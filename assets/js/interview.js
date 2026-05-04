@@ -1,64 +1,93 @@
-// MockMode — interview.js
-// Core game engine for interview.html.
+// MockMode — interview.js  (updated)
 // Manages question flow, AI evaluation, stress meter, and
 // transitions to the results page.
 // Depends on: main.js, ai.js
+// New in this version:
+//   - TTS via speakText() (defined in interview.html)
+//   - STT via mic button (wired in interview.html)
+//   - Skip question button (one per session, +15 stress)
+//   - Answer history drawer integration
+//   - Loading indicator between questions
+//   - Interviewer flavored name/title display
+//   - Progress label fix (q-current / q-total spans)
 
-
-// Session state
+// ── Session state ──────────────────────────────────────────────────────────
 
 let resumeText      = null;
 let personality     = null;
-let role            = null;      // 'developer' | 'designer' | 'analyst' | 'marketing' | 'general'
-let questions       = [];      // string[5]
-let scores          = [];      // number[]  (0–100 per answer)
-let currentIndex    = 0;       // 0–4
-let stressLevel     = 0;       // 0–100
-let isProcessing    = false;   // guards against double-submit
+let role            = null;
+let questions       = [];
+let scores          = [];
+let currentIndex    = 0;
+let stressLevel     = 0;
+let isProcessing    = false;
+let skipUsed        = false;   // NEW: only one skip allowed per session
 
-// DOM references (resolved after DOMContentLoaded)
+// ── Interviewer flavoring (NEW) ────────────────────────────────────────────
+// Each personality gets a fake name + title for immersion.
 
-let dialogueBox     = null;    // <p> or element that shows the question
-let answerInput     = null;    // <textarea> or <input>
-let submitBtn       = null;    // submit answer button
-let stressFill      = null;    // stress bar fill element
-let stressLabel     = null;    // optional "Stress: 42%" text
-let progressLabel   = null;    // optional "Question 2 / 5" text
-let reactionBox     = null;    // element where AI reaction appears
+const INTERVIEWER_PERSONAS = {
+  corporate: {
+    label: 'Ms. Reyes',
+    title: 'VP of Operations',
+    display: 'Ms. Reyes — VP of Operations',
+  },
+  startup: {
+    label: 'Kai',
+    title: 'Co-founder & Culture Lead',
+    display: 'Kai — Co-founder & Culture Lead',
+  },
+  technical: {
+    label: 'Dr. Matsuda',
+    title: 'Principal Engineer',
+    display: 'Dr. Matsuda — Principal Engineer',
+  },
+};
 
-// Init
+// ── DOM references ─────────────────────────────────────────────────────────
+
+let dialogueBox     = null;
+let answerInput     = null;
+let submitBtn       = null;
+let skipBtn         = null;    // NEW
+let stressFill      = null;
+let stressLabel     = null;
+let reactionBox     = null;
+let qCurrentSpan    = null;    // FIX: was progressLabel (full element)
+let qTotalSpan      = null;
+
+// ── Init ───────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Resolve DOM nodes
-  dialogueBox   = document.getElementById('dialogue-text');
-  answerInput   = document.getElementById('answer-input');
-  submitBtn     = document.getElementById('submit-answer-btn');
-  stressFill    = document.getElementById('stress-fill');
-  stressLabel   = document.getElementById('stress-label');
-  progressLabel = document.getElementById('question-progress');
-  reactionBox   = document.getElementById('reaction-box');
+  dialogueBox  = document.getElementById('dialogue-text');
+  answerInput  = document.getElementById('answer-input');
+  submitBtn    = document.getElementById('submit-answer-btn');
+  skipBtn      = document.getElementById('skip-btn');           // NEW
+  stressFill   = document.getElementById('stress-fill');
+  stressLabel  = document.getElementById('stress-label');
+  reactionBox  = document.getElementById('reaction-box');
+  qCurrentSpan = document.getElementById('q-current');         // FIX
+  qTotalSpan   = document.getElementById('q-total');           // FIX
 
-  // Load session data
   resumeText  = getFromStorage('resume');
   personality = getFromStorage('personality');
   role        = getFromStorage('role') ?? 'general';
 
-  // Guard: if session data is missing, bounce back to upload
   if (!resumeText || !personality) {
     showToast('Session expired. Please start over.', 'warning');
     setTimeout(() => navigateTo('upload.html'), 1500);
     return;
   }
 
-  // Display personality label if element exists
-  const personalityLabel = document.getElementById('interviewer-name');
-  if (personalityLabel) {
-    personalityLabel.textContent = formatPersonality(personality);
+  // ── Set flavored interviewer name (NEW) ────────────────────────────────
+  const nameEl = document.getElementById('interviewer-name');
+  if (nameEl) {
+    const persona = INTERVIEWER_PERSONAS[personality];
+    nameEl.textContent = persona ? `${persona.display}:` : `${formatPersonality(personality)}:`;
   }
 
   // Load or generate questions
   const cached = getFromStorage('questions');
-
   if (Array.isArray(cached) && cached.length === 5) {
     questions = cached;
     startInterview();
@@ -67,66 +96,55 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Wire submit button
-  if (submitBtn) {
-    submitBtn.addEventListener('click', submitAnswer);
-  }
+  if (submitBtn) submitBtn.addEventListener('click', submitAnswer);
 
-  // Allow Enter (without Shift) in single-line inputs to submit
+  // Enter key submits (single-line input)
   if (answerInput && answerInput.tagName === 'INPUT') {
     answerInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') submitAnswer();
     });
   }
+
+  // ── Wire skip button (NEW) ─────────────────────────────────────────────
+  if (skipBtn) {
+    skipBtn.addEventListener('click', skipQuestion);
+  }
 });
 
-// Question generation
+// ── Question generation ────────────────────────────────────────────────────
 
 async function loadQuestions() {
   showLoader('Preparing your interview questions...');
-
   try {
     const generated = await generateQuestions(resumeText, personality, role);
-
     if (!Array.isArray(generated) || generated.length === 0) {
       throw new Error('No questions returned from AI.');
     }
-
     questions = generated;
     saveToStorage('questions', questions);
-
     hideLoader();
     startInterview();
-
   } catch (err) {
     hideLoader();
     console.error('[MockMode] generateQuestions failed:', err);
     showToast('Could not load questions. Retrying in 3 seconds...', 'error');
-
     setTimeout(loadQuestions, 3000);
   }
 }
 
-// Interview flow
+// ── Interview flow ─────────────────────────────────────────────────────────
 
-/**
- * Called once questions are ready. Sets up UI and asks Q1.
- */
 function startInterview() {
   updateProgressLabel();
   updateStressMeter(0);
   askCurrentQuestion();
 }
 
-/**
- * Streams the current question into the dialogue box.
- */
 async function askCurrentQuestion() {
   if (!dialogueBox) return;
 
-  // Clear previous reaction
   clearReactionBox();
 
-  // Reset answer input
   if (answerInput) {
     answerInput.value = '';
     answerInput.disabled = false;
@@ -134,37 +152,38 @@ async function askCurrentQuestion() {
   }
   if (submitBtn) submitBtn.disabled = false;
 
+  // Hide thinking indicator once we start showing the question
+  if (typeof hideThinkingIndicator === 'function') hideThinkingIndicator();
+
   const question = questions[currentIndex];
 
-  // Stream the question text into the dialogue box character by character
   try {
+    // Stream the question into the dialogue box
     await streamInterviewerMessage(
       `Ask this interview question naturally, in character: "${question}"`,
       personality,
       dialogueBox,
-      () => {
-        // onDone: enable answer input
+      (fullText) => {
+        // onDone: speak the question via TTS (NEW)
+        if (typeof speakText === 'function') {
+          speakText(fullText || question);
+        }
         if (answerInput) answerInput.disabled = false;
       }
     );
   } catch (err) {
-    // Fallback: just set the text directly if streaming fails
     console.warn('[MockMode] Stream failed, using direct text:', err);
     if (dialogueBox) dialogueBox.textContent = question;
+    if (typeof speakText === 'function') speakText(question);
   }
 }
 
-// Answer submission
+// ── Answer submission ──────────────────────────────────────────────────────
 
-/**
- * Publicly callable (e.g. from HTML onclick="submitAnswer()").
- * Reads the answer, evaluates it via AI, updates UI, advances state.
- */
 async function submitAnswer() {
-  if (isProcessing) return; // prevent double-submit
+  if (isProcessing) return;
 
   const answer = answerInput ? answerInput.value.trim() : '';
-
   if (!answer) {
     showToast('Type your answer before submitting!', 'warning');
     if (answerInput) answerInput.focus();
@@ -173,6 +192,7 @@ async function submitAnswer() {
 
   isProcessing = true;
   if (submitBtn) submitBtn.disabled = true;
+  if (skipBtn)   skipBtn.disabled   = true;
   if (answerInput) answerInput.disabled = true;
 
   const question = questions[currentIndex];
@@ -181,38 +201,40 @@ async function submitAnswer() {
 
   try {
     const evaluation = await evaluateAnswer(question, answer, personality, role);
-
     if (!evaluation) throw new Error('Empty evaluation returned.');
 
     hideLoader();
 
-    // Record score
     const score = Math.max(0, Math.min(100, evaluation.score ?? 50));
     scores.push(score);
 
-    // Update stress meter
+    // Stress calculation
     const stressDelta = Math.max(1, Math.min(10, evaluation.stress_increase ?? 5));
-    // Good answers lower stress slightly; bad answers raise it
     const stressChange = score >= 60 ? -(stressDelta * 0.5) : stressDelta;
     stressLevel = Math.max(0, Math.min(100, stressLevel + stressChange));
     updateStressMeter(stressLevel);
 
-    // Show reaction
     showReaction(evaluation);
 
-    // Advance or finish
+    // ── Add to history drawer (NEW) ────────────────────────────────────
+    if (typeof addToHistory === 'function') {
+      addToHistory(question, answer, score);
+    }
+
     if (currentIndex < 4) {
       currentIndex++;
       updateProgressLabel();
 
-      // Wait for candidate to read reaction, then move on
+      // Show thinking indicator during the 3-second gap (NEW)
+      if (typeof showThinkingIndicator === 'function') showThinkingIndicator();
+
       setTimeout(() => {
         isProcessing = false;
+        // Re-enable skip only if not used
+        if (skipBtn && !skipUsed) skipBtn.disabled = false;
         askCurrentQuestion();
       }, 3000);
-
     } else {
-      // All 5 questions done
       await finishInterview();
     }
 
@@ -222,22 +244,60 @@ async function submitAnswer() {
     showToast('AI evaluation failed. Try submitting again.', 'error');
     isProcessing = false;
     if (submitBtn) submitBtn.disabled = false;
+    if (skipBtn && !skipUsed) skipBtn.disabled = false;
     if (answerInput) answerInput.disabled = false;
   }
 }
 
-// Reaction display
+// ── Skip question (NEW) ────────────────────────────────────────────────────
+// One skip per session. Applies +15 stress penalty and a score of 0.
 
-/**
- * Renders the AI reaction, emoji, and feedback into the reaction box.
- * @param {{ reaction: string, mood_emoji: string, feedback: string, score: number }} evaluation
- */
+function skipQuestion() {
+  if (isProcessing || skipUsed) return;
+
+  skipUsed = true;
+  if (skipBtn) {
+    skipBtn.disabled = true;
+    skipBtn.title = 'Skip already used this session.';
+    skipBtn.innerHTML = `
+      <span class="material-symbols-outlined text-base">block</span>
+      SKIP USED
+    `;
+  }
+
+  // +15 stress penalty
+  stressLevel = Math.min(100, stressLevel + 15);
+  updateStressMeter(stressLevel);
+  showToast('Question skipped. +15 stress penalty applied.', 'warning');
+
+  // Log a score of 0 for this question (skipped)
+  scores.push(0);
+
+  // Add to history with a skip marker
+  const question = questions[currentIndex];
+  if (typeof addToHistory === 'function') {
+    addToHistory(question, '[Skipped]', 0);
+  }
+
+  if (currentIndex < 4) {
+    currentIndex++;
+    updateProgressLabel();
+    if (typeof showThinkingIndicator === 'function') showThinkingIndicator();
+
+    setTimeout(() => {
+      isProcessing = false;
+      askCurrentQuestion();
+    }, 2000);
+  } else {
+    finishInterview();
+  }
+}
+
+// ── Reaction display ───────────────────────────────────────────────────────
+
 function showReaction(evaluation) {
   if (!reactionBox) return;
-
   const { reaction, mood_emoji, feedback, score } = evaluation;
-
-  // Determine sentiment class based on score
   const sentiment = score >= 75 ? 'positive' : score >= 50 ? 'neutral' : 'negative';
 
   reactionBox.innerHTML = `
@@ -249,7 +309,6 @@ function showReaction(evaluation) {
       </div>
     </div>
   `;
-
   reactionBox.classList.add('reaction--visible');
 }
 
@@ -259,19 +318,15 @@ function clearReactionBox() {
   reactionBox.classList.remove('reaction--visible');
 }
 
-// Stress meter
+// ── Stress meter (BUG FIX: style.height, not style.width) ─────────────────
 
-/**
- * Updates the visual stress bar and optional text label.
- * @param {number} level - 0–100
- */
 function updateStressMeter(level) {
   const clamped = Math.max(0, Math.min(100, Math.round(level)));
 
   if (stressFill) {
-    stressFill.style.width = `${clamped}%`;
+    // FIX: thermometer is vertical, so we set height (not width)
+    stressFill.style.height = `${clamped}%`;
 
-    // Color shifts from green → yellow → red
     if (clamped < 40) {
       stressFill.style.background = 'var(--stress-low, #1aff7a)';
     } else if (clamped < 70) {
@@ -286,45 +341,37 @@ function updateStressMeter(level) {
   }
 }
 
-// Progress label
+// ── Progress label (FIX: update q-current / q-total spans) ────────────────
 
 function updateProgressLabel() {
-  if (!progressLabel) return;
-  progressLabel.textContent = `Question ${currentIndex + 1} / ${questions.length}`;
+  // FIX: the HTML has two <span> elements (q-current and q-total),
+  // not a single element whose textContent is replaced.
+  if (qCurrentSpan) qCurrentSpan.textContent = currentIndex + 1;
+  if (qTotalSpan)   qTotalSpan.textContent   = questions.length || 5;
 }
 
-// Finish interview
+// ── Finish interview ───────────────────────────────────────────────────────
 
-/**
- * Called after the 5th answer is evaluated.
- * Persists scores, generates verdict, navigates to results.
- */
 async function finishInterview() {
   saveToStorage('scores', scores);
-
   showLoader('Calculating your verdict...');
 
   try {
     const resumeAnalysis = getFromStorage('resume_analysis');
-
     if (!resumeAnalysis) throw new Error('Resume analysis not found in storage.');
 
     const verdict = await generateVerdict(scores, resumeAnalysis, personality, role);
-
     if (!verdict) throw new Error('Verdict generation returned empty.');
 
     saveToStorage('verdict', verdict);
-
     hideLoader();
     showToast('Interview complete! Revealing your verdict...', 'success');
-
     setTimeout(() => navigateTo('results.html'), 1200);
 
   } catch (err) {
     hideLoader();
     console.error('[MockMode] generateVerdict failed:', err);
     showToast('Could not generate verdict. Retrying...', 'error');
-
     isProcessing = false;
     setTimeout(finishInterview, 3000);
   }

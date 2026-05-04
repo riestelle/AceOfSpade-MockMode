@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MockMode — Privacy & Consent</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700;800&family=Be+Vietnam+Pro:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<style>
+  body { background: #1f0f0c; color: #fcdbd6; font-family: 'Be Vietnam Pro', sans-serif; }
+  .pixel-border { border: 4px solid #190a08; box-shadow: inset -2px -2px 0 rgba(0,0,0,0.2), inset 2px 2px 0 rgba(255,255,255,0.08); }
+  .shadow-step { box-shadow: 4px 4px 0 0 #190a08; }
+  .arcade-btn { transition: all 0.05s steps(2); box-shadow: 0 6px 0 0 #190a08; }
+  .arcade-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 0 #190a08; }
+  .feature-card { border-left: 3px solid #a0cfcf; padding: 12px 16px; margin-bottom: 10px; background: rgba(160,207,207,0.06); }
+  .toggle-switch { position: relative; width: 44px; height: 24px; }
+  .toggle-switch input { display: none; }
+  .toggle-slider {
+    position: absolute; inset: 0;
+    background: #44302c;
+    border: 2px solid #9d8d8b;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle-slider::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 16px; height: 16px;
+    background: #9d8d8b;
+    transition: transform 0.2s;
+  }
+  input:checked + .toggle-slider { background: #1d4d4d; border-color: #a0cfcf; }
+  input:checked + .toggle-slider::after { transform: translateX(20px); background: #a0cfcf; }
+</style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-8">
+
+<div class="w-full max-w-2xl">
+
+  <!-- Header -->
+  <div class="text-center mb-8">
+    <div class="inline-flex items-center gap-3 mb-3">
+      <span class="material-symbols-outlined text-3xl text-[#a0cfcf]">privacy_tip</span>
+      <h1 class="font-bold text-3xl text-[#a0cfcf] uppercase tracking-tight" style="font-family: 'Space Grotesk', sans-serif;">Privacy &amp; Consent</h1>
+    </div>
+    <p class="text-sm text-[#d4c3c0] opacity-70 uppercase tracking-widest">MockMode — Data Transparency</p>
+  </div>
+
+  <!-- Main panel -->
+  <div class="bg-[#2d1b18] pixel-border shadow-step p-8 space-y-6">
+
+    <!-- What we collect -->
+    <section>
+      <h2 class="font-bold text-[#a0cfcf] uppercase text-sm tracking-widest mb-4 flex items-center gap-2" style="font-family: 'Space Grotesk', sans-serif;">
+        <span class="material-symbols-outlined text-base">database</span>
+        What MockMode Stores
+      </h2>
+
+      <div class="feature-card">
+        <p class="text-sm font-semibold text-[#fcdbd6] mb-1">Resume Text</p>
+        <p class="text-xs text-[#d4c3c0] opacity-80">Stored temporarily in <code class="bg-black/30 px-1 rounded">localStorage</code> for the duration of your session. Cleared when you start a new game.</p>
+      </div>
+
+      <div class="feature-card">
+        <p class="text-sm font-semibold text-[#fcdbd6] mb-1">Interview Answers &amp; Scores</p>
+        <p class="text-xs text-[#d4c3c0] opacity-80">Used only to generate your final verdict. Not stored long-term. No account or login required.</p>
+      </div>
+
+      <div class="feature-card">
+        <p class="text-sm font-semibold text-[#fcdbd6] mb-1">AI API Calls</p>
+        <p class="text-xs text-[#d4c3c0] opacity-80">Your resume and answers are sent to the AI backend (Groq / Gemini) for analysis. Review their privacy policies at groq.com and cloud.google.com.</p>
+      </div>
+    </section>
+
+    <hr class="border-[#44302c]"/>
+
+    <!-- Optional features with toggles -->
+    <section>
+      <h2 class="font-bold text-[#a0cfcf] uppercase text-sm tracking-widest mb-4 flex items-center gap-2" style="font-family: 'Space Grotesk', sans-serif;">
+        <span class="material-symbols-outlined text-base">tune</span>
+        Optional Features
+      </h2>
+
+      <!-- Webcam toggle -->
+      <div class="flex items-start justify-between gap-4 p-4 bg-black/20 border border-[#44302c] mb-3">
+        <div class="flex-1">
+          <p class="text-sm font-semibold text-[#fcdbd6] mb-1 flex items-center gap-2">
+            <span class="material-symbols-outlined text-base text-[#a0cfcf]">videocam</span>
+            Webcam Confidence Tracking
+          </p>
+          <p class="text-xs text-[#d4c3c0] opacity-75">Uses your webcam and Face API.js to show a confidence meter during the interview. <strong>All processing is local — no video is sent externally.</strong></p>
+        </div>
+        <label class="toggle-switch flex-shrink-0 mt-1">
+          <input type="checkbox" id="webcam-toggle" onchange="updatePreference('webcam', this.checked)"/>
+          <div class="toggle-slider"></div>
+        </label>
+      </div>
+
+      <!-- Voice output toggle -->
+      <div class="flex items-start justify-between gap-4 p-4 bg-black/20 border border-[#44302c] mb-3">
+        <div class="flex-1">
+          <p class="text-sm font-semibold text-[#fcdbd6] mb-1 flex items-center gap-2">
+            <span class="material-symbols-outlined text-base text-[#a0cfcf]">volume_up</span>
+            Voice Output (TTS)
+          </p>
+          <p class="text-xs text-[#d4c3c0] opacity-75">The interviewer speaks questions aloud using your browser's built-in Web Speech API. No external service used.</p>
+        </div>
+        <label class="toggle-switch flex-shrink-0 mt-1">
+          <input type="checkbox" id="tts-toggle" checked onchange="updatePreference('tts', this.checked)"/>
+          <div class="toggle-slider"></div>
+        </label>
+      </div>
+
+      <!-- Voice input toggle -->
+      <div class="flex items-start justify-between gap-4 p-4 bg-black/20 border border-[#44302c]">
+        <div class="flex-1">
+          <p class="text-sm font-semibold text-[#fcdbd6] mb-1 flex items-center gap-2">
+            <span class="material-symbols-outlined text-base text-[#a0cfcf]">mic</span>
+            Voice Input (STT)
+          </p>
+          <p class="text-xs text-[#d4c3c0] opacity-75">Answer questions by speaking. Uses the browser's built-in speech recognition. Chrome is recommended for best results.</p>
+        </div>
+        <label class="toggle-switch flex-shrink-0 mt-1">
+          <input type="checkbox" id="stt-toggle" checked onchange="updatePreference('stt', this.checked)"/>
+          <div class="toggle-slider"></div>
+        </label>
+      </div>
+    </section>
+
+    <hr class="border-[#44302c]"/>
+
+    <!-- What we DON'T do -->
+    <section>
+      <h2 class="font-bold text-[#a0cfcf] uppercase text-sm tracking-widest mb-3 flex items-center gap-2" style="font-family: 'Space Grotesk', sans-serif;">
+        <span class="material-symbols-outlined text-base">block</span>
+        What We Don't Do
+      </h2>
+      <ul class="space-y-2 text-xs text-[#d4c3c0]">
+        <li class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-[#1aff7a]">check_circle</span> No account creation or login required</li>
+        <li class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-[#1aff7a]">check_circle</span> No ads, no tracking pixels, no analytics</li>
+        <li class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-[#1aff7a]">check_circle</span> No video or audio recorded to any server</li>
+        <li class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-[#1aff7a]">check_circle</span> Resume text is never shared with third parties beyond the AI provider</li>
+      </ul>
+    </section>
+
+    <!-- Action buttons -->
+    <div class="flex flex-col sm:flex-row gap-4 pt-2">
+      <button onclick="saveAndReturn()" class="arcade-btn flex-1 bg-[#a0cfcf] text-[#003737] font-bold text-sm uppercase tracking-widest py-3 pixel-border flex items-center justify-center gap-2" style="font-family: 'Space Grotesk', sans-serif;">
+        <span class="material-symbols-outlined text-base">check</span> Save &amp; Continue
+      </button>
+      <button onclick="history.back()" class="arcade-btn flex-1 bg-[#2d1b18] text-[#d4c3c0] font-bold text-sm uppercase tracking-widest py-3 pixel-border flex items-center justify-center gap-2" style="font-family: 'Space Grotesk', sans-serif;">
+        <span class="material-symbols-outlined text-base">arrow_back</span> Go Back
+      </button>
+    </div>
+  </div>
+
+  <p class="text-center text-[10px] text-[#9d8d8b] mt-4 uppercase tracking-widest">MockMode v2.0 — Built for DevKada Hackathon</p>
+</div>
+
+<script>
+  // Load saved preferences on page load
+  window.addEventListener('DOMContentLoaded', () => {
+    const prefs = JSON.parse(localStorage.getItem('mm_privacy_prefs') || '{}');
+    if (prefs.webcam !== undefined) document.getElementById('webcam-toggle').checked = prefs.webcam;
+    if (prefs.tts !== undefined)    document.getElementById('tts-toggle').checked    = prefs.tts;
+    if (prefs.stt !== undefined)    document.getElementById('stt-toggle').checked    = prefs.stt;
+  });
+
+  function updatePreference(key, value) {
+    const prefs = JSON.parse(localStorage.getItem('mm_privacy_prefs') || '{}');
+    prefs[key] = value;
+    localStorage.setItem('mm_privacy_prefs', JSON.stringify(prefs));
+  }
+
+  function saveAndReturn() {
+    localStorage.setItem('mm_privacy_seen', '1');
+    // Return to landing page or upload page
+    const from = new URLSearchParams(location.search).get('from') || 'index.html';
+    window.location.href = from;
+  }
+</script>
+</body>
+</html>

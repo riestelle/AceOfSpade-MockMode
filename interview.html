@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>RETRO_OS - Interview Room</title>
+<title>MockMode — Interview Room</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;700;800&family=Be+Vietnam+Pro:wght@400;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -112,19 +112,135 @@
   }
   .animate-pulse-slow { animation: pulse-opacity 2s ease-in-out infinite; }
 
-  /* Reaction box styling — JS adds reaction--visible class to show it */
+  /* Reaction box styling */
   #reaction-box { display: none; }
   #reaction-box.reaction--visible { display: block; }
-
   .reaction { display: flex; align-items: flex-start; gap: 0.5rem; }
   .reaction-emoji { font-size: 1.5rem; flex-shrink: 0; }
   .reaction--positive .reaction-text { color: #1aff7a; }
   .reaction--neutral  .reaction-text { color: #ffcc00; }
   .reaction--negative .reaction-text { color: #ff4444; }
   .reaction-feedback { font-size: 0.8rem; opacity: 0.75; margin-top: 0.25rem; }
+
+  /* ── NEW: Answer History Drawer ── */
+  #history-drawer {
+    position: fixed;
+    top: 0; right: -360px;
+    width: 340px;
+    height: 100vh;
+    background: #190a08;
+    border-left: 4px solid #44302c;
+    z-index: 200;
+    transition: right 0.3s cubic-bezier(.4,0,.2,1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #history-drawer.open { right: 0; }
+  #history-drawer-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 199;
+  }
+  #history-drawer-overlay.open { display: block; }
+  .history-item {
+    border-bottom: 1px solid #44302c;
+    padding: 12px 16px;
+    font-size: 0.82rem;
+  }
+  .history-item__q { color: #a0cfcf; font-weight: 700; margin-bottom: 4px; }
+  .history-item__a { color: #d4c3c0; opacity: 0.85; margin-bottom: 6px; line-height: 1.4; }
+  .history-score-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .score--high { background: #0d2b1a; color: #1aff7a; border: 1px solid #1aff7a; }
+  .score--mid  { background: #2b2200; color: #ffcc00; border: 1px solid #ffcc00; }
+  .score--low  { background: #2b0d0d; color: #ff4444; border: 1px solid #ff4444; }
+
+  /* ── NEW: Keyboard shortcut hints ── */
+  .kbd-hint {
+    font-size: 0.62rem;
+    font-family: 'Space Grotesk', monospace;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: #9d8d8b;
+    letter-spacing: 0.05em;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  /* ── NEW: Loading pulse between questions ── */
+  @keyframes thinking-pulse {
+    0%, 100% { opacity: 0.3; transform: scale(0.95); }
+    50% { opacity: 1; transform: scale(1.05); }
+  }
+  .thinking-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #a0cfcf;
+    animation: thinking-pulse 0.9s ease-in-out infinite;
+  }
+  .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+  #thinking-indicator { display: none; }
+  #thinking-indicator.visible { display: flex; }
+
+  /* ── NEW: Skip button state ── */
+  #skip-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  #skip-btn:disabled:active { transform: none; box-shadow: 4px 4px 0 0 #1a0f0d; }
+
+  /* ── NEW: Webcam consent banner ── */
+  #webcam-consent {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: #1d4d4d;
+    border-top: 3px solid #a0cfcf;
+    z-index: 300;
+    padding: 16px 24px;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+  #webcam-consent.visible { display: flex; }
+
+  /* Mic recording indicator */
+  @keyframes mic-pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(255,68,68,0.6); }
+    50% { box-shadow: 0 0 0 8px rgba(255,68,68,0); }
+  }
+  #mic-btn.recording { background: #2b0d0d; animation: mic-pulse 1s ease-in-out infinite; }
+  #mic-btn.recording .mic-icon { color: #ff4444; }
 </style>
 </head>
 <body class="bg-background text-on-surface font-body-md overflow-hidden h-screen w-screen selection:bg-tertiary selection:text-on-tertiary">
+
+<!-- ══ ANSWER HISTORY DRAWER OVERLAY ══ -->
+<div id="history-drawer-overlay" onclick="closeHistoryDrawer()"></div>
+
+<!-- ══ ANSWER HISTORY DRAWER ══ -->
+<div id="history-drawer" role="dialog" aria-label="Answer History">
+  <div class="flex items-center justify-between px-4 py-3 border-b-2 border-surface-container-highest bg-surface-container flex-shrink-0">
+    <span class="font-label-caps text-tertiary uppercase tracking-widest text-sm">Answer History</span>
+    <button onclick="closeHistoryDrawer()" class="w-8 h-8 flex items-center justify-center bg-surface-container-high border border-outline hover:bg-surface-variant transition-colors">
+      <span class="material-symbols-outlined text-base text-on-surface-variant">close</span>
+    </button>
+  </div>
+  <div id="history-list" class="flex-1 overflow-y-auto">
+    <p class="text-on-surface-variant text-xs font-label-caps p-4 opacity-60">No answers yet.</p>
+  </div>
+</div>
 
 <main class="relative h-screen w-screen flex flex-col items-center justify-end overflow-hidden bg-surface-dim">
 
@@ -138,17 +254,13 @@
   <!-- CRT Overlay -->
   <div class="crt-overlay absolute inset-0 z-40"></div>
 
-  <!-- TOP-LEFT: Stress Meter -->
+  <!-- TOP-LEFT: Stress Thermometer (BUG FIX: use height not width) -->
   <div class="absolute top-6 left-6 flex flex-col items-center gap-3 z-50">
-    <div class="flex flex-col items-center gap-1">
-      <!-- stress-label: JS can update this text but we show a static label here -->
-      <div id="stress-label"
-        class="font-label-caps text-on-surface uppercase tracking-widest bg-surface-container border-4 border-on-surface px-3 py-1 shadow-step text-xs">
-        Stress: 0%
-      </div>
+    <div id="stress-label"
+      class="font-label-caps text-on-surface uppercase tracking-widest bg-surface-container border-4 border-on-surface px-3 py-1 shadow-step text-xs">
+      Stress: 0%
     </div>
-
-    <!-- Thermometer tube — JS controls height% of stress-fill -->
+    <!-- Thermometer: stress-fill uses style.height (fixed from style.width bug) -->
     <div class="w-14 h-[72vh] bg-surface-container-lowest border-4 border-on-surface rounded-full relative p-1">
       <div
         id="stress-fill"
@@ -166,14 +278,31 @@
     </div>
   </div>
 
-  <!-- TOP-RIGHT: Sound + Question Progress -->
+  <!-- TOP-RIGHT: Controls + Progress -->
   <div class="absolute top-6 right-6 flex flex-col items-end gap-3 z-50">
-    <button id="sound-btn" onclick="toggleSound()"
-      class="w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step active-shadow-step hover:bg-surface-container-high transition-all">
-      <span id="sound-icon" class="material-symbols-outlined text-[#669BBC]">volume_up</span>
-    </button>
+    <div class="flex gap-2">
+      <!-- Sound toggle (TTS) — now functional via Web Speech API -->
+      <div class="flex flex-col items-center gap-0.5">
+        <button id="sound-btn" onclick="toggleSound()"
+          class="w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step active-shadow-step hover:bg-surface-container-high transition-all"
+          title="Toggle voice output">
+          <span id="sound-icon" class="material-symbols-outlined text-[#669BBC]">volume_up</span>
+        </button>
+        <span class="kbd-hint">[S]</span>
+      </div>
 
-    <!-- question-progress: JS updates q-current and q-total -->
+      <!-- History drawer toggle — NEW feature -->
+      <div class="flex flex-col items-center gap-0.5">
+        <button onclick="openHistoryDrawer()"
+          class="w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step active-shadow-step hover:bg-surface-container-high transition-all"
+          title="View answer history">
+          <span class="material-symbols-outlined text-[#669BBC]">history</span>
+        </button>
+        <span class="kbd-hint">[H]</span>
+      </div>
+    </div>
+
+    <!-- Progress label — now uses q-current/q-total spans (matching JS) -->
     <div id="question-progress"
       class="font-label-caps text-on-surface uppercase tracking-widest bg-surface-container border-4 border-on-surface px-3 py-2 shadow-step text-xs text-center">
       Q <span id="q-current">1</span> / <span id="q-total">5</span>
@@ -212,45 +341,76 @@
         <div class="bg-surface-container-lowest p-md border-2 border-surface-variant min-h-[90px]">
           <h2 class="font-headline-md text-primary mb-2 flex items-center gap-2 text-sm">
             <span class="material-symbols-outlined text-sm">terminal</span>
-            <!-- interviewer-name: JS sets this to "Strict Corporate:", "Chill Startup:", etc. -->
+            <!-- interviewer-name: JS sets this — NEW: now shows flavored name+title -->
             <span id="interviewer-name">INTERVIEWER:</span>
           </h2>
+
+          <!-- Thinking indicator — shown between questions (NEW) -->
+          <div id="thinking-indicator" class="flex items-center gap-2 mb-2">
+            <div class="thinking-dot"></div>
+            <div class="thinking-dot"></div>
+            <div class="thinking-dot"></div>
+            <span class="text-xs font-label-caps text-on-surface-variant opacity-60 ml-1">Preparing next question...</span>
+          </div>
+
           <!-- dialogue-text: JS streams the question text here -->
           <p id="dialogue-text" class="font-headline-md text-tertiary leading-relaxed tracking-tight">
             Preparing your interview...
           </p>
         </div>
 
-        <!-- Reaction box — hidden until JS adds reaction--visible class -->
+        <!-- Reaction box -->
         <div id="reaction-box"
           class="bg-surface-container-high border-2 border-primary-container p-sm min-h-[40px]">
         </div>
 
-        <!-- Answer input row -->
-        <div class="flex items-center gap-sm bg-surface-dim border-2 border-primary-container p-sm">
-          <span class="material-symbols-outlined text-tertiary px-sm">keyboard_command_key</span>
-          <!-- answer-input: JS reads value and disables/enables this -->
-          <input
-            id="answer-input"
-            class="bg-transparent border-none focus:ring-0 text-tertiary font-headline-md w-full placeholder:text-primary-container uppercase"
-            placeholder="TYPE YOUR DEFENSE..."
-            type="text"
-          />
-          <button class="flex items-center justify-center p-sm hover:bg-surface-variant text-on-surface-variant">
-            <span class="material-symbols-outlined">mic</span>
-          </button>
+        <!-- Answer input row + keyboard hints -->
+        <div>
+          <div class="flex items-center gap-sm bg-surface-dim border-2 border-primary-container p-sm">
+            <span class="material-symbols-outlined text-tertiary px-sm">keyboard_command_key</span>
+            <!-- answer-input -->
+            <input
+              id="answer-input"
+              class="bg-transparent border-none focus:ring-0 text-tertiary font-headline-md w-full placeholder:text-primary-container uppercase"
+              placeholder="TYPE YOUR DEFENSE..."
+              type="text"
+            />
+            <!-- Mic button — now wired to STT (NEW) -->
+            <button id="mic-btn"
+              class="flex items-center justify-center p-sm hover:bg-surface-variant text-on-surface-variant transition-colors"
+              title="Hold to speak [M]">
+              <span class="mic-icon material-symbols-outlined">mic</span>
+            </button>
+          </div>
+          <!-- Keyboard shortcut hints (NEW) -->
+          <div class="flex items-center gap-3 mt-1 px-1">
+            <span class="kbd-hint">[Enter] Submit</span>
+            <span class="kbd-hint">[M] Mic</span>
+            <span class="kbd-hint">[S] Sound</span>
+            <span class="kbd-hint">[H] History</span>
+          </div>
         </div>
       </div>
 
-      <!-- Submit Button -->
-      <div class="flex-shrink-0 w-full md:w-auto flex">
-        <!-- submit-answer-btn: JS wires the click handler and disables during processing -->
+      <!-- Submit + Skip buttons -->
+      <div class="flex-shrink-0 w-full md:w-auto flex flex-col gap-sm">
+        <!-- submit-answer-btn -->
         <button
           id="submit-answer-btn"
           class="w-full md:h-full bg-primary text-on-primary font-headline-md px-xl py-md border-4 border-on-primary active-shadow-step shadow-step transition-all flex items-center justify-center gap-sm"
         >
           SUBMIT
           <span class="material-symbols-outlined">send</span>
+        </button>
+
+        <!-- Skip button — NEW: 1 skip per session, +15 stress penalty -->
+        <button
+          id="skip-btn"
+          class="w-full bg-surface-container text-on-surface-variant font-label-caps text-xs px-md py-sm border-2 border-outline active-shadow-step shadow-step transition-all flex items-center justify-center gap-1 hover:bg-surface-container-high"
+          title="Skip this question (+15 stress). One use only."
+        >
+          <span class="material-symbols-outlined text-base">skip_next</span>
+          SKIP (+15 stress)
         </button>
       </div>
 
@@ -262,12 +422,199 @@
 
 </main>
 
+<!-- ══ Webcam Consent Banner (NEW) ══ -->
+<div id="webcam-consent" class="visible" role="alertdialog" aria-label="Webcam consent">
+  <span class="material-symbols-outlined text-tertiary text-2xl flex-shrink-0">videocam</span>
+  <p class="font-body-md text-on-surface flex-1 min-w-[200px]">
+    <strong class="text-tertiary">Webcam Confidence Tracking</strong> — Enable your camera to analyze facial expression confidence during the interview? No data is sent externally.
+  </p>
+  <div class="flex gap-3 flex-shrink-0">
+    <button onclick="grantWebcamConsent()" class="font-label-caps text-xs px-4 py-2 bg-tertiary text-surface border-2 border-black shadow-step hover:opacity-90 transition-opacity">
+      ENABLE
+    </button>
+    <button onclick="denyWebcamConsent()" class="font-label-caps text-xs px-4 py-2 bg-surface-container text-on-surface-variant border-2 border-outline hover:bg-surface-variant transition-colors">
+      SKIP
+    </button>
+  </div>
+</div>
+
 <script>
+  // ── TTS / Sound toggle ──
   let soundOn = true;
+  let currentUtterance = null;
+
   function toggleSound() {
     soundOn = !soundOn;
-    document.getElementById('sound-icon').textContent = soundOn ? 'volume_up' : 'volume_off';
+    const icon = document.getElementById('sound-icon');
+    icon.textContent = soundOn ? 'volume_up' : 'volume_off';
+    if (!soundOn && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
   }
+
+  /**
+   * Speaks text via Web Speech API TTS.
+   * Called by interview.js after a question is shown.
+   * @param {string} text
+   */
+  function speakText(text) {
+    if (!soundOn || !window.speechSynthesis || !text) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 0.95;
+    utter.pitch = 1.05;
+    utter.volume = 0.9;
+    currentUtterance = utter;
+    window.speechSynthesis.speak(utter);
+  }
+
+  // ── STT / Mic ──
+  let recognition = null;
+  let isRecording = false;
+
+  function setupSTT() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    const answerInput = document.getElementById('answer-input');
+    const micBtn = document.getElementById('mic-btn');
+
+    recognition.onstart = () => {
+      isRecording = true;
+      micBtn.classList.add('recording');
+      if (answerInput) answerInput.placeholder = 'LISTENING...';
+    };
+
+    recognition.onresult = (e) => {
+      let transcript = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        transcript += e.results[i][0].transcript;
+      }
+      if (answerInput) answerInput.value = transcript;
+    };
+
+    recognition.onend = () => {
+      isRecording = false;
+      micBtn.classList.remove('recording');
+      if (answerInput) answerInput.placeholder = 'TYPE YOUR DEFENSE...';
+    };
+
+    recognition.onerror = () => {
+      isRecording = false;
+      micBtn.classList.remove('recording');
+      if (answerInput) answerInput.placeholder = 'TYPE YOUR DEFENSE...';
+    };
+  }
+
+  function toggleMic() {
+    if (!recognition) {
+      showToast('Speech recognition not supported in this browser.', 'warning');
+      return;
+    }
+    if (isRecording) {
+      recognition.stop();
+    } else {
+      recognition.start();
+    }
+  }
+
+  // ── History Drawer ──
+  const answerHistory = []; // { q, a, score }
+
+  function addToHistory(question, answer, score) {
+    answerHistory.push({ q: question, a: answer, score });
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const list = document.getElementById('history-list');
+    if (!list) return;
+    if (answerHistory.length === 0) {
+      list.innerHTML = '<p class="text-on-surface-variant text-xs font-label-caps p-4 opacity-60">No answers yet.</p>';
+      return;
+    }
+    list.innerHTML = answerHistory.map((item, i) => {
+      const scoreClass = item.score >= 75 ? 'score--high' : item.score >= 50 ? 'score--mid' : 'score--low';
+      return `
+        <div class="history-item">
+          <div class="history-item__q">Q${i + 1}: ${item.q}</div>
+          <div class="history-item__a">${item.a}</div>
+          <span class="history-score-badge ${scoreClass}">${item.score}/100</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function openHistoryDrawer() {
+    document.getElementById('history-drawer').classList.add('open');
+    document.getElementById('history-drawer-overlay').classList.add('open');
+  }
+
+  function closeHistoryDrawer() {
+    document.getElementById('history-drawer').classList.remove('open');
+    document.getElementById('history-drawer-overlay').classList.remove('open');
+  }
+
+  // ── Thinking Indicator (loading between questions) ──
+  function showThinkingIndicator() {
+    const el = document.getElementById('thinking-indicator');
+    if (el) el.classList.add('visible');
+    const dialogue = document.getElementById('dialogue-text');
+    if (dialogue) dialogue.style.opacity = '0.3';
+  }
+
+  function hideThinkingIndicator() {
+    const el = document.getElementById('thinking-indicator');
+    if (el) el.classList.remove('visible');
+    const dialogue = document.getElementById('dialogue-text');
+    if (dialogue) dialogue.style.opacity = '1';
+  }
+
+  // ── Webcam Consent (NEW) ──
+  function grantWebcamConsent() {
+    sessionStorage.setItem('mm_webcam_consent', 'granted');
+    document.getElementById('webcam-consent').classList.remove('visible');
+    // Webcam/FaceAPI init would go here in future
+    showToast('Webcam enabled for session.', 'success');
+  }
+
+  function denyWebcamConsent() {
+    sessionStorage.setItem('mm_webcam_consent', 'denied');
+    document.getElementById('webcam-consent').classList.remove('visible');
+  }
+
+  // Check if already answered this session
+  window.addEventListener('DOMContentLoaded', () => {
+    const consent = sessionStorage.getItem('mm_webcam_consent');
+    if (consent) {
+      document.getElementById('webcam-consent').classList.remove('visible');
+    }
+
+    // Setup STT
+    setupSTT();
+
+    // Wire mic button
+    const micBtn = document.getElementById('mic-btn');
+    if (micBtn) micBtn.addEventListener('click', toggleMic);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      // Ignore if typing in input
+      if (document.activeElement === document.getElementById('answer-input')) return;
+
+      switch (e.key.toLowerCase()) {
+        case 's': toggleSound(); break;
+        case 'h': openHistoryDrawer(); break;
+        case 'm': toggleMic(); break;
+        case 'escape': closeHistoryDrawer(); break;
+      }
+    });
+  });
 </script>
 
 <!-- main.js must come before ai.js and interview.js -->
