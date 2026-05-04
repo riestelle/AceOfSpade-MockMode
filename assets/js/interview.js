@@ -369,13 +369,20 @@ async function finishInterview() {
   saveToStorage('scores', scores);
 
   // ── Save left-panel stat data for results.html ─────────────────────────
+  // If stress meter never updated (e.g. AI failures), estimate from scores
+  if (peakStressLevel === 0 && scores.length > 0) {
+    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+    peakStressLevel = Math.round(Math.max(0, 100 - avg));
+  }
   saveToStorage('peak_stress', Math.round(peakStressLevel) || 0);
   saveToStorage('personality', personality);
   saveToStorage('question_count', questions.length || scores.length || 5);
 
   // Best combo: longest streak of consecutive scores >= 60
+  // Use the scores we just saved to storage to guarantee accuracy
+  const finalScores = scores.length > 0 ? scores : (getFromStorage('scores') || []);
   let bestCombo = 0, currentCombo = 0;
-  for (const s of scores) {
+  for (const s of finalScores) {
     if (s >= 60) { currentCombo++; bestCombo = Math.max(bestCombo, currentCombo); }
     else { currentCombo = 0; }
   }

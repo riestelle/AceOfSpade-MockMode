@@ -116,8 +116,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const verdict        = getFromStorage('verdict');
   const scores         = getFromStorage('scores');
   const resumeAnalysis = getFromStorage('resume_analysis');
-  const combo          = getFromStorage('best_combo');
-  const peakStress     = getFromStorage('peak_stress');
+  const combo          = (() => {
+    // Recompute from actual scores as source of truth
+    const s = getFromStorage('scores') || [];
+    let best = 0, cur = 0;
+    for (const score of s) {
+      if (score >= 60) { cur++; best = Math.max(best, cur); }
+      else { cur = 0; }
+    }
+    return best;
+  })();
+  const peakStress     = (() => {
+    // Use saved value if valid, otherwise estimate from scores
+    const saved = getFromStorage('peak_stress');
+    if (saved != null && saved > 0) return saved;
+    // Estimate: low scores = high stress
+    const s = getFromStorage('scores') || [];
+    if (s.length === 0) return 0;
+    const avg = s.reduce((a, b) => a + b, 0) / s.length;
+    return Math.round(Math.max(0, 100 - avg));
+  })();
   const personality    = getFromStorage('personality');
   const questionCount  = getFromStorage('question_count');
   const sessionComplete = getFromStorage('session_complete');
