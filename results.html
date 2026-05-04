@@ -166,26 +166,63 @@
     <!-- Main Bento Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
 
-        <!-- Left: Portrait + Verdict Stamp -->
-        <div id="portrait-card" class="lg:col-span-4 bg-surface-container border-4 border-surface-container-highest shadow-[4px_4px_0_0_#1A0F0D] relative overflow-hidden group p-md min-h-[500px] flex flex-col">
-            <div class="absolute top-2 left-2 z-10 font-label-caps text-[10px] bg-tertiary text-surface px-1">BIO_SCAN: ACTIVE</div>
-            <img class="w-full h-full object-cover grayscale brightness-75 group-hover:grayscale-0 transition-all duration-500 border-2 border-surface-container-highest"
-                 src="https://lh3.googleusercontent.com/aida/ADBb0ugDlvR1vyuSZB3tffgLz2e8W3fwdsdgSelNhQGRl2crgkvgj2TqfODvjOxOgJ7z0radSKrZf-amYvyGRwLa8RyMd-oTl2lbfNtBPQfyv_UVKi_ZYud8nmtK9LT4Cv4L0UctUr0W5NoLvXUZ9d9-vq2joBlYv6XH9f9MNhVk6PtIUhBjufNWPK3Z85wi6OXUG04lBkCk5dW0j3Rv4-okVN6_dFmxvxIQk_rMTjrCwcs1vPccUoKrXcX0lU-b"
-                 alt="Recruit portrait"/>
+        <!-- Left: Recruit Stats Panel -->
+        <div id="portrait-card" class="lg:col-span-4 bg-surface-container border-4 border-surface-container-highest shadow-[4px_4px_0_0_#1A0F0D] p-md flex flex-col gap-md">
 
-            <!-- Status badge -->
-            <div class="absolute bottom-4 left-4 right-4 bg-surface-container-low/90 p-md border-t-4 border-tertiary">
-                <p class="font-headline-md text-on-surface">RECRUIT_#7721</p>
-                <p id="status-label" class="font-label-caps text-tertiary">STATUS: VALIDATED</p>
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b border-outline-variant pb-md">
+                <p class="font-label-caps text-tertiary text-[10px] uppercase tracking-widest">RECRUIT_FILE</p>
+                <p class="font-label-caps text-outline text-[10px]">#7721</p>
             </div>
 
-            <!-- Verdict stamp — animated in by GSAP -->
-            <div id="verdict-stamp" class="absolute bottom-16 left-1/2 -translate-x-1/2 -rotate-12 z-20 border-4 border-tertiary px-4 py-2 opacity-90 pointer-events-none max-w-[200px]" >
-                <span id="verdict-text"
-class="text-4x1 font-black text-tertiary tracking-tighter leading-none block uppercase font-headline-md"
-                    style="text-shadow: 0 0 16px rgba(160,207,207,0.5)">
-                    ...
-                </span>
+            <!-- Verdict stamp box -->
+            <div class="flex flex-col items-center justify-center py-lg border-4 border-surface-container-highest bg-surface-container-low">
+                <p class="font-label-caps text-outline text-[10px] uppercase tracking-widest mb-sm">FINAL VERDICT</p>
+                <div class="-rotate-6">
+                    <span id="verdict-text"
+                        class="text-6xl font-black text-tertiary tracking-tighter leading-none block uppercase font-headline-md"
+                        style="text-shadow: 0 0 16px rgba(160,207,207,0.5)">
+                        ...
+                    </span>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div class="bg-surface-container-low border-2 border-outline-variant p-md flex items-center justify-between">
+                <p class="font-label-caps text-outline text-xs uppercase tracking-widest">Status</p>
+                <p id="status-label" class="font-label-caps text-tertiary text-xs">VALIDATED</p>
+            </div>
+
+            <!-- Stat rows -->
+            <div class="flex flex-col gap-xs flex-1">
+                <div class="bg-surface-container-low border-2 border-outline-variant p-md flex items-center justify-between">
+                    <div class="flex items-center gap-sm">
+                        <span class="material-symbols-outlined text-base text-outline">psychiatry</span>
+                        <p class="font-label-caps text-outline text-xs uppercase tracking-widest">Peak Stress</p>
+                    </div>
+                    <p id="stat-stress" class="font-headline-md text-on-surface text-sm">—</p>
+                </div>
+                <div class="bg-surface-container-low border-2 border-outline-variant p-md flex items-center justify-between">
+                    <div class="flex items-center gap-sm">
+                        <span class="material-symbols-outlined text-base text-outline">local_fire_department</span>
+                        <p class="font-label-caps text-outline text-xs uppercase tracking-widest">Best Combo</p>
+                    </div>
+                    <p id="stat-combo" class="font-headline-md text-on-surface text-sm">—</p>
+                </div>
+                <div class="bg-surface-container-low border-2 border-outline-variant p-md flex items-center justify-between">
+                    <div class="flex items-center gap-sm">
+                        <span class="material-symbols-outlined text-base text-outline">person</span>
+                        <p class="font-label-caps text-outline text-xs uppercase tracking-widest">Interviewer</p>
+                    </div>
+                    <p id="stat-personality" class="font-headline-md text-on-surface text-sm capitalize">—</p>
+                </div>
+                <div class="bg-surface-container-low border-2 border-outline-variant p-md flex items-center justify-between">
+                    <div class="flex items-center gap-sm">
+                        <span class="material-symbols-outlined text-base text-outline">quiz</span>
+                        <p class="font-label-caps text-outline text-xs uppercase tracking-widest">Questions</p>
+                    </div>
+                    <p id="stat-questions" class="font-headline-md text-on-surface text-sm">—</p>
+                </div>
             </div>
         </div>
 
