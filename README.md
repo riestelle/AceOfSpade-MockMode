@@ -83,7 +83,7 @@ The easiest way is to just hit the live link above. But if you want to run it lo
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/AceOfSpade/MockMode.git
+git clone https://github.com/riestelle/AceInSpade-MockMode.git
 cd MockMode
 ```
 
