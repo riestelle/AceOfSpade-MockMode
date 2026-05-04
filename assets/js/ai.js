@@ -182,15 +182,15 @@ async function evaluateAnswer(question, answer, personality, role = 'general') {
 
 async function streamInterviewerMessage(prompt, personality, targetElement, onDone) {
   const personalityPrompts = {
-    corporate: 'You are a strict, formal corporate hiring manager.',
-    startup: 'You are a chill startup founder.',
-    technical: 'You are a tough technical lead.'
+    corporate: 'You are Ms. Reyes, a strict formal corporate hiring manager. You are direct, composed, and expect precision.',
+    startup: 'You are Kai, a chill startup co-founder who values passion and authenticity. You are conversational but thoughtful.',
+    technical: 'You are Dr. Matsuda, a tough principal engineer who values depth and specificity. You are measured and skeptical.'
   };
 
   const messages = [
     {
       role: 'system',
-      content: `${personalityPrompts[personality]} Respond in character in 1-2 sentences only.`
+      content: `${personalityPrompts[personality]} Respond in character in 1-2 sentences only. Vary how you open each question — avoid starting with the same word or phrase every time.`
     },
     {
       role: 'user',
