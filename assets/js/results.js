@@ -79,6 +79,37 @@ const COMP_CONFIG = {
 };
 
 
+// ─── Dev / preview seed ───────────────────────────────────────────────────────
+// If the URL contains ?mock or ?preview, seed fake data so results.html
+// can be viewed and styled without completing the full interview flow.
+// Remove this block (or the query param) before shipping to production.
+
+(function seedMockDataIfRequested() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has('mock') && !params.has('preview')) return;
+
+  const mockVerdict = {
+    verdict:         'HIRED',
+    average:         92,
+    verdict_message: 'We are pleased to inform you that after careful consideration of your application and interview performance, we are offering you the analyst position. Your technical skills and experience in performance optimization and code quality improvement were particularly impressive. We believe your strengths outweigh your weaknesses and are excited to see you grow with our team.',
+    final_tip:       'To further develop as an analyst, focus on seeking out opportunities to lead small projects or mentor junior team members to build your leadership and management skills.',
+  };
+
+  saveToStorage('verdict',         mockVerdict);
+  saveToStorage('scores',          [88, 95, 90, 93, 94]);
+  saveToStorage('resume_analysis', {
+    strengths:  ['Strong system design fundamentals', 'Excellent code quality track record', 'Clear communicator under pressure'],
+    weaknesses: ['Limited leadership experience', 'Could elaborate more on project impact'],
+  });
+  saveToStorage('best_combo',      4);
+  saveToStorage('peak_stress',     62);
+  saveToStorage('personality',     'startup');
+  saveToStorage('question_count',  5);
+
+  console.info('[MockMode] 🧪 Mock data seeded. Remove ?mock from URL for production.');
+})();
+
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -398,14 +429,17 @@ function renderCombo(combo) {
  */
 function runEntranceAnimations(verdictKey) {
   if (typeof gsap === 'undefined') {
-    // GSAP not loaded — just make everything visible
-    document.getElementById('portrait-card').style.opacity = '1';
-    document.getElementById('verdict-stamp').style.opacity = '1';
+    // GSAP not loaded — make everything visible with null-safe guards
+    const portraitCard = document.getElementById('portrait-card');
+    if (portraitCard) portraitCard.style.opacity = '1';
+    const verdictStamp = document.getElementById('verdict-stamp');
+    if (verdictStamp) verdictStamp.style.opacity = '1';
     document.querySelectorAll('.stat-card').forEach(el => {
       el.style.opacity = '1';
       el.style.transform = 'none';
     });
-    document.getElementById('verdict-text').classList.add('verdict--revealed');
+    const verdictText = document.getElementById('verdict-text');
+    if (verdictText) verdictText.classList.add('verdict--revealed');
     return;
   }
 

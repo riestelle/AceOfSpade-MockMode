@@ -53,13 +53,18 @@
     .comp-card.comp--void:hover { transform: none; }
 
     /* stat cards start hidden for GSAP */
-    .stat-card { opacity: 0; transform: translateY(24px); }
+    .stat-card { opacity: 0; transform: translateY(24px); transition: opacity 0.4s ease, transform 0.4s ease; }
 
     /* portrait starts hidden */
-    #portrait-card { opacity: 0; }
+    #portrait-card { opacity: 0; transition: opacity 0.5s ease; }
 
     /* verdict stamp starts hidden */
     #verdict-stamp { opacity: 0; transform: scale(0.4) rotate(-20deg); }
+
+    /* Safety net: if JS never fires (e.g. network failure), reveal after 3s */
+    @keyframes mm-reveal { to { opacity: 1; transform: none; } }
+    .stat-card     { animation: mm-reveal 0s 3s forwards; }
+    #portrait-card { animation: mm-reveal 0s 3s forwards; }
 </style>
 <script id="tailwind-config">
     tailwind.config = {
