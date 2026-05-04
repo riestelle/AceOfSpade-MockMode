@@ -444,13 +444,21 @@
 -->
 
       <div class="hidden md:block flex-shrink-0">
+        
         <div class="w-32 h-full min-h-[160px] bg-surface-container-lowest border-4 border-outline relative overflow-hidden flex flex-col"> 
           <video id="webcam-video" class="w-full flex-1 object-cover grayscale contrast-125" autoplay muted playsinline
           ></video>
+
           <div class="absolute top-1 left-1 flex items-center gap-1">
             <span class="w-2 h-2 bg-error rounded-full animate-ping"></span>
             <span class="text-[8px] font-label-caps text-error">REC</span>
           </div>
+
+          <div id="webcam-status-pill">
+            <span id="webcam-status-dot"></span>
+            <span id="webcam-status-text">CAMERA OFF</span>
+          </div>
+
         </div>
       </div>
 
