@@ -114,6 +114,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ── Question generation ────────────────────────────────────────────────────
 
+let loadQuestionsAttempts = 0;
+const MAX_LOAD_ATTEMPTS = 3;
+
 async function loadQuestions() {
   showLoader('Preparing your interview questions...');
   try {
@@ -121,15 +124,22 @@ async function loadQuestions() {
     if (!Array.isArray(generated) || generated.length === 0) {
       throw new Error('No questions returned from AI.');
     }
+    loadQuestionsAttempts = 0;
     questions = generated;
     saveToStorage('questions', questions);
     hideLoader();
     startInterview();
   } catch (err) {
     hideLoader();
+    loadQuestionsAttempts++;
     console.error('[MockMode] generateQuestions failed:', err);
-    showToast('Could not load questions. Retrying in 3 seconds...', 'error');
-    setTimeout(loadQuestions, 3000);
+    if (loadQuestionsAttempts < MAX_LOAD_ATTEMPTS) {
+      showToast(`Could not load questions. Retrying... (${loadQuestionsAttempts}/${MAX_LOAD_ATTEMPTS})`, 'error');
+      setTimeout(loadQuestions, 5000);
+    } else {
+      showToast('AI is currently unavailable. Please try again later.', 'error');
+      setTimeout(() => navigateTo('upload.html'), 2000);
+    }
   }
 }
 
@@ -390,7 +400,14 @@ async function finishInterview() {
     console.error('[MockMode] generateVerdict failed:', err);
     showToast('Could not generate verdict. Retrying...', 'error');
     isProcessing = false;
-    setTimeout(finishInterview, 3000);
+    if (!finishInterview._attempts) finishInterview._attempts = 0;
+    finishInterview._attempts++;
+    if (finishInterview._attempts < 3) {
+      setTimeout(finishInterview, 3000);
+    } else {
+      finishInterview._attempts = 0;
+      showToast('Could not generate verdict. Please try again.', 'error');
+    }
   }
 }
 
