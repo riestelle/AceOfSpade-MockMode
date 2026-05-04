@@ -26,6 +26,7 @@ let comboCount      = 0;      // live combo counter, resets on score < 70
 let isProcessing    = false;
 let skipUsed        = false;
 let isBossQuestion  = false;  // true when currentIndex === 4 (Q5)
+let lastAnswerContext = null; // { answer, score } from previous question — used to connect questions
 
 // ── Timer state ────────────────────────────────────────────────────────────
 // Logic is wired — UI hookup (display element) is frontend's job.
@@ -227,9 +228,19 @@ async function askCurrentQuestion() {
 
   const question = questions[currentIndex];
 
+  // Build a context-aware prompt so the interviewer reacts to the previous answer
+  let questionPrompt;
+  if (lastAnswerContext && currentIndex > 0) {
+    const { answer, score } = lastAnswerContext;
+    const quality = score >= 70 ? 'strong' : score >= 50 ? 'mediocre' : 'weak or nonsensical';
+    questionPrompt = `The candidate just gave a ${quality} answer to the previous question. Their answer was: "${answer}". Briefly acknowledge it in one short clause (e.g. react naturally in character), then transition into asking this next question: "${question}". Keep the whole thing to 1-2 sentences.`;
+  } else {
+    questionPrompt = `Ask this interview question naturally, in character: "${question}"`;
+  }
+
   try {
     await streamInterviewerMessage(
-      `Ask this interview question naturally, in character: "${question}"`,
+      questionPrompt,
       personality,
       dialogueBox,
       (fullText) => {
@@ -292,6 +303,9 @@ async function submitAnswer() {
     score = Math.max(0, Math.min(100, score));
 
     scores.push(score);
+
+    // Save context so next question can reference this answer
+    lastAnswerContext = { answer, score };
 
     // ── Mood tracking (hidden, passed to AI on next turn) ──────────────
     // Good answer → mood up, bad answer → mood down
