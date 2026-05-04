@@ -444,7 +444,7 @@
 -->
 
       <div class="hidden md:block flex-shrink-0">
-        
+
         <div class="w-32 h-full min-h-[160px] bg-surface-container-lowest border-4 border-outline relative overflow-hidden flex flex-col"> 
           <video id="webcam-video" class="w-full flex-1 object-cover grayscale contrast-125" autoplay muted playsinline
           ></video>
@@ -563,7 +563,7 @@
   <p class="font-body-md text-on-surface flex-1 min-w-[200px]">
     <strong class="text-tertiary">Webcam Confidence Tracking</strong> — Enable your camera to analyze facial expression confidence during the interview? No data is sent externally.
   </p>
-  <div class="flex gap-3 flex-shrink-0">
+  <div class="mm-webcam-actions flex gap-3 flex-shrink-0">
     <button onclick="handleWebcamConsent('grant')" class="font-label-caps text-xs px-4 py-2 bg-tertiary text-surface border-2 border-black shadow-step hover:opacity-90 transition-opacity">
       ENABLE
     </button>
@@ -742,7 +742,24 @@
 <!-- main.js must come before ai.js and interview.js -->
 <script src="assets/js/main.js"></script>
 <script src="assets/js/ai.js"></script>
+
+<!-- 
+  Face Cam
+  START: ID.1
+  NOTE: This is specified for Face Cam features.
+  ELLIE WORKAROUNDS
+-->
+
 <script src="assets/js/session-interview/asset.interview.js"></script>
+
+<!-- <script src="assets/js/session-interview/vendor/face-api.min.js"></script> -->
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 <script src="assets/js/session-interview/asset.webcam.js"></script>
+
+<!-- 
+  END: ID.1
+  ELLIE WORKAROUNDS
+-->
+
 </body>
 </html>
