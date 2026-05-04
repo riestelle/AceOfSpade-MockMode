@@ -370,6 +370,7 @@ async function finishInterview() {
     else { currentCombo = 0; }
   }
   saveToStorage('best_combo', bestCombo);
+  saveToStorage('session_complete', Date.now());
   showLoader('Calculating your verdict...');
 
   try {
