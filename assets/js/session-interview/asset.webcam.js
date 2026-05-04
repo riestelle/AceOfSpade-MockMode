@@ -170,9 +170,9 @@ document.addEventListener('DOMContentLoaded', () => {
     .then(() => manageFaceMonitoring(true, 'webcam-video'))
     .then(() => {
       if (typeof setWebcamUiState === 'function') {
-        setWebcamUiState('ready', 'Camera is Ready!');
+        setWebcamUiState('ready', 'Camera ONLINE');
       }
-      updateWebcamUiState('ready', 'Camera is Ready!');
+      updateWebcamUiState('ready', 'Camera ONLINE');
     })
     .catch((err) => {
       console.error('[MockMode] Auto webcam monitor failed:', err);
