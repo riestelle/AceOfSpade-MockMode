@@ -121,27 +121,9 @@ document.addEventListener('DOMContentLoaded', () => {
  * @returns {string} one of the VERDICT_CONFIG keys
  */
 function resolveVerdictKey(v) {
-  const result      = (v.verdict ?? '').toUpperCase();
-  const avg         = v.average     ?? 0;
-  const personality = (v.personality ?? '').toLowerCase();
-  const peakStress  = v.peak_stress ?? 0;
-
-  if (result === 'FIRED') {
-    // Early breakdown: stress hit 100
-    if (peakStress >= 100) return 'fired-breakdown';
-    // Technical failure: technical personality + low score
-    if (personality === 'technical') return 'fired-technical';
-    // Attitude: strict personality + low score
-    if (personality === 'corporate' || personality === 'strict') return 'fired-attitude';
-    return 'fired-breakdown'; // fallback fired
-  }
-
-  if (result === 'HIRED') {
-    // Lucky hire: stress was dangerously high at some point but they recovered
-    if (peakStress >= 70) return 'hired-lucky';
-    return 'hired-confident';
-  }
-
+  const result = (v.verdict ?? '').toUpperCase();
+  if (result === 'HIRED')  return 'hired-confident';
+  if (result === 'FIRED')  return 'fired-breakdown';
   return 'waitlisted';
 }
 
