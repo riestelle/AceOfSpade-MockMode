@@ -105,38 +105,6 @@
       height: 100%;
     }
 
-    /* ── Blink overlay — CSS-driven, sits over the Lottie SVG ── */
-    .blink-overlay {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-    }
-
-    /* Individual blink rects — positioned as % of 386×278 comp */
-    .blink-l, .blink-r {
-      position: absolute;
-      background: transparent; /* color set per character */
-      border-radius: 1px;
-      transform-origin: center center;
-      transform: scaleY(0);     /* closed by default */
-    }
-
-    /* Blink animation: rapid close/open */
-    @keyframes do-blink {
-      0%   { transform: scaleY(0); }
-      15%  { transform: scaleY(1); }
-      30%  { transform: scaleY(0); }
-      100% { transform: scaleY(0); }
-    }
-
-    /* Idle float */
-    @keyframes idle-float {
-      0%, 100% { transform: translateY(0px); }
-      50%       { transform: translateY(-4px); }
-    }
-    .lottie-wrap.idle { animation: idle-float 3s ease-in-out infinite; }
-    .lottie-wrap.talking { animation: none; }
-
     .char-name {
       font-family: 'Press Start 2P', monospace;
       font-size: 9px;
@@ -331,23 +299,6 @@
     <div class="state-row">
       <span style="font-size:17px;color:var(--muted)">STATE:</span>
       <span class="badge stopped" id="state-badge">STOPPED</span>
-
-      <!-- Blink toggle -->
-      <div class="toggle-row" style="margin-left:auto">
-        <span class="toggle-label">BLINK</span>
-        <label class="toggle">
-          <input type="checkbox" id="blink-toggle" checked onchange="onBlinkToggle(this.checked)">
-          <div class="toggle-track"></div>
-          <div class="toggle-thumb"></div>
-        </label>
-      </div>
-    </div>
-
-    <!-- Blink speed -->
-    <div class="slider-row">
-      <label for="blink-speed">BLINK EVERY</label>
-      <input type="range" id="blink-speed" min="1500" max="8000" step="100" value="3500" oninput="onBlinkSpeedChange(this.value)">
-      <span class="slider-val" id="blink-speed-val">3.5s</span>
     </div>
 
     <!-- Speak text -->
@@ -393,8 +344,7 @@ const CHARACTERS = [
     name: 'KAI',
     role: 'Co-founder & Culture Lead',
     path: 'assets/animations/kai.json',
-    // Approximate eye positions as % of the rendered frame (160×120 display)
-    // You may need to tweak these per character after visual inspection.
+    gender: 'male',
     eyes: [
       { left: '28%', top: '30%', w: '14%', h: '8%', color: '#c8b89a' },
       { left: '57%', top: '30%', w: '14%', h: '8%', color: '#c8b89a' },
@@ -405,6 +355,7 @@ const CHARACTERS = [
     name: 'DR. MATSUDA',
     role: 'Principal Engineer',
     path: 'assets/animations/matsuda.json',
+    gender: 'male',
     eyes: [
       { left: '27%', top: '28%', w: '14%', h: '8%', color: '#c8b89a' },
       { left: '57%', top: '28%', w: '14%', h: '8%', color: '#c8b89a' },
@@ -415,6 +366,7 @@ const CHARACTERS = [
     name: 'MS. REYES',
     role: 'VP of Operations',
     path: 'assets/animations/reyes.json',
+    gender: 'female',
     eyes: [
       { left: '28%', top: '30%', w: '14%', h: '8%', color: '#c8b89a' },
       { left: '57%', top: '30%', w: '14%', h: '8%', color: '#c8b89a' },
@@ -458,8 +410,8 @@ class CharacterController {
 
     // Lottie div
     const lottiDiv = document.createElement('div');
-    lottiDiv.className = 'lottie-wrap idle';
-    lottiDiv.style.cssText = 'width:100%;height:100%;';
+    lottiDiv.className = 'lottie-wrap';
+    lottiDiv.style.cssText = 'width:100%;height:100%;position:relative;';
     this.container.appendChild(lottiDiv);
     this._lottieWrap = lottiDiv;
 
@@ -467,35 +419,9 @@ class CharacterController {
     this.anim = lottie.loadAnimation({
       container: lottiDiv,
       renderer: 'svg',
-      loop: true,
-      autoplay: true,
+      loop: true,   // loop for idle animations
+      autoplay: false,  // don't autoplay
       path: this.animPath,
-    });
-
-    // Blink overlay
-    const ov = document.createElement('div');
-    ov.className = 'blink-overlay';
-    ov.style.cssText = 'position:absolute;inset:0;pointer-events:none;';
-    this.container.appendChild(ov);
-    this._overlay = ov;
-
-    // Build blink elements (one rect per eye)
-    this._blinkEls = this.eyeDefs.map((e, i) => {
-      const el = document.createElement('div');
-      el.style.cssText = `
-        position: absolute;
-        left: ${e.left};
-        top: ${e.top};
-        width: ${e.w};
-        height: ${e.h};
-        background: ${e.color};
-        border-radius: 1px;
-        transform: scaleY(0);
-        transform-origin: center center;
-        pointer-events: none;
-      `;
-      ov.appendChild(el);
-      return el;
     });
 
     return new Promise(resolve => {
@@ -508,117 +434,43 @@ class CharacterController {
   // ── State machine ─────────────────────────────────────────────────────────
   goIdle() {
     this.state = 'idle';
-    this._lottieWrap?.classList.add('idle');
-    this._lottieWrap?.classList.remove('talking');
-    // Play the full animation loop slowly (frame 0→600)
-    if (this.anim) {
-      this.anim.setSpeed(0.4);
-      this.anim.play();
-    }
-    this._stopMouthAnim();
-    this._scheduleBlink();
-    log('◎ Idle', 'ok');
-  }
-
-  stopAll() {
-    this.state = 'stopped';
-    this._lottieWrap?.classList.remove('idle', 'talking');
+    // Pause at frame 0 (neutral expression)
     if (this.anim) {
       this.anim.goToAndStop(0, true);
     }
     this._stopMouthAnim();
-    this._cancelBlink();
+    log('◎ Idle — paused at frame 0', 'ok');
+  }
+
+  stopAll() {
+    this.state = 'stopped';
+    if (this.anim) {
+      this.anim.goToAndStop(0, true);
+    }
+    this._stopMouthAnim();
     log('■ Stopped — reset to frame 0', 'warn');
   }
 
   startTalking() {
+    if (this.state === 'talking') return; // already talking, don't re-trigger
     this.state = 'talking';
-    this._lottieWrap?.classList.remove('idle');
-    this._lottieWrap?.classList.add('talking');
-    // Speed up the animation slightly while talking
+    // Play the animation while talking
     if (this.anim) {
       this.anim.setSpeed(1.0);
       this.anim.play();
     }
-    this._cancelBlink(); // no blinking while talking
     this._startMouthAnim();
     log('▶ Talking...', 'ok');
   }
 
   stopTalking() {
-    if (this.state === 'stopped') return;
+    if (this.state !== 'talking') return;
     this._stopMouthAnim();
     this.goIdle();
     log('◎ Back to idle', 'info');
   }
 
-  // ── Blink ─────────────────────────────────────────────────────────────────
-  setBlinkEnabled(enabled) {
-    this.blinkOn = enabled;
-    if (enabled && this.state === 'idle') {
-      this._scheduleBlink();
-    } else {
-      this._cancelBlink();
-    }
-  }
 
-  setBlinkInterval(ms) {
-    this.blinkMs = ms;
-    if (this.state === 'idle' && this.blinkOn) {
-      this._cancelBlink();
-      this._scheduleBlink();
-    }
-  }
-
-  _scheduleBlink() {
-    this._cancelBlink();
-    if (!this.blinkOn || this.state !== 'idle') return;
-    // Randomise around blinkMs ±40% for naturalness
-    const jitter = this.blinkMs * 0.4;
-    const delay  = this.blinkMs - jitter/2 + Math.random() * jitter;
-    this._blinkTimer = setTimeout(() => {
-      this._doBlink();
-    }, delay);
-  }
-
-  _cancelBlink() {
-    clearTimeout(this._blinkTimer);
-    this._blinkTimer = null;
-  }
-
-  _doBlink() {
-    if (this.state !== 'idle') return;
-
-    // Animate each eye element: scale Y from 0→1→0 over ~150ms
-    const DUR = 150; // ms total for close+open
-    const steps = [
-      [0, 0], [1, 1],    // 0ms  open
-      [DUR * 0.3, 1],    // close
-      [DUR * 0.6, 1],    // closed hold
-      [DUR, 0],          // open
-    ];
-
-    this._blinkEls.forEach(el => {
-      el.style.transition = 'none';
-      el.style.transform  = 'scaleY(0)';
-      void el.offsetWidth; // reflow
-
-      el.style.transition  = `transform ${DUR * 0.3}ms ease-in`;
-      el.style.transform   = 'scaleY(1)';
-
-      setTimeout(() => {
-        el.style.transition = `transform ${DUR * 0.4}ms ease-out`;
-        el.style.transform  = 'scaleY(0)';
-      }, DUR * 0.5);
-    });
-
-    // Occasionally do a double-blink
-    if (Math.random() < 0.15) {
-      setTimeout(() => this._doBlink(), DUR + 100);
-    }
-
-    this._scheduleBlink();
-  }
 
   // ── Mouth animation (CSS-driven, no Lottie layer needed) ──────────────────
   // Finds the mouth rect element inside the rendered Lottie SVG by layer name
@@ -686,7 +538,6 @@ class CharacterController {
   }
 
   destroy() {
-    this._cancelBlink();
     this._stopMouthAnim();
     clearTimeout(this._idleTimer);
     if (this.anim) { this.anim.destroy(); this.anim = null; }
@@ -700,8 +551,6 @@ let activeCtrl   = null;   // CharacterController
 let controllers  = {};     // id → CharacterController (for multi-char preview)
 let synth        = window.speechSynthesis;
 let voice        = null;
-let blinkEnabled = true;
-let blinkMs      = 3500;
 
 // ── Build character cards ────────────────────────────────────────────────────
 function buildStage() {
@@ -747,8 +596,6 @@ async function selectChar(c) {
 
   try {
     await ctrl.init();
-    ctrl.setBlinkEnabled(blinkEnabled);
-    ctrl.setBlinkInterval(blinkMs);
     ctrl.goIdle();
     updateState('idle');
     log(`${c.name} loaded ✓`, 'ok');
@@ -758,16 +605,73 @@ async function selectChar(c) {
 }
 
 // ── TTS ──────────────────────────────────────────────────────────────────────
-function pickVoice() {
+// Returns the best available voice for the requested gender.
+// gender: 'female' | 'male' | 'neutral' (neutral prefers female)
+function pickVoice(gender = 'neutral') {
   const voices = synth.getVoices();
-  const want   = ['Google UK English Male','Microsoft David Desktop','Microsoft Mark Desktop','Alex','Daniel'];
-  for (const name of want) {
+  if (!voices.length) return null;
+
+  // Preferred voice names, ordered best → fallback, keyed by gender
+  const PREFS = {
+    female: [
+      'Google UK English Female',
+      'Microsoft Zira Desktop',      // Windows
+      'Microsoft Hazel Desktop',     // Windows UK female
+      'Samantha',                    // macOS
+      'Karen',                       // macOS AU
+      'Moira',                       // macOS Irish
+      'Tessa',                       // macOS SA
+      'Victoria',                    // macOS
+      'Susan',
+      'Allison',
+      'Ava',
+      'Fiona',
+      'Kate',
+    ],
+    male: [
+      'Google UK English Male',
+      'Microsoft David Desktop',
+      'Microsoft Mark Desktop',
+      'Alex',
+      'Daniel',
+      'Fred',
+      'Tom',
+      'Bruce',
+      'Ralph',
+      'Jorge',
+      'Diego',
+      'Lee',
+      'Luca',
+    ],
+  };
+
+  // neutral falls back to female preference
+  const wantList = PREFS[gender] ?? PREFS.female;
+
+  // 1) Try exact named match from preference list
+  for (const name of wantList) {
     const v = voices.find(v => v.name === name);
     if (v) return v;
   }
+
+  // 2) Heuristic: scan voice names for gender keywords
+  const femaleHint = /female|woman|girl|zira|samantha|karen|moira|tessa|victoria|hazel|fiona|allison|ava|susan|kate/i;
+  const maleHint   = /male|man|guy|david|mark|alex|daniel|fred|jorge|diego/i;
+
+  if (gender === 'female' || gender === 'neutral') {
+    const v = voices.find(v => femaleHint.test(v.name) && v.lang?.startsWith('en'));
+    if (v) return v;
+  }
+  if (gender === 'male') {
+    const v = voices.find(v => maleHint.test(v.name) && v.lang?.startsWith('en'));
+    if (v) return v;
+  }
+
+  // 3) Any English voice as last resort
   return voices.find(v => v.lang?.startsWith('en')) || voices[0] || null;
 }
-if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = () => { voice = pickVoice(); };
+
+if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = () => { /* voices ready */ };
 
 // ── Controls ──────────────────────────────────────────────────────────────────
 function doSpeak() {
@@ -776,17 +680,36 @@ function doSpeak() {
   if (!text) { log('No text to speak', 'warn'); return; }
 
   synth.cancel();
-  if (!voice) voice = pickVoice();
+
+  // Pick voice based on the active character's gender
+  const gender = activeChar?.gender ?? 'neutral';
+  const chosenVoice = pickVoice(gender);
 
   const u = new SpeechSynthesisUtterance(text);
-  u.rate  = 0.88;
-  u.pitch = 0.82;
+  // Tune pitch/rate per gender for more natural sound
+  if (gender === 'female' || gender === 'neutral') {
+    u.rate  = 0.90;
+    u.pitch = 1.15;   // slightly higher for a natural female cadence
+  } else {
+    u.rate  = 0.88;
+    u.pitch = 0.82;
+  }
+  // Special adjustment for Kai to sound younger
+  if (activeChar?.id === 'kai') {
+    u.pitch = 1.0;  // higher pitch for younger male voice
+  }
   u.volume = 1;
-  if (voice) u.voice = voice;
+  if (chosenVoice) {
+    u.voice = chosenVoice;
+    log(`Voice: ${chosenVoice.name}`, 'info');
+  } else {
+    log('No matching voice found — using browser default', 'warn');
+  }
 
   u.onstart = () => {
     activeCtrl.startTalking();
     updateState('talking');
+    log('Speaking...', 'ok');
   };
   u.onend = () => {
     activeCtrl.stopTalking();
@@ -800,7 +723,6 @@ function doSpeak() {
   };
 
   synth.speak(u);
-  log('Speaking...', 'ok');
 }
 
 function doStop() {
@@ -822,17 +744,7 @@ function doReset() {
   updateState('stopped');
 }
 
-function onBlinkToggle(checked) {
-  blinkEnabled = checked;
-  activeCtrl?.setBlinkEnabled(checked);
-  log(`Blink ${checked ? 'ON' : 'OFF'}`, 'info');
-}
 
-function onBlinkSpeedChange(val) {
-  blinkMs = parseInt(val);
-  document.getElementById('blink-speed-val').textContent = (blinkMs / 1000).toFixed(1) + 's';
-  activeCtrl?.setBlinkInterval(blinkMs);
-}
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
 function updateState(state) {
