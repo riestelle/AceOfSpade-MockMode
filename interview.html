@@ -5,7 +5,8 @@
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
   <title>MockMode — Interview Room</title>
   <script id="tailwind-config">
-    tailwind.config = {
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = {
       darkMode: "class",
       theme: {
         extend: {
