@@ -70,34 +70,95 @@ async function startWebcam(videoElementId = 'webcam-video') {
 // ──── START: ID.2 ────
 // ───────────────────────────────────────────────────────────────────────────
 
-let faceLimits = null;
-async function startFaceMonitoring(videoElementId = 'webcam-video') {
-    if (!window.faceapi) {
-        try {
-            throw new Error('face-api.js is not loaded.');
-        } catch (error) {
-            await faceapi.nets.tinyFaceDetector.loadFromUri(modelPath);
-        }}
 
-    const video = document.getElementById(videoElementId);
-    clearInterval(faceLimits); faceLimits = setInterval(async () => {
+let faceMonitorTimer = null;
+let faceApiModelsLoaded = false;
+
+async function manageFaceMonitoring(enable, videoElementId = 'webcam-video', modelPath = '/models') {
+  if (!enable) {
+    if (faceMonitorTimer) {
+      clearInterval(faceMonitorTimer);
+      faceMonitorTimer = null;
+    }
+    return;
+  }
+
+  const video = document.getElementById(videoElementId);
+  if (!video) {
+    throw new Error(`Video element with id "${videoElementId}" was not found.`);
+  }
+
+  if (!window.faceapi) {
+    throw new Error('face-api.js is not loaded.');
+  }
+
+  if (!faceApiModelsLoaded) {
+    await faceapi.nets.tinyFaceDetector.loadFromUri(modelPath);
+    faceApiModelsLoaded = true;
+  }
+
+  if (faceMonitorTimer) {
+    clearInterval(faceMonitorTimer);
+    faceMonitorTimer = null;
+  }
+
+  faceMonitorTimer = setInterval(async () => {
     if (video.paused || video.ended || video.readyState < 2) {
-        return;
-    } 
+      return;
+    }
 
-    const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({
-        scoreThreshold: 0.5})
-    );
+    try {
+      const detections = await faceapi.detectAllFaces(
+        video,
+        new faceapi.TinyFaceDetectorOptions({
+          scoreThreshold: 0.5
+        })
+      );
 
-    document.dispatchEvent(new CustomEvent('mm:face-monitor', {
-        detail: {
+      document.dispatchEvent(
+        new CustomEvent('mm:face-monitor', {
+          detail: {
             hasFace: detections.length > 0,
             faceCount: detections.length,
             detections
-        }}));
-    }, 500);
+          }
+        })
+      );
+    } catch (err) {
+      console.error('[MockMode] Face monitoring failed:', err);
+    }
+  }, 500);
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const consent = sessionStorage.getItem('mm_webcam_consent');
+
+  if (consent !== 'granted') {
+    return;
+  }
+
+  if (typeof setWebcamUiState === 'function') {
+    setWebcamUiState('loading', 'Starting Camera...');
+  }
+
+  startWebcam('webcam-video').then(() => manageFaceMonitoring(true, 'webcam-video')).then(() => {
+      if (typeof setWebcamUiState === 'function') {
+        setWebcamUiState('ready', 'Camera is Ready!');
+      }}).catch((err) => {
+      console.error('[MockMode] Auto webcam monitor failed:', err);
+      
+      sessionStorage.removeItem('mm_webcam_consent');
+      manageFaceMonitoring(false);
+      if (typeof setWebcamUiState === 'function') {
+        setWebcamUiState('error', 'Camera failed to initialize.');
+      }
+    });
+});
 
 // ───────────────────────────────────────────────────────────────────────────
 // ──── END: ID.2 ────
+// ───────────────────────────────────────────────────────────────────────────
+
+// ───────────────────────────────────────────────────────────────────────────
+// ──── START: ID.3 ────
 // ───────────────────────────────────────────────────────────────────────────
