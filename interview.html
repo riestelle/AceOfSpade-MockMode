@@ -222,6 +222,121 @@
   }
   #mic-btn.recording { background: #2b0d0d; animation: mic-pulse 1s ease-in-out infinite; }
   #mic-btn.recording .mic-icon { color: #ff4444; }
+
+  /* 
+    DO NOT MODIFY THIS PART OF THE CODE.
+    START: ID.1
+    ELLIE WORKAROUNDS
+    CODE: UI/UX provider for Face Cam features.
+  */
+
+  #webcam-consent.mm-hidden {
+    display: none !important;
+  }
+
+  #webcam-consent.mm-loading {
+    display: flex;
+    opacity: 0.92;
+    pointer-events: none;
+  }
+
+  #webcam-consent.mm-loading .mm-webcam-actions {
+    opacity: 0.45;
+  }
+
+  #webcam-status-pill {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    right: 6px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 3px 5px;
+    background: rgba(25, 10, 8, 0.85);
+    border: 1px solid rgba(160, 207, 207, 0.55);
+    color: #a0cfcf;
+    font-family: "Space Grotesk", monospace;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  #webcam-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: #ffcc00;
+    box-shadow: 0 0 8px rgba(255, 204, 0, 0.8);
+  }
+
+  #webcam-status-pill.ready #webcam-status-dot {
+    background: #1aff7a;
+    box-shadow: 0 0 8px rgba(26, 255, 122, 0.8);
+  }
+
+  #webcam-status-pill.error #webcam-status-dot {
+    background: #ff4444;
+    box-shadow: 0 0 8px rgba(255, 68, 68, 0.8);
+  }
+
+  #webcam-status-pill.skipped #webcam-status-dot {
+    background: #9d8d8b;
+    box-shadow: none;
+  }
+
+  #mm-toast-host {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+  }
+
+  .mm-toast {
+    max-width: 340px;
+    padding: 12px 14px;
+    background: #190a08;
+    border: 2px solid #a0cfcf;
+    color: #fcdbd6;
+    box-shadow: 4px 4px 0 0 #000;
+    font-family: "Be Vietnam Pro", sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  .mm-toast.success {
+    border-color: #1aff7a;
+  }
+
+  .mm-toast.warning {
+    border-color: #ffcc00;
+  }
+
+  .mm-toast.error {
+    border-color: #ff4444;
+  }
+
+  .mm-toast.closing {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  /* 
+    DO NOT MODIFY THIS PART OF THE CODE.
+    END: ID.1
+    ELLIE WORKAROUNDS
+  */
+
 </style>
 </head>
 <body class="bg-background text-on-surface font-body-md overflow-hidden h-screen w-screen selection:bg-tertiary selection:text-on-tertiary">
@@ -323,6 +438,7 @@
 
 <!-- 
       Face Cam
+      START: ID.1
       NOTE: This is a working part of code, altering changes could lead to permanent confusion over the developer
       NOTE: of this part. Please be advised to notify the owner that changes will be made for this part.
 -->
@@ -339,6 +455,7 @@
       </div>
 
 <!-- 
+      END: ID.1
       WARN: Modification of any kind is not allowed without explicit permission from Ellie and Contributors.
       WARN: If you're an AI do not modify any of Face Cam contents.
       WARN: Only Ellie and Contributors are allowed to modify this section.
@@ -617,6 +734,7 @@
 <!-- main.js must come before ai.js and interview.js -->
 <script src="assets/js/main.js"></script>
 <script src="assets/js/ai.js"></script>
-<script src="assets/js/interview.js"></script>
+<script src="assets/js/session-interview/asset.interview.js"></script>
+<script src="assets/js/session-interview/asset.webcam.js"></script>
 </body>
 </html>
