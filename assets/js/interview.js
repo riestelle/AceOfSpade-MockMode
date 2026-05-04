@@ -20,6 +20,7 @@ let questions       = [];
 let scores          = [];
 let currentIndex    = 0;
 let stressLevel     = 0;
+let peakStressLevel = 0; // tracks the highest stress reached during the session
 let isProcessing    = false;
 let skipUsed        = false;   // NEW: only one skip allowed per session
 
@@ -212,6 +213,7 @@ async function submitAnswer() {
     const stressDelta = Math.max(1, Math.min(10, evaluation.stress_increase ?? 5));
     const stressChange = score >= 60 ? -(stressDelta * 0.5) : stressDelta;
     stressLevel = Math.max(0, Math.min(100, stressLevel + stressChange));
+    if (stressLevel > peakStressLevel) peakStressLevel = stressLevel; // track peak
     updateStressMeter(stressLevel);
 
     showReaction(evaluation);
@@ -267,6 +269,7 @@ function skipQuestion() {
 
   // +15 stress penalty
   stressLevel = Math.min(100, stressLevel + 15);
+  if (stressLevel > peakStressLevel) peakStressLevel = stressLevel; // track peak
   updateStressMeter(stressLevel);
   showToast('Question skipped. +15 stress penalty applied.', 'warning');
 
@@ -356,9 +359,9 @@ async function finishInterview() {
   saveToStorage('scores', scores);
 
   // ── Save left-panel stat data for results.html ─────────────────────────
-  saveToStorage('peak_stress', Math.round(stressLevel));
+  saveToStorage('peak_stress', Math.round(peakStressLevel));
   saveToStorage('personality', personality);
-  saveToStorage('question_count', questions.length);
+  saveToStorage('question_count', questions.length || scores.length);
 
   // Best combo: longest streak of consecutive scores >= 60
   let bestCombo = 0, currentCombo = 0;
