@@ -19,10 +19,29 @@ let role            = null;
 let questions       = [];
 let scores          = [];
 let currentIndex    = 0;
-let stressLevel     = 0;
-let peakStressLevel = 0; // tracks the highest stress reached during the session
+let stressLevel     = 30;     // SPEC: starts at 30, not 0
+let peakStressLevel = 30;
+let moodScore       = 0;      // hidden: -100 to +100, affects AI tone only
+let comboCount      = 0;      // live combo counter, resets on score < 70
 let isProcessing    = false;
-let skipUsed        = false;   // NEW: only one skip allowed per session
+let skipUsed        = false;
+let isBossQuestion  = false;  // true when currentIndex === 4 (Q5)
+
+// ── Timer state ────────────────────────────────────────────────────────────
+// Logic is wired — UI hookup (display element) is frontend's job.
+let timerInterval   = null;
+let timeRemaining   = 45;
+const TIMER_DURATION = 45;
+
+// ── Personality score multipliers (SPEC) ──────────────────────────────────
+const PERSONALITY_MULTIPLIER = {
+  corporate:  0.9,   // strict  → penalises score
+  startup:    1.1,   // chill   → boosts score
+  technical:  1.0,   // neutral
+};
+
+// ── Boss question multiplier (SPEC) ───────────────────────────────────────
+const BOSS_MULTIPLIER = 1.5;  // Q5 score × 1.5 before capping at 100
 
 // ── Interviewer flavoring (NEW) ────────────────────────────────────────────
 // Each personality gets a fake name + title for immersion.
@@ -147,14 +166,55 @@ async function loadQuestions() {
 
 function startInterview() {
   updateProgressLabel();
-  updateStressMeter(0);
+  updateStressMeter(30);
   askCurrentQuestion();
+}
+
+// ── Timer ──────────────────────────────────────────────────────────────────
+// startTimer() / stopTimer() are called around each question.
+// Frontend dev wires updateTimerDisplay() to a DOM element.
+
+function startTimer() {
+  stopTimer();
+  timeRemaining = TIMER_DURATION;
+  if (typeof updateTimerDisplay === 'function') updateTimerDisplay(timeRemaining);
+
+  timerInterval = setInterval(() => {
+    timeRemaining--;
+    if (typeof updateTimerDisplay === 'function') updateTimerDisplay(timeRemaining);
+
+    if (timeRemaining <= 0) {
+      stopTimer();
+      handleTimerTimeout();
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+}
+
+// Called when timer hits 0: auto-submits a blank answer with stress penalty
+function handleTimerTimeout() {
+  if (isProcessing) return;
+  stressLevel = Math.min(100, stressLevel + 15);
+  if (stressLevel > peakStressLevel) peakStressLevel = stressLevel;
+  updateStressMeter(stressLevel);
+  checkLoseCondition();
+
+  // Force-submit a weak answer so the game loop continues
+  if (answerInput) answerInput.value = '[No answer — time ran out]';
+  submitAnswer();
 }
 
 async function askCurrentQuestion() {
   if (!dialogueBox) return;
 
   clearReactionBox();
+  isBossQuestion = (currentIndex === 4);  // flag Q5 as boss question
 
   if (answerInput) {
     answerInput.value = '';
@@ -163,29 +223,28 @@ async function askCurrentQuestion() {
   }
   if (submitBtn) submitBtn.disabled = false;
 
-  // Hide thinking indicator once we start showing the question
   if (typeof hideThinkingIndicator === 'function') hideThinkingIndicator();
 
   const question = questions[currentIndex];
 
   try {
-    // Stream the question into the dialogue box
     await streamInterviewerMessage(
       `Ask this interview question naturally, in character: "${question}"`,
       personality,
       dialogueBox,
       (fullText) => {
-        // onDone: speak the question via TTS (NEW)
         if (typeof speakText === 'function') {
           speakText(fullText || question);
         }
         if (answerInput) answerInput.disabled = false;
+        startTimer();  // start countdown after question is spoken
       }
     );
   } catch (err) {
     console.warn('[MockMode] Stream failed, using direct text:', err);
     if (dialogueBox) dialogueBox.textContent = question;
     if (typeof speakText === 'function') speakText(question);
+    startTimer();
   }
 }
 
@@ -202,6 +261,7 @@ async function submitAnswer() {
   }
 
   isProcessing = true;
+  stopTimer();  // stop countdown the moment they submit
   if (submitBtn) submitBtn.disabled = true;
   if (skipBtn)   skipBtn.disabled   = true;
   if (answerInput) answerInput.disabled = true;
@@ -216,15 +276,43 @@ async function submitAnswer() {
 
     hideLoader();
 
-    const score = Math.max(0, Math.min(100, evaluation.score ?? 50));
+    // ── Score pipeline ─────────────────────────────────────────────────
+    let score = Math.max(0, Math.min(100, evaluation.score ?? 50));
+
+    // 1. Personality multiplier (SPEC: strict ×0.9, chill ×1.1)
+    const multiplier = PERSONALITY_MULTIPLIER[personality] ?? 1.0;
+    score = Math.round(score * multiplier);
+
+    // 2. Boss question multiplier (SPEC: Q5 ×1.5)
+    if (isBossQuestion) {
+      score = Math.round(score * BOSS_MULTIPLIER);
+    }
+
+    // 3. Cap at 100
+    score = Math.max(0, Math.min(100, score));
+
     scores.push(score);
 
-    // Stress calculation
+    // ── Mood tracking (hidden, passed to AI on next turn) ──────────────
+    // Good answer → mood up, bad answer → mood down
+    moodScore = Math.max(-100, Math.min(100, moodScore + (score >= 60 ? 5 : -5)));
+
+    // ── Live combo tracking (SPEC: ≥70, resets on failure) ────────────
+    if (score >= 70) {
+      comboCount++;
+    } else {
+      comboCount = 0;
+    }
+
+    // ── Stress calculation ─────────────────────────────────────────────
     const stressDelta = Math.max(1, Math.min(10, evaluation.stress_increase ?? 5));
     const stressChange = score >= 60 ? -(stressDelta * 0.5) : stressDelta;
     stressLevel = Math.max(0, Math.min(100, stressLevel + stressChange));
-    if (stressLevel > peakStressLevel) peakStressLevel = stressLevel; // track peak
+    if (stressLevel > peakStressLevel) peakStressLevel = stressLevel;
     updateStressMeter(stressLevel);
+
+    // ── Lose condition: stress ≥ 100 → instant Fired (SPEC) ───────────
+    if (checkLoseCondition()) return;
 
     showReaction(evaluation);
 
@@ -234,6 +322,14 @@ async function submitAnswer() {
     }
 
     if (currentIndex < 4) {
+      // ── Branching flag (SPEC: follow-up if score < 60) ────────────
+      // Frontend dev reads needsFollowUp to inject a follow-up question.
+      // For now the game always advances — branching UI is pending.
+      const needsFollowUp = score < 60;
+      saveToStorage('needs_follow_up', needsFollowUp);
+      saveToStorage('current_mood', moodScore);
+      saveToStorage('current_combo', comboCount);
+
       currentIndex++;
       updateProgressLabel();
 
@@ -363,6 +459,37 @@ function updateProgressLabel() {
   if (qTotalSpan)   qTotalSpan.textContent   = questions.length || 5;
 }
 
+// ── Lose condition ─────────────────────────────────────────────────────────
+// SPEC: stress ≥ 100 → instant Fired, bypass normal verdict flow.
+// Returns true if the condition was triggered (caller should return early).
+
+function checkLoseCondition() {
+  if (stressLevel < 100) return false;
+
+  stopTimer();
+  saveToStorage('scores', scores);
+  saveToStorage('peak_stress', Math.round(peakStressLevel));
+  saveToStorage('personality', personality);
+  saveToStorage('question_count', questions.length || scores.length || 5);
+  saveToStorage('best_combo', comboCount);
+  saveToStorage('current_mood', moodScore);
+  saveToStorage('session_complete', Date.now());
+
+  // Force a FIRED verdict without calling the AI
+  saveToStorage('verdict', {
+    verdict: 'FIRED',
+    verdict_message: 'Your stress levels went critical. Interview terminated.',
+    final_tip: 'Work on staying calm under pressure.',
+    average: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0,
+    scores,
+  });
+
+  showToast('STRESS CRITICAL — Interview terminated!', 'error');
+  setTimeout(() => navigateTo('results.html'), 1500);
+  return true;
+}
+
+
 // ── Finish interview ───────────────────────────────────────────────────────
 
 async function finishInterview() {
@@ -377,6 +504,8 @@ async function finishInterview() {
   saveToStorage('peak_stress', Math.round(peakStressLevel) || 0);
   saveToStorage('personality', personality);
   saveToStorage('question_count', questions.length || scores.length || 5);
+  saveToStorage('current_mood', moodScore);
+  saveToStorage('current_combo', comboCount);
 
   // Best combo: longest streak of consecutive scores >= 60
   // Use the scores we just saved to storage to guarantee accuracy
