@@ -5,6 +5,7 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>MockMode — Hired or Fired?</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;700;900&family=Be+Vietnam+Pro:wght@400;500;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script id="tailwind-config">
@@ -61,77 +62,171 @@
                     "inverse-surface": "#fcdbd6",
                     "secondary-container": "#4f4936"
                 },
-                "borderRadius": {
-                    "DEFAULT": "0.25rem",
-                    "lg": "0.5rem",
-                    "xl": "0.75rem",
-                    "full": "9999px"
-                },
+                "borderRadius": {"DEFAULT":"0","lg":"0","xl":"0","full":"9999px"},
                 "spacing": {
-                    "unit": "4px",
-                    "md": "16px",
-                    "lg": "32px",
-                    "gutter": "16px",
-                    "xs": "4px",
-                    "sm": "8px",
-                    "xl": "64px",
-                    "margin": "24px"
+                    "unit":"4px","md":"16px","lg":"32px","gutter":"16px",
+                    "xs":"4px","sm":"8px","xl":"64px","margin":"24px"
                 },
                 "fontFamily": {
-                    "headline-md": ["Space Grotesk"],
-                    "label-caps": ["Space Grotesk"],
-                    "body-lg": ["Be Vietnam Pro"],
-                    "body-md": ["Be Vietnam Pro"],
-                    "headline-lg": ["Space Grotesk"]
+                    "headline-md":["Space Grotesk"],"label-caps":["Space Grotesk"],
+                    "body-lg":["Be Vietnam Pro"],"body-md":["Be Vietnam Pro"],
+                    "headline-lg":["Space Grotesk"]
                 },
                 "fontSize": {
-                    "headline-md": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
-                    "label-caps": ["14px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "700"}],
-                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
-                    "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
-                    "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    "headline-md":["24px",{"lineHeight":"1.2","fontWeight":"700"}],
+                    "label-caps":["14px",{"lineHeight":"1","letterSpacing":"0.1em","fontWeight":"700"}],
+                    "body-lg":["18px",{"lineHeight":"1.6","fontWeight":"400"}],
+                    "body-md":["16px",{"lineHeight":"1.5","fontWeight":"400"}],
+                    "headline-lg":["32px",{"lineHeight":"1.2","letterSpacing":"-0.02em","fontWeight":"700"}]
                 }
-            },
-        },
+            }
+        }
     }
 </script>
 <style>
-    .structural-offset { box-shadow: 4px 4px 0px 0px #1A0F0D; }
-    .active-press:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px 0px #1A0F0D; }
-    .pixel-bevel { box-shadow: inset 1px 1px 0px rgba(255,255,255,0.1), inset -1px -1px 0px rgba(0,0,0,0.3); }
+    /* ── Shared pixel system from upload.html / results.html ── */
+    .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .pixel-border {
+        border: 4px solid #190a08;
+        box-shadow: inset -4px -4px 0px rgba(0,0,0,0.2), inset 4px 4px 0px rgba(255,255,255,0.1);
+    }
+    .arcade-button {
+        transition: all 0.05s steps(2);
+        box-shadow: 0 8px 0 0 #190a08;
+    }
+    .arcade-button:active { transform: translateY(4px); box-shadow: 0 4px 0 0 #190a08; }
+    .crt-glow { text-shadow: 0 0 10px rgba(102,155,188,0.5); }
     .retro-glow { text-shadow: 2px 2px 0px rgba(0,0,0,1); }
-    @keyframes pulse-opacity { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-    .animate-pulse-slow { animation: pulse-opacity 2s ease-in-out infinite; }
-    .dither-overlay { background-image: radial-gradient(#ffffff11 1px, transparent 1px); background-size: 4px 4px; }
-    #how-to-play-modal { display: none; }
-    #how-to-play-modal.open { display: flex; }
+
+    /* CRT vignette */
+    body::before {
+        content:" "; display:block; position:fixed; inset:0;
+        background: radial-gradient(circle, transparent 20%, #000 150%);
+        z-index:40; pointer-events:none; opacity:0.4;
+    }
+
+    /* Scanlines (results.html) */
+    .pixel-scanline {
+        background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 50%),
+                    linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06));
+        background-size: 100% 4px, 3px 100%;
+        pointer-events: none;
+    }
+    .pixel-dither {
+        background-image: radial-gradient(#1A0F0D 1px, transparent 0);
+        background-size: 4px 4px;
+    }
+    @keyframes scanline { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
+    .animate-scanline { animation: scanline 8s linear infinite; }
+
+    /* Entrance — elements start hidden for GSAP */
+    #main-panel   { opacity:0; transform:translateY(32px); }
+    #title-hired, #title-fired, #tagline-text,
+    #btn-start, #btn-how, #press-start-row { opacity:0; }
+
+    /* Continuous glow pulse on title */
+    @keyframes hired-glow {
+        0%,100%{ text-shadow:2px 2px 0px rgba(0,0,0,1), 0 0 16px rgba(102,155,188,0.4); }
+        50%    { text-shadow:2px 2px 0px rgba(0,0,0,1), 0 0 40px rgba(102,155,188,0.9), 0 0 80px rgba(102,155,188,0.3); }
+    }
+    @keyframes fired-glow {
+        0%,100%{ text-shadow:2px 2px 0px rgba(0,0,0,1), 0 0 12px rgba(231,189,182,0.3); }
+        50%    { text-shadow:2px 2px 0px rgba(0,0,0,1), 0 0 36px rgba(231,189,182,0.8), 0 0 70px rgba(231,189,182,0.2); }
+    }
+    .title-hired-glow { animation: hired-glow 3s ease-in-out infinite; }
+    .title-fired-glow  { animation: fired-glow 3.4s ease-in-out infinite 0.4s; }
+
+    /* Blinking PRESS START diamonds */
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .blink { animation: blink 1s step-end infinite; }
+
+    /* START button shimmer sweep */
+    @keyframes btn-shimmer { 0%{left:-60%} 100%{left:150%} }
+    #btn-start-inner { position:relative; overflow:hidden; }
+    #btn-start-inner::after {
+        content:''; position:absolute; top:0; left:-60%;
+        width:40%; height:100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+        animation: btn-shimmer 2.4s ease-in-out infinite 1.8s;
+    }
+
+    /* Corner ticks (upload.html style) */
+    .corner-tick { position:absolute; width:16px; height:16px; background:#a0cfcf; }
+    .corner-tick.tl { top:-3px; left:-3px; border-right:2px solid #190a08; border-bottom:2px solid #190a08; }
+    .corner-tick.tr { top:-3px; right:-3px; border-left:2px solid #190a08; border-bottom:2px solid #190a08; }
+    .corner-tick.bl { bottom:-3px; left:-3px; border-right:2px solid #190a08; border-top:2px solid #190a08; }
+    .corner-tick.br { bottom:-3px; right:-3px; border-left:2px solid #190a08; border-top:2px solid #190a08; }
+
+    /* Floating pixel particles */
+    @keyframes float-up {
+        0%   { transform:translateY(0) rotate(0deg); opacity:0.7; }
+        100% { transform:translateY(-130px) rotate(180deg); opacity:0; }
+    }
+    .pixel-particle {
+        position:absolute; width:4px; height:4px;
+        animation: float-up linear infinite;
+        pointer-events:none;
+    }
+
+    /* Status LED pulse */
+    @keyframes led-pulse {
+        0%,100%{ box-shadow:0 0 0 0 rgba(255,180,171,0.7); }
+        50%    { box-shadow:0 0 0 6px rgba(255,180,171,0); }
+    }
+    .led-pulse { animation: led-pulse 1.8s ease-in-out infinite; }
+
+    /* Modal */
+    #how-to-play-modal { display:none; }
+    #how-to-play-modal.open { display:flex; }
+
+    /* Light theme */
+    html.light body { background-color:#f5ede6; color:#2c1511; }
+    html.light #main-panel { background-color:#fdf3e3 !important; border-color:#5c3d2e !important; }
+    html.light #title-hired { color:#1a6b8a !important; }
+    html.light #title-fired  { color:#5c3d2e !important; }
+    html.light #tagline-text { color:#7a5c52 !important; border-color:#d4b8aa !important; }
+    html.light #btn-start-inner { background-color:#3a9e9e !important; color:#fff !important; }
+    html.light #btn-how-inner   { background-color:#e8ddd4 !important; color:#1a6b8a !important; }
+    html.light #press-start-row { color:#7a5c52 !important; }
+    html.light #how-to-play-modal > div { background-color:#fdf3e3 !important; }
+    html.light .bg-background\/80 { background-color:rgba(245,237,230,0.85) !important; }
+    html.light #bg-overlay { background-color:rgba(245,237,230,0.3) !important; }
+    html.light #bg-img { opacity:0.45 !important; }
 </style>
 </head>
 <body class="bg-background text-on-background font-body-md overflow-hidden selection:bg-tertiary selection:text-on-tertiary">
 
-<!-- Background Layer -->
+<!-- Background -->
 <div class="fixed inset-0 z-0">
-    <img id="bg-img" class="w-full h-full object-cover opacity-60 grayscale-[20%]" src="https://lh3.googleusercontent.com/aida/ADBb0uhpB9QnUtBVUX8K4JFNjLov130Dc6BEYuBebSyxJPidSJ85PHtyNnslz66afi3aGZmRL2Vwbf8z3Qx6_PIVGLRmV1SdQETubB5TLC8VajeZ8WTuPCLkVT6fpu9bA0VX5Lz_vdQumXQf2B-hBEwyDl27XjJ0tDMzF6lVQV13vk0U3-SULWMe2DfewDIrSqCvD5jnT8JPRMR00PHyqjPwaq2FET-c9CrmUp5LXZa3febNGyorr4ekUgkmpovzvIEjKwoFcrwEEW42Cg" alt=""/>
+    <img id="bg-img" class="w-full h-full object-cover opacity-60 grayscale-[20%]"
+         src="https://i.pinimg.com/originals/73/70/e8/7370e8c51bfaefc02aa1c857c51fcee0.gif" alt=""/>
     <div id="bg-overlay" class="absolute inset-0 bg-background/40 backdrop-blur-[2px]"></div>
-    <div class="absolute inset-0 dither-overlay opacity-20"></div>
+    <div class="absolute inset-0 pixel-dither opacity-10"></div>
 </div>
+
+<!-- Scanline sweep -->
+<div class="fixed inset-0 pointer-events-none z-[101] bg-gradient-to-b from-transparent via-tertiary/5 to-transparent h-20 w-full -translate-y-full opacity-10 animate-scanline"></div>
+<!-- Static scanlines -->
+<div class="fixed inset-0 pixel-scanline opacity-15 pointer-events-none z-[50]"></div>
 
 <!-- Navbar -->
 <header class="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 py-4">
     <div class="flex items-center gap-4">
-        <span class="text-[#669BBC] font-headline-md tracking-tighter uppercase font-black drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">MockMode</span>
-        <div class="bg-surface-container/60 px-2 py-1 border-2 border-black text-[10px] font-label-caps text-on-surface-variant">
+        <span class="text-[#669BBC] font-headline-md tracking-tighter uppercase font-black crt-glow">MockMode</span>
+        <div class="bg-surface-container/60 px-2 py-1 border-2 border-[#190a08] text-[10px] font-label-caps text-on-surface-variant">
             MOCK_MODE_v2.0
         </div>
     </div>
     <div class="flex items-center gap-3">
-        <button class="w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black structural-offset active-press hover:bg-surface-container-high transition-all">
+        <button class="arcade-button w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
             <span class="material-symbols-outlined text-[#669BBC]">volume_up</span>
         </button>
-        <button id="theme-toggle" onclick="toggleTheme()" class="w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black structural-offset active-press hover:bg-surface-container-high transition-all">
+        <button id="theme-toggle" onclick="toggleTheme()" class="arcade-button w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
             <span id="theme-icon" class="material-symbols-outlined text-[#669BBC]">light_mode</span>
         </button>
-        <button onclick="document.getElementById('how-to-play-modal').classList.add('open')" class="w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black structural-offset active-press hover:bg-surface-container-high transition-all">
+        <button onclick="document.getElementById('how-to-play-modal').classList.add('open')" class="arcade-button w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
             <span class="material-symbols-outlined text-[#669BBC]">help</span>
         </button>
     </div>
@@ -139,56 +234,74 @@
 
 <!-- Main Content -->
 <main class="relative z-10 w-screen h-screen flex flex-col items-center justify-center p-6">
-    <div id="main-panel" class="w-full max-w-2xl bg-[#2a1f1a] border-[6px] border-[#1A0F0D] p-12 relative flex flex-col items-center text-center shadow-[8px_8px_0px_rgba(0,0,0,0.5)] pixel-bevel">
-        <div class="absolute -top-1 -left-1 w-4 h-4 bg-tertiary border-r-2 border-b-2 border-black"></div>
-        <div class="absolute -top-1 -right-1 w-4 h-4 bg-tertiary border-l-2 border-b-2 border-black"></div>
-        <div class="absolute -bottom-1 -left-1 w-4 h-4 bg-tertiary border-r-2 border-t-2 border-black"></div>
-        <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-tertiary border-l-2 border-t-2 border-black"></div>
+    <div id="main-panel" class="w-full max-w-2xl bg-[#2a1f1a] border-[6px] border-[#1A0F0D] p-12 relative flex flex-col items-center text-center shadow-[12px_12px_0px_rgba(0,0,0,0.6)] pixel-border overflow-hidden">
 
-        <div class="mb-8">
+        <!-- Dither texture inside panel -->
+        <div class="absolute inset-0 pixel-dither opacity-5 pointer-events-none"></div>
+
+        <!-- Corner ticks -->
+        <div class="corner-tick tl"></div>
+        <div class="corner-tick tr"></div>
+        <div class="corner-tick bl"></div>
+        <div class="corner-tick br"></div>
+
+        <!-- Terminal top bar (upload.html) -->
+        <div class="absolute top-0 left-0 right-0 h-8 bg-surface-container-low border-b-4 border-[#190a08] flex items-center px-4 gap-2">
+            <div class="w-3 h-3 bg-error pixel-border"></div>
+            <div class="w-3 h-3 bg-[#669BBC] pixel-border"></div>
+            <span class="ml-2 font-label-caps text-on-surface-variant text-[9px] uppercase tracking-widest">SESSION_INIT // AWAITING_INPUT</span>
+            <span class="ml-auto material-symbols-outlined text-[#669BBC] text-sm">terminal</span>
+        </div>
+
+        <!-- Floating particles container -->
+        <div id="particles-container" class="absolute inset-0 overflow-hidden pointer-events-none"></div>
+
+        <!-- Title -->
+        <div class="mt-6 mb-8 relative z-10">
             <h1 class="font-headline-lg text-6xl md:text-8xl flex flex-col leading-none tracking-tight">
-                <span class="title-hired text-[#669BBC] retro-glow font-black italic">HIRED</span>
-                <span class="title-fired text-primary retro-glow font-black mt-[-10px]">OR FIRED?</span>
+                <span id="title-hired" class="text-[#669BBC] retro-glow font-black italic title-hired-glow">HIRED</span>
+                <span id="title-fired"  class="text-primary  retro-glow font-black mt-[-10px] title-fired-glow">OR FIRED?</span>
             </h1>
-            <p class="tagline font-body-lg text-on-surface-variant mt-6 max-w-md mx-auto italic border-y-2 border-surface-container-highest py-2">
+            <p id="tagline-text" class="font-body-lg text-on-surface-variant mt-6 max-w-md mx-auto italic border-y-2 border-surface-container-highest py-2">
                 Survive the interview. Earn your desk.
             </p>
         </div>
 
-        <div class="flex flex-col sm:flex-row gap-6 w-full max-w-sm">
-            <!-- START GAME — calls navigateTo via main.js -->
+        <!-- Buttons (arcade-button style from upload.html) -->
+        <div class="flex flex-col sm:flex-row gap-6 w-full max-w-sm relative z-10">
             <button id="btn-start" class="flex-1 group relative">
-                <div class="absolute inset-0 bg-[#1A0F0D] translate-x-1 translate-y-1"></div>
-                <div class="relative bg-tertiary text-on-tertiary-fixed font-headline-md py-4 border-2 border-black active:translate-x-1 active:translate-y-1 transition-all flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                <div class="absolute inset-0 bg-[#1A0F0D] translate-x-2 translate-y-2"></div>
+                <div id="btn-start-inner" class="relative bg-[#a0cfcf] text-[#002020] font-headline-md py-4 border-2 border-[#190a08] flex items-center justify-center gap-2 arcade-button active:translate-x-2 active:translate-y-2">
+                    <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1;">play_arrow</span>
                     START GAME
                 </div>
             </button>
             <button id="btn-how" class="flex-1 group relative" onclick="document.getElementById('how-to-play-modal').classList.add('open')">
-                <div class="absolute inset-0 bg-[#1A0F0D] translate-x-1 translate-y-1"></div>
-                <div class="relative bg-surface-container text-[#669BBC] font-headline-md py-4 border-2 border-black active:translate-x-1 active:translate-y-1 transition-all flex items-center justify-center gap-2">
+                <div class="absolute inset-0 bg-[#1A0F0D] translate-x-2 translate-y-2"></div>
+                <div id="btn-how-inner" class="relative bg-surface-container text-[#669BBC] font-headline-md py-4 border-2 border-[#190a08] flex items-center justify-center gap-2 arcade-button active:translate-x-2 active:translate-y-2">
                     <span class="material-symbols-outlined">help_center</span>
                     HOW TO PLAY
                 </div>
             </button>
         </div>
 
-        <div class="press-start mt-10 font-label-caps text-base animate-pulse-slow tracking-[0.2em] flex items-center gap-3 text-on-surface-variant">
-            <span class="w-2 h-2 bg-primary rotate-45 inline-block"></span>
+        <!-- PRESS START -->
+        <div id="press-start-row" class="mt-10 font-label-caps text-base tracking-[0.2em] flex items-center gap-3 text-on-surface-variant relative z-10">
+            <span class="w-2 h-2 bg-primary rotate-45 inline-block blink"></span>
             PRESS START
-            <span class="w-2 h-2 bg-primary rotate-45 inline-block"></span>
+            <span class="w-2 h-2 bg-primary rotate-45 inline-block blink" style="animation-delay:0.5s"></span>
         </div>
     </div>
 </main>
 
 <!-- How To Play Modal -->
 <div id="how-to-play-modal" class="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 items-center justify-center p-gutter">
-    <div class="relative w-full max-w-2xl bg-surface-container border-4 border-[#1A0F0D] structural-offset flex flex-col overflow-hidden">
-        <div class="absolute inset-0 dither-overlay pointer-events-none opacity-10"></div>
+    <div class="relative w-full max-w-2xl bg-surface-container border-4 border-[#1A0F0D] shadow-[8px_8px_0_0_#190a08] flex flex-col overflow-hidden">
+        <div class="absolute inset-0 pixel-dither pointer-events-none opacity-10"></div>
         <div class="bg-[#2D1B18] border-b-4 border-[#1A0F0D] px-6 py-4 flex justify-between items-center relative z-10">
-            <h2 class="font-headline-md text-tertiary tracking-tighter uppercase">HOW TO PLAY</h2>
+            <h2 class="font-headline-md text-[#a0cfcf] tracking-tighter uppercase crt-glow">HOW TO PLAY</h2>
             <button onclick="document.getElementById('how-to-play-modal').classList.remove('open')"
-                class="w-10 h-10 bg-error text-on-error border-2 border-[#1A0F0D] flex items-center justify-center structural-offset active-press transition-all hover:opacity-90">
+                class="arcade-button w-10 h-10 bg-error text-on-error border-2 border-[#1A0F0D] flex items-center justify-center hover:opacity-90">
                 <span class="material-symbols-outlined font-black">close</span>
             </button>
         </div>
@@ -197,21 +310,21 @@
                 <div class="absolute -top-3 left-4 px-2 bg-surface-container font-label-caps text-outline text-xs uppercase tracking-widest">Operation: INTERVIEW</div>
                 <div class="flex flex-col gap-lg mt-2">
                     <div class="flex gap-md">
-                        <div class="flex-shrink-0 w-12 h-12 bg-primary-container text-primary border-2 border-[#1A0F0D] flex items-center justify-center font-headline-md structural-offset">1</div>
+                        <div class="flex-shrink-0 w-12 h-12 bg-primary-container text-primary border-2 border-[#1A0F0D] flex items-center justify-center font-headline-md shadow-[4px_4px_0_0_#190a08]">1</div>
                         <div class="flex flex-col">
                             <p class="font-headline-md text-on-primary-container mb-xs uppercase">📋 DATA UPLOAD</p>
                             <p class="font-body-md text-on-surface-variant leading-relaxed">Paste your resume text into the terminal. The system will parse your experience for the quest simulation.</p>
                         </div>
                     </div>
                     <div class="flex gap-md">
-                        <div class="flex-shrink-0 w-12 h-12 bg-secondary-container text-secondary border-2 border-[#1A0F0D] flex items-center justify-center font-headline-md structural-offset">2</div>
+                        <div class="flex-shrink-0 w-12 h-12 bg-secondary-container text-secondary border-2 border-[#1A0F0D] flex items-center justify-center font-headline-md shadow-[4px_4px_0_0_#190a08]">2</div>
                         <div class="flex flex-col">
                             <p class="font-headline-md text-on-secondary-container mb-xs uppercase">🎭 CHOOSE AVATAR</p>
                             <p class="font-body-md text-on-surface-variant leading-relaxed">Select your interviewer persona. Each boss has a unique questioning style and difficulty rating.</p>
                         </div>
                     </div>
                     <div class="flex gap-md">
-                        <div class="flex-shrink-0 w-12 h-12 bg-tertiary-container text-tertiary border-2 border-[#1A0F0D] flex items-center justify-center font-headline-md structural-offset">3</div>
+                        <div class="flex-shrink-0 w-12 h-12 bg-tertiary-container text-tertiary border-2 border-[#1A0F0D] flex items-center justify-center font-headline-md shadow-[4px_4px_0_0_#190a08]">3</div>
                         <div class="flex flex-col">
                             <p class="font-headline-md text-on-tertiary-container mb-xs uppercase">⚖️ THE GAUNTLET</p>
                             <p class="font-body-md text-on-surface-variant leading-relaxed">Answer 5 high-stakes questions. Your responses determine your Final Ranking and Loot Grade.</p>
@@ -221,7 +334,7 @@
             </div>
             <div class="flex justify-end">
                 <button onclick="document.getElementById('how-to-play-modal').classList.remove('open')"
-                    class="bg-primary text-on-primary font-headline-md px-lg py-sm border-4 border-[#1A0F0D] active-press transition-all flex items-center gap-md group hover:opacity-90">
+                    class="arcade-button bg-primary text-on-primary font-headline-md px-lg py-sm border-4 border-[#1A0F0D] flex items-center gap-md group hover:opacity-90">
                     <span class="uppercase">I UNDERSTAND</span>
                     <span class="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
                 </button>
@@ -236,37 +349,21 @@
 
 <!-- Footer -->
 <footer class="fixed bottom-6 left-6 right-6 z-20 flex justify-between items-end pointer-events-none">
-    <div class="bg-surface-container-highest/40 backdrop-blur-md p-3 border-2 border-black structural-offset">
+    <div class="bg-surface-container/60 backdrop-blur-md p-3 border-2 border-[#190a08] shadow-[4px_4px_0_0_#190a08]">
         <div class="flex items-center gap-3 text-xs font-label-caps text-on-surface">
-            <div class="w-3 h-3 rounded-full bg-error animate-pulse"></div>
+            <div class="w-3 h-3 bg-error led-pulse"></div>
             SYSTEM ONLINE: 100%
         </div>
     </div>
     <div class="hidden md:flex flex-col items-end gap-2 text-[10px] font-label-caps text-outline uppercase">
-        <a href="privacy.html" class="pointer-events-auto hover:text-tertiary transition-colors">Privacy &amp; Consent</a>
+        <a href="privacy.html" class="pointer-events-auto hover:text-[#a0cfcf] transition-colors">Privacy &amp; Consent</a>
         <span>MockMode v2.0</span>
     </div>
 </footer>
 
-<!-- Scanlines -->
-<div class="fixed inset-0 pointer-events-none z-[100] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] bg-[length:100%_4px,3px_100%] opacity-20"></div>
+<!-- UI border frame (results.html) -->
+<div class="fixed top-0 left-0 w-full h-full border-[12px] border-surface-container-lowest/50 pointer-events-none z-[100]"></div>
 
-<style>
-    html.light body { background-color: #f5ede6; color: #2c1511; }
-    html.light #main-panel { background-color: #fdf3e3 !important; border-color: #5c3d2e !important; }
-    html.light .title-hired { color: #1a6b8a !important; }
-    html.light .title-fired { color: #5c3d2e !important; }
-    html.light .tagline { color: #7a5c52 !important; border-color: #d4b8aa !important; }
-    html.light #btn-start > div:last-child { background-color: #3a9e9e !important; color: #fff !important; }
-    html.light #btn-how > div:last-child { background-color: #e8ddd4 !important; color: #1a6b8a !important; }
-    html.light .press-start { color: #7a5c52 !important; }
-    html.light #how-to-play-modal > div { background-color: #fdf3e3 !important; }
-    html.light .bg-background\/80 { background-color: rgba(245,237,230,0.85) !important; }
-    html.light #bg-overlay { background-color: rgba(245,237,230,0.3) !important; }
-    html.light #bg-img { opacity: 0.45 !important; }
-</style>
-
-<!-- main.js first so navigateTo is available when the button is wired -->
 <script src="assets/js/main.js"></script>
 <script>
     function toggleTheme() {
@@ -274,19 +371,59 @@
         const icon = document.getElementById('theme-icon');
         const isDark = html.classList.contains('dark');
         if (isDark) {
-            html.classList.remove('dark');
-            html.classList.add('light');
+            html.classList.remove('dark'); html.classList.add('light');
             icon.textContent = 'dark_mode';
         } else {
-            html.classList.remove('light');
-            html.classList.add('dark');
+            html.classList.remove('light'); html.classList.add('dark');
             icon.textContent = 'light_mode';
         }
     }
 
-    // wire the START GAME button to go to upload.html
-    document.getElementById('btn-start').addEventListener('click', () => {
-        navigateTo('upload.html');
+    document.getElementById('btn-start').addEventListener('click', () => navigateTo('upload.html'));
+
+    /* ── Floating pixel particles ── */
+    (function spawnParticles() {
+        const c = document.getElementById('particles-container');
+        const colors = ['#a0cfcf','#e7bdb6','#669BBC','#cfc6ae','#bbeceb'];
+        for (let i = 0; i < 20; i++) {
+            const p = document.createElement('div');
+            p.className = 'pixel-particle';
+            p.style.left              = Math.random() * 100 + '%';
+            p.style.bottom            = Math.random() * 40 + '%';
+            p.style.background        = colors[i % colors.length];
+            p.style.animationDuration = (4 + Math.random() * 7) + 's';
+            p.style.animationDelay    = (Math.random() * 7) + 's';
+            p.style.opacity           = 0.3 + Math.random() * 0.4;
+            p.style.width             = (Math.random() > 0.5 ? 4 : 6) + 'px';
+            p.style.height            = p.style.width;
+            c.appendChild(p);
+        }
+    })();
+
+    /* ── GSAP entrance sequence ── */
+    window.addEventListener('DOMContentLoaded', () => {
+        const tl = gsap.timeline({ defaults: { ease: 'power2.out' } });
+
+        // Panel rises up
+        tl.to('#main-panel', { opacity: 1, y: 0, duration: 0.55, ease: 'back.out(1.4)' })
+
+        // HIRED slams in from left with a step-ease snap
+        .set('#title-hired', { x: -80 })
+        .to('#title-hired', { opacity: 1, x: 0, duration: 0.3, ease: 'steps(6)' }, '+=0.05')
+
+        // OR FIRED? slams in from right
+        .set('#title-fired', { x: 80 })
+        .to('#title-fired', { opacity: 1, x: 0, duration: 0.3, ease: 'steps(6)' }, '-=0.1')
+
+        // Tagline fades in
+        .to('#tagline-text', { opacity: 1, duration: 0.35 }, '+=0.08')
+
+        // Buttons pop up with stagger
+        .set(['#btn-start','#btn-how'], { y: 20 })
+        .to(['#btn-start','#btn-how'], { opacity: 1, y: 0, stagger: 0.14, duration: 0.28, ease: 'steps(4)' }, '+=0.08')
+
+        // PRESS START blinks in last
+        .to('#press-start-row', { opacity: 1, duration: 0.2 }, '+=0.1');
     });
 </script>
 </body>
