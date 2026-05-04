@@ -486,13 +486,8 @@ class CharacterController {
     let mouthEl = this._findLayerEl(svgEl, 'mouth');
 
     if (!mouthEl) {
-      // Fallback: animate the whole character with a subtle shake
-      log('Mouth layer not directly accessible — using body oscillation', 'warn');
-      let t = 0;
-      this._mouthTimer = setInterval(() => {
-        const y = Math.sin(t++ * 0.5) * 1.5;
-        if (this._lottieWrap) this._lottieWrap.style.transform = `translateY(${y}px)`;
-      }, 30);
+      // Fallback: skip mouth animation if layer not found
+      log('Mouth layer not found — skipping mouth animation', 'warn');
       return;
     }
 
