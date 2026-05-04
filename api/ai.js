@@ -31,6 +31,19 @@ export default async function handler(req, res) {
 
   const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
+  // ── Diagnostic log (remove after confirming keys are loaded) ─────────────
+  console.log('[MockMode] Key counts:', {
+    groq: GROQ_KEYS.length,
+    gemini: GEMINI_KEYS.length,
+    openrouter: !!OPENROUTER_API_KEY,
+  });
+
+  // ── Guard: no keys configured at all ─────────────────────────────────────
+  if (GROQ_KEYS.length === 0 && GEMINI_KEYS.length === 0 && !OPENROUTER_API_KEY) {
+    console.error('[MockMode] No API keys found in environment variables.');
+    return res.status(500).json({ error: 'No API keys configured. Set GROQ_API_KEY in Vercel environment variables.' });
+  }
+
   // ── STREAMING MODE ────────────────────────────────────────────────────────
   // Streams from first working Groq key, no fallback for streams
   if (stream) {
@@ -118,7 +131,10 @@ export default async function handler(req, res) {
           }),
         });
 
-        if (!response.ok) continue; // rate limited or bad key, try next
+        if (!response.ok) {
+          console.warn(`[MockMode] Groq key failed with status ${response.status}`);
+          continue; // rate limited or bad key, try next
+        }
 
         const data = await response.json();
         const content = data?.choices?.[0]?.message?.content ?? null;
