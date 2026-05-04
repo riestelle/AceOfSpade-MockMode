@@ -353,6 +353,7 @@ function updateProgressLabel() {
 // ── Finish interview ───────────────────────────────────────────────────────
 
 async function finishInterview() {
+  saveToStorage('session_complete', Date.now());
   saveToStorage('scores', scores);
   showLoader('Calculating your verdict...');
 
