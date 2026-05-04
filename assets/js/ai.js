@@ -180,6 +180,9 @@ async function evaluateAnswer(question, answer, personality, role = 'general') {
   return parseJSON(result);
 }
 
+// Tracks the last opening word per personality so the AI knows what to avoid
+const _lastOpener = {};
+
 async function streamInterviewerMessage(prompt, personality, targetElement, onDone) {
   const personalityPrompts = {
     corporate: 'You are Ms. Reyes, a strict formal corporate hiring manager. You are direct, composed, and expect precision.',
@@ -187,10 +190,14 @@ async function streamInterviewerMessage(prompt, personality, targetElement, onDo
     technical: 'You are Dr. Matsuda, a tough principal engineer who values depth and specificity. You are measured and skeptical.'
   };
 
+  const avoidHint = _lastOpener[personality]
+    ? ` Do not start your response with "${_lastOpener[personality]}".`
+    : '';
+
   const messages = [
     {
       role: 'system',
-      content: `${personalityPrompts[personality]} Respond in character in 1-2 sentences only. Vary how you open each question — avoid starting with the same word or phrase every time.`
+      content: `${personalityPrompts[personality]} Respond in character in 1-2 sentences only.${avoidHint}`
     },
     {
       role: 'user',
@@ -210,6 +217,9 @@ async function streamInterviewerMessage(prompt, personality, targetElement, onDo
       if (targetElement) targetElement.textContent += token;
     },
     () => {
+      // Track the opening word so next question avoids repeating it
+      const firstWord = fullText.trim().split(/\s+/)[0].replace(/[^a-zA-Z]/g, '');
+      if (firstWord) _lastOpener[personality] = firstWord;
       // Pass the fully-accumulated text to onDone so TTS speaks
       // exactly what was shown in the dialogue box
       if (onDone) onDone(fullText);
