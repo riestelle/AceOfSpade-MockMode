@@ -39,8 +39,8 @@ async function handleWebcamConsent(choice) {
     }
 }
 
-const video = document.getElementById(videoElementId);
 async function startWebcam(videoElementId = 'webcam-video') {
+    const video = document.getElementById(videoElementId);
     if (!video) {
         throw new Error(`Video element with id "${videoElementId}" was not found.`);
     }
@@ -73,12 +73,13 @@ async function startWebcam(videoElementId = 'webcam-video') {
 let faceLimits = null;
 async function startFaceMonitoring(videoElementId = 'webcam-video') {
     if (!window.faceapi) {
-    try {
-        throw new Error('face-api.js is not loaded.');
-    } catch (error) {
-        await faceapi.nets.tinyFaceDetector.loadFromUri(modelPath);
-    }}
+        try {
+            throw new Error('face-api.js is not loaded.');
+        } catch (error) {
+            await faceapi.nets.tinyFaceDetector.loadFromUri(modelPath);
+        }}
 
+    const video = document.getElementById(videoElementId);
     clearInterval(faceLimits); faceLimits = setInterval(async () => {
     if (video.paused || video.ended || video.readyState < 2) {
         return;
