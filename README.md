@@ -56,21 +56,30 @@ There's actual game logic running underneath:
 
 ```
 mockmode/
-├── index.html          # Landing page
-├── upload.html         # Resume input + setup
-├── interview.html      # Main game screen
-├── results.html        # Final verdict + score chart
+├── index.html                  # Landing page
+├── upload.html                 # Resume input + setup
+├── interview.html              # Main game screen
+├── results.html                # Final verdict + score chart
 ├── 404.html
 ├── privacy.html
 ├── api/
-│   └── ai.js           # Unified AI proxy with key rotation
+│   └── ai.js                   # Unified AI proxy with key rotation
 ├── assets/
-│   └── js/
-│       ├── ai.js        # Frontend AI caller (askAI, askAIStream)
-│       ├── interview.js # Core game loop logic
-│       ├── upload.js    # Resume handling + session init
-│       ├── results.js   # Verdict calculation + chart
-│       └── main.js      # Shared utilities
+│   ├── css/
+│   │   └── styling.interview.css # Interview-specific styling
+│   ├── js/
+│   │   ├── ai.js                # Frontend AI caller (askAI, askAIStream)
+│   │   ├── main.js              # Shared utilities
+│   │   ├── results.js           # Verdict calculation + chart
+│   │   ├── upload.js            # Resume handling + session init
+│   │   ├── session-interview/    # Webcam + face-api support
+│   │   │   ├── asset.interview.js
+│   │   │   ├── asset.webcam.js
+│   │   │   ├── vendor/face-api.min.js
+│   │   │   └── models/
+│   │   └── (other page scripts)
+│   └── tailwind/
+│       └── tailwind.styling.interview.js # Tailwind config helper
 └── vercel.json
 ```
 
