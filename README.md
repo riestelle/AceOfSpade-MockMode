@@ -129,6 +129,11 @@ Things that are still being worked on:
 - Full mobile responsiveness polish
 
 ---
+## Contributors
+@riestelle
+@bugvn
+@vectoriunknown
+@cantilangalexandramarie-lgtm
 
 ## Built for
 
