@@ -5,324 +5,796 @@
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>MockMode — The Desk</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Courier+Prime:wght@400;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script id="tailwind-config">
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            "colors": {
-                "background": "#1f0f0c",
-                "surface": "#2a1f1a",
-                "on-surface": "#fcf9f8",
-                "primary": "#669BBC",
-                "on-primary": "#ffffff",
-                "secondary": "#a0522d",
-                "tertiary": "#d2b48c",
-                "on-tertiary": "#1f0f0c",
-                "surface-container": "#281714",
-                "outline": "#493431",
-                "error": "#ff4b2b"
-            },
-            "borderRadius": {
-                "none": "0",
-                "DEFAULT": "0",
-                "lg": "0",
-                "xl": "0",
-                "full": "0"
-            },
-            "spacing": {
-                "md": "16px",
-                "sm": "8px",
-                "unit": "8px",
-                "xs": "4px",
-                "lg": "24px",
-                "xl": "40px",
-                "gutter": "24px",
-                "container-max": "1200px"
-            },
-            "fontFamily": {
-                "headline-xl": ["Space Grotesk", "sans-serif"],
-                "headline-lg": ["Space Grotesk", "sans-serif"],
-                "headline-md": ["Space Grotesk", "sans-serif"],
-                "body-lg": ["Space Grotesk", "sans-serif"],
-                "body-md": ["Space Grotesk", "sans-serif"],
-                "label-bold": ["Space Grotesk", "sans-serif"]
-            },
-            "fontSize": {
-                "headline-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800"}],
-                "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "800"}],
-                "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "700"}],
-                "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "500"}],
-                "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "500"}],
-                "label-bold": ["14px", {"lineHeight": "1.0", "fontWeight": "700"}]
-            }
-          },
-        },
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "background": "#1f0f0c",
+          "surface": "#2a1f1a",
+          "on-surface": "#fcf9f8",
+          "primary": "#669BBC",
+          "on-primary": "#ffffff",
+          "secondary": "#a0522d",
+          "tertiary": "#d2b48c",
+          "on-tertiary": "#1f0f0c",
+          "surface-container": "#281714",
+          "outline": "#493431",
+          "error": "#ff4b2b"
+        }
       }
-    </script>
+    }
+  }
+</script>
 <style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        .pixel-border {
-            border: 4px solid #190a08;
-            box-shadow:
-                inset -4px -4px 0px 0px rgba(0,0,0,0.2),
-                inset 4px 4px 0px 0px rgba(255,255,255,0.1);
-        }
-        .arcade-button {
-            transition: all 0.05s steps(2);
-            box-shadow: 0 8px 0 0 #190a08;
-            position: relative;
-        }
-        .arcade-button:active {
-            transform: translateY(4px);
-            box-shadow: 0 4px 0 0 #190a08;
-        }
-        .scanline-overlay {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
-            background-size: 100% 4px;
-            z-index: 50;
-            pointer-events: none;
-            opacity: 0.3;
-        }
-        .isometric-desk {
-            transform: perspective(2000px) rotateX(10deg);
-        }
-        .character-card {
-            transition: transform 0.1s steps(4);
-            cursor: pointer;
-        }
-        .character-card:hover { transform: translateY(-4px); }
-        .character-card.active {
-            border-color: #669BBC !important;
-            background-color: rgba(102,155,188,0.15) !important;
-        }
-        .crt-glow { text-shadow: 0 0 10px rgba(102, 155, 188, 0.5); }
-        body::before {
-            content: " ";
-            display: block;
-            position: fixed;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: radial-gradient(circle, transparent 20%, #000 150%);
-            z-index: 40;
-            pointer-events: none;
-            opacity: 0.4;
-        }
-        @keyframes mm-shake {
-            0%, 100% { transform: translateX(0); }
-            20% { transform: translateX(-6px); }
-            40% { transform: translateX(6px); }
-            60% { transform: translateX(-4px); }
-            80% { transform: translateX(4px); }
-        }
-        .mm-shake { animation: mm-shake 0.4s ease; }
-    </style>
+  /* ── RESET & BASE ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #1f0f0c;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  font-family: 'Space Grotesk', sans-serif;
+  transition: opacity 0.35s ease;
+}
+
+/* Scanline overlay */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.08) 50%);
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0.3;
+}
+
+/* Vignette overlay */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, #000 130%);
+  pointer-events: none;
+  z-index: 998;
+  opacity: 0.5;
+}
+
+body.mm-fade-out { opacity: 0; }
+
+/* ── SCENE ── */
+#scene {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── BACKGROUND ── */
+#office-bg {
+  position: absolute; inset: 0;
+  background: url('bg.jpg') center center / cover no-repeat;
+  transform-origin: center 40%;
+  transition: transform 2.6s cubic-bezier(0.2, 0.0, 0.1, 1);
+}
+#office-bg.zoomed { transform: scale(1.6); }
+#office-bg::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: rgba(15, 8, 6, 0.45);
+  pointer-events: none;
+}
+
+/* ── DOORS LAYER ── */
+#doors-layer {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding-top: 250px;       /* ← add this, pushes group down */
+  pointer-events: none;
+  z-index: 2;
+  transform-origin: center 85%;
+  transition: transform 2.6s cubic-bezier(0.2, 0.0, 0.1, 1);
+}
+#doors-layer.zoomed { transform: scale(1.6) translateY(-3%); }
+#doors-layer.interactive { pointer-events: all; }
+
+#doors-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 50px;
+  width: 100%;
+}
+/* ── DOOR UNIT ── */
+.door-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+/* ── DOOR WRAP ── */
+.door-wrap {
+  position: relative;
+  width: 160px;
+  height: 230px;
+  opacity: 0;
+  flex: 0 0 auto;
+
+  transition:
+    transform 0.6s cubic-bezier(0.34, 1.2, 0.64, 1),
+    filter 0.45s ease,
+    opacity 0.5s ease;
+
+  will-change: transform, filter;
+  animation: floatIdle 3.2s ease-in-out infinite;
+}
+
+.door-unit:nth-child(1) .door-wrap { animation-delay: 0s; }
+.door-unit:nth-child(2) .door-wrap { animation-delay: -1.1s; }
+.door-unit:nth-child(3) .door-wrap { animation-delay: -2.1s; }
+
+@keyframes floatIdle {
+  0%   { transform: translateY(0px); }
+  50%  { transform: translateY(-7px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes floatSelected {
+  0%   { transform: translateY(0px); }
+  50%  { transform: translateY(-14px); }
+  100% { transform: translateY(0px); }
+}
+
+.door-wrap.revealed {
+  opacity: 1;
+}
+
+.door-wrap.selected {
+  animation: floatSelected 2s ease-in-out infinite;
+  filter: brightness(1.15)
+          drop-shadow(0 0 10px rgba(160, 207, 207, 0.7))
+          drop-shadow(0 0 28px rgba(160, 207, 207, 0.35));
+}
+
+.door-wrap.dimmed {
+  animation: none;
+  transform: scale(0.82) translateY(8px);
+  filter: brightness(0.38) saturate(0.4);
+  pointer-events: none;
+  cursor: default;
+}
+
+.door-wrap::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: rgba(10, 4, 2, 0);
+  pointer-events: none;
+  z-index: 20;
+  transition: background 0.45s ease;
+}
+.door-wrap.dimmed::after {
+  background: rgba(10, 4, 2, 0.55);
+}
+
+/* ── DOOR CARD ── */
+.pd-frame {
+  position: absolute; inset: 0;
+  background: #3d211e;
+  padding: 6px;
+}
+.pd-body {
+  position: absolute;
+  inset: 6px;
+  background: #d8815b;
+  display: flex;
+  flex-direction: column;
+}
+.pd-body::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-top: 8px solid #f2b08a;
+  border-left: 8px solid #f2b08a;
+  pointer-events: none;
+}
+.pd-main-panel {
+  flex: 1;
+  margin: 12px;
+  background: #d8815b;
+  border: 6px solid #8c4a38;
+  display: flex;
+  flex-direction: column;
+  align-items: center;      /* ← horizontal center */
+  justify-content: center;  /* ← vertical center */
+  gap: 4px;
+  padding: 10px 6px;
+  position: relative;
+  z-index: 1;
+  text-align: center;       /* ← ADD THIS for text nodes */
+}
+.pd-knob {
+  position: absolute;
+  right: 8px;
+  top: 55%;
+  width: 12px;
+  height: 28px;
+  background: #2a343d;
+  z-index: 5;
+}
+.pd-knob::after {
+  content: '';
+  position: absolute;
+  top: 8px; left: 0; right: 0;
+  height: 8px;
+  background: #fcf9f8;
+}
+
+/* Door text */
+.door-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;           /* ← slightly smaller so long names fit */
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #1f0f0c;
+  margin-top: 0;             /* ← remove the old margin pushing it off */
+  text-align: center;
+}
+
+.door-role {
+  font-family: 'Courier Prime', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: #5c3d2e;
+  text-transform: uppercase;
+  margin-bottom: 0;          /* ← remove old margin */
+  text-align: center;
+}
+.door-diff {
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.d-hard { color: #8b0000 !important; }
+.d-easy { color: #006400 !important; }
+.d-med  { color: #f8c331 !important; }
+
+/* ── BROWSER LAYER ── */
+#browser-layer {
+  position: absolute; inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+#browser-layer.exit {
+  opacity: 0;
+  transform: translateY(60px) scale(0.92);
+  pointer-events: none;
+}
+
+#browser {
+  width: min(920px, 90vw);
+  background: #f5ede3;
+  border: 2px solid #c5a88a;
+  box-shadow: 12px 12px 0 #080402;
+  position: relative;
+  transform: perspective(1200px) rotateX(3deg);
+  transform-origin: center bottom;
+}
+
+/* Chrome bar */
+.b-chrome {
+  background: #e0d0be;
+  border-bottom: 2px solid #c5a88a;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.chrome-dots { display: flex; gap: 5px; }
+.cd { width: 9px; height: 9px; border-radius: 50%; }
+.cd-r { background: #e03c3c; }
+.cd-y { background: #e8b84b; }
+.cd-g { background: #3cbe6e; }
+.chrome-url {
+  flex: 1;
+  background: #f5ede3;
+  border: 1px solid #c5a88a;
+  padding: 3px 10px;
+  font-size: 9px;
+  color: #9d8d8b;
+  letter-spacing: 0.05em;
+  font-family: 'Courier Prime', monospace;
+}
+
+/* Browser body */
+.b-body { padding: 28px 36px 20px; }
+
+.pos-label {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: #7a6a55;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 10px;
+  font-family: 'Courier Prime', monospace;
+}
+.pos-field {
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid #5c3d2e;
+  padding-bottom: 6px;
+  margin-bottom: 18px;
+  min-height: 32px;
+}
+.typed-text {
+  font-family: 'Courier Prime', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: #2c1511;
+  letter-spacing: 0.04em;
+}
+.blink-cur {
+  display: inline-block;
+  width: 10px;
+  height: 18px;
+  background: #5c3d2e;
+  margin-left: 2px;
+  vertical-align: middle;
+  animation: blink 0.8s step-end infinite;
+}
+.blink-cur.typing { animation: none; opacity: 1; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* Role chips */
+#role-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 16px;
+}
+.chip {
+  padding: 6px 16px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1.5px solid #ddd0b8;
+  background: rgba(255,255,255,0.4);
+  color: #7a6a55;
+  cursor: pointer;
+  font-family: 'Courier Prime', monospace;
+  transition: all 0.12s ease;
+  box-shadow: 1px 1px 0 rgba(8,4,2,0.12);
+}
+.chip:hover {
+  border-color: #5c3d2e;
+  color: #2c1511;
+  background: rgba(92,61,46,0.07);
+  transform: translateY(-1px);
+  box-shadow: 3px 3px 0 rgba(8,4,2,0.35);
+}
+.chip.selected {
+  background: #e8d5b8;
+  color: #2c1511;
+  border: 2px solid #5c3d2e;
+  box-shadow: 2px 2px 0 #5c3d2e;
+  transform: none;
+}
+
+/* Resume textarea */
+#resume-input {
+  width: 100%;
+  height: 180px;
+  background: #faf6ee;
+  border: 1.5px solid #d4c5a9;
+  resize: none;
+  outline: none;
+  font-family: 'Courier Prime', monospace;
+  font-size: 13px;
+  color: #2c1511;
+  padding: 14px;
+  line-height: 1.65;
+}
+#resume-input::placeholder { color: #c0b09a; }
+
+.char-row { display: flex; justify-content: flex-end; margin-top: 4px; }
+#resume-char-count { font-size: 9px; color: #b0a090; font-family: 'Courier Prime', monospace; }
+
+/* Footer */
+.b-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 24px 18px;
+  border-top: 1px solid #e0d5c5;
+  margin-top: 20px;
+}
+.footer-left { display: flex; gap: 8px; }
+
+.ghost-btn {
+  padding: 7px 14px;
+  background: #4a3728;
+  border: 2px solid #cfc6ae;
+  color: #fdf6e3;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: 'Courier Prime', monospace;
+  box-shadow: 3px 3px 0 #0f0806;
+  transition: all 0.1s;
+}
+.ghost-btn:hover { background: #382522; border-color: #a0cfcf; color: #a0cfcf; }
+.ghost-btn:active { transform: translate(3px,3px); box-shadow: none; }
+
+#start-interview-btn {
+  padding: 10px 26px;
+  background: #a0cfcf;
+  color: #1d4d4d;
+  border: 2px solid #1d4d4d;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: 'Courier Prime', monospace;
+  box-shadow: 4px 4px 0 #0f0806;
+  transition: all 0.1s;
+}
+#start-interview-btn:hover { background: #c97b5a; color: #fdf3e3; border-color: #5c3d2e; }
+#start-interview-btn:active { transform: translate(4px,4px); box-shadow: none; }
+
+/* Hire stamp */
+.hire-stamp {
+  position: absolute;
+  top: -18px; left: -18px;
+  width: 58px; height: 58px;
+  background: #c97b5a;
+  border: 3px solid #5c3d2e;
+  transform: rotate(-12deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 3px 3px 0 #0f0806;
+  z-index: 30;
+  cursor: default;
+}
+.hire-stamp span {
+  font-size: 9px;
+  font-weight: 900;
+  color: #fdf3e3;
+  letter-spacing: 0.05em;
+  text-align: center;
+  line-height: 1.2;
+  font-family: 'Courier Prime', monospace;
+}
+
+/* ── DOOR PICK UI ── */
+#door-pick-ui {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+  /* NO position, NO bottom, NO left/right */
+}
+#door-pick-ui.show { opacity: 1; pointer-events: all; }
+
+#choose-label-top {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: #a0cfcf;
+  text-transform: uppercase;
+  background: rgba(15, 8, 6, 0.92);
+  padding: 8px 28px;
+  border: 1px solid rgba(160, 207, 207, 0.3);  /* ← subtle teal border */
+  font-family: 'Courier Prime', monospace;
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+  box-shadow: 0 0 12px rgba(160, 207, 207, 0.15),  /* ← soft glow */
+              inset 0 0 12px rgba(0, 0, 0, 0.3);
+}
+#choose-label-top.show { opacity: 1; }
+
+.enter-btn {
+  padding: 8px 24px;       /* ← from 12px 40px */
+  background: #a0cfcf;
+  color: #003737;
+  border: 3px solid #1a0f0d;
+  font-size: 9px;           /* ← from 11px */
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 #0f0806;
+  font-family: 'Courier Prime', monospace;
+  opacity: 0.35;
+  pointer-events: none;
+  transition: all 0.1s;
+}
+.enter-btn.ready { opacity: 1; pointer-events: all; }
+.enter-btn.ready:hover { transform: translate(-1px,-1px); box-shadow: 5px 5px 0 #0f0806; }
+.enter-btn.ready:active { transform: translate(4px,4px); box-shadow: none; }
+
+/* ── HIDDEN LEGACY ELEMENTS ── */
+.personality-cards, .role-cards { display: none; }
+
+.resume-validation { 
+  margin-top: 8px; 
+  font-size: 0.875rem; 
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+.resume-validation.success { color: #22c55e; }
+.resume-validation.error   { color: #ef4444; }
+.resume-validation.warn    { color: #f97316; }
+.resume-validation.loading { color: #94a3b8; }
+</style>
 </head>
-<body class="bg-background text-on-surface font-body-md min-h-screen py-xl selection:bg-primary selection:text-white">
-<div class="scanline-overlay"></div>
-<main class="max-w-6xl mx-auto px-gutter space-y-xl relative z-10">
+<body>
+<div id="scene">
 
-<!-- Header -->
-<div class="text-center space-y-sm">
-    <h1 class="font-headline-xl text-primary crt-glow uppercase tracking-widest">THE DESK</h1>
-    <p class="font-body-lg text-tertiary/80 uppercase text-sm tracking-widest">Configure dossier // Select Arbiter</p>
+  <!-- BACKGROUND -->
+  <div id="office-bg"></div>
+
+  <!-- DOORS — hidden until phase 2 -->
+  <div id="doors-layer">
+
+    <div id="choose-label-top">▸ Choose your interviewer</div>
+
+    <div id="doors-row">
+
+      <div class="door-unit" onclick="pickDoorUI(this,'strict')">
+        <div class="door-wrap" id="wrap-strict">
+            
+          <div class="pd-frame">
+            <div class="pd-body">
+              <div class="pd-main-panel">
+                <div class="door-avatar"><img src="assets/download.jpg" alt="Avatar"/></div>
+                <div class="door-name">Ms. Reyes</div>
+                <div class="door-role">Strict Corporate</div>
+                <div class="door-diff d-hard" id="diff-strict">STRICT ■■■</div>
+              </div>
+            </div>
+            <div class="pd-knob"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="door-unit" onclick="pickDoorUI(this,'chill')">
+        <div class="door-wrap" id="wrap-chill">
+          <div class="pd-frame">
+            <div class="pd-body">
+              <div class="pd-main-panel">
+                <div class="door-avatar"><img src="IMAGE_URL_HERE" alt="Avatar"/></div>
+                <div class="door-name">Kai</div>
+                <div class="door-role">Chill Startup</div>
+                <div class="door-diff d-easy" id="diff-chill">CHILL ■■■</div>
+              </div>
+            </div>
+            <div class="pd-knob"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="door-unit" onclick="pickDoorUI(this,'technical')">
+        <div class="door-wrap" id="wrap-technical">
+          <div class="pd-frame">
+            <div class="pd-body">
+              <div class="pd-main-panel">
+                <div class="door-avatar"><img src="IMAGE_URL_HERE" alt="Avatar"/></div>
+                <div class="door-name">Dr. Matsuda</div>
+                <div class="door-role">Technical Lead</div>
+                <div class="door-diff d-med" id="diff-technical">TECHNICAL ■■■</div>
+              </div>
+            </div>
+            <div class="pd-knob"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end #doors-row -->
+
+    <!-- BUTTON now INSIDE doors-layer -->
+    <div id="door-pick-ui">
+      <button class="enter-btn" id="enter-btn" onclick="enterRoom()">
+        Enter the Room →
+      </button>
+    </div>
+
+  </div><!-- end #doors-layer -->
+
+  <!-- BROWSER — Phase 1 -->
+  <div id="browser-layer">
+    <div id="browser">
+
+      <div class="hire-stamp"><span>HIRE<br>ME</span></div>
+
+      <div class="b-chrome">
+        <div class="chrome-dots">
+          <div class="cd cd-r"></div>
+          <div class="cd cd-y"></div>
+          <div class="cd cd-g"></div>
+        </div>
+        <div class="chrome-url">project-dossier // submission_id_404</div>
+        <span style="font-size:9px;color:#9d8d8b;font-family:'Courier Prime',monospace;letter-spacing:0.08em;">AUTOSAVING...</span>
+      </div>
+
+      <div class="b-body">
+        <div class="pos-label">Position Applied For:</div>
+        <div id="role-chips">
+          <div class="chip" onclick="pickJobUI(this,'Developer')" data-role="developer">Dev</div>
+          <div class="chip" onclick="pickJobUI(this,'Designer')"  data-role="designer">Designer</div>
+          <div class="chip" onclick="pickJobUI(this,'Analyst')"   data-role="analyst">Analyst</div>
+          <div class="chip" onclick="pickJobUI(this,'Marketing')" data-role="marketing">Marketing</div>
+          <div class="chip" onclick="pickJobUI(this,'General')"   data-role="general">General</div>
+        </div>
+        <div class="pos-field">
+          <span class="typed-text" id="typed-text"></span>
+          <span class="blink-cur" id="blink-cur"></span>
+        </div>
+
+        <label style="font-size:9px;letter-spacing:0.14em;color:#7a6a55;text-transform:uppercase;font-weight:700;font-family:'Courier Prime',monospace;display:block;margin-bottom:6px;">
+          Paste your resume or cv here:
+        </label>
+        <textarea
+          id="resume-input"
+          placeholder="Experienced professional with a proven track record in [Your Industry]. Skilled in [Key Skills] and passionate about driving results. Seeking to leverage my expertise in [Specific Area] to contribute to the success of [Company Name]....."
+          oninput="document.getElementById('resume-char-count').textContent=this.value.length+' characters'"
+        ></textarea>
+        <div class="char-row">
+          <span id="resume-char-count">0 characters</span>
+        </div>
+        <div id="resume-validation" style="display:none;"></div>
+        <div id="role-validation" style="display:none;"></div>
+
+        <div class="b-footer">
+          <div class="footer-left">
+            <button class="ghost-btn" onclick="triggerFile()">📎 Upload File</button>
+            <button class="ghost-btn" onclick="clearForm()">✕ Clear</button>
+          </div>
+          <button id="start-interview-btn" onclick="submitForm()">
+            Submit Resume ▲
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <input type="file" id="resume-file" accept=".txt,.pdf,application/pdf,text/plain" style="display:none;"/>
+
+  <div class="personality-cards" style="display:none;">
+    <div data-personality="corporate" aria-pressed="false"></div>
+    <div data-personality="startup"   aria-pressed="false"></div>
+    <div data-personality="technical" aria-pressed="false"></div>
+  </div>
+  <div class="role-cards" style="display:none;">
+    <div data-role="developer"  aria-pressed="false"></div>
+    <div data-role="designer"   aria-pressed="false"></div>
+    <div data-role="analyst"    aria-pressed="false"></div>
+    <div data-role="marketing"  aria-pressed="false"></div>
+    <div data-role="general"    aria-pressed="false"></div>
+  </div>
+
 </div>
 
-<div class="flex flex-col items-center gap-xl">
+<script>
 
-    <!-- Personality Selection -->
-    <div class="w-full">
-        <div class="bg-surface pixel-border p-lg shadow-[8px_8px_0_0_#190a08]">
-            <div class="flex items-center justify-between mb-lg border-b-2 border-outline pb-4">
-                <h2 class="font-headline-md text-primary flex items-center gap-2 uppercase tracking-tight">
-                    <span class="material-symbols-outlined text-3xl">person_search</span> Pick Your Fate
-                </h2>
-                <span class="text-[10px] font-label-bold bg-primary text-on-primary px-3 py-1 uppercase tracking-widest">Select Arbiter</span>
-            </div>
-            <!-- personality-cards class is used by upload.js for the shake animation -->
-            <div class="personality-cards grid grid-cols-1 md:grid-cols-3 gap-lg">
+    let tyTimer = null;
 
-                <!-- Strict / Corporate -->
-                <div class="character-card group flex flex-col items-center text-center gap-md p-lg bg-surface-container pixel-border hover:bg-outline/50"
-                     data-personality="corporate" aria-pressed="false">
-                    <div class="relative w-24 h-24 pixel-border overflow-hidden bg-background shrink-0 shadow-[4px_4px_0_0_#190a08]">
-                        <img class="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all"
-                             src="https://lh3.googleusercontent.com/aida/ADBb0ugex1dnDlz6S9fYFOU5rv93Xh6jJFs8zxBLz63pNT1n7JjzZg4lgbSEK9kubvQNOtWjpHF7-EB5rg0nlukGh7owKl3E7bL-N3Tj1i5w5awzuAIgG6qPodw-uOq_op8wH3EilMT7WWcZGtX_NMjz_fRmaIVMXahay8uNJ9IZ4Zfn1On-gc6NTAVJzzJ3fTJ9ZY1_NJKyi2PbtW2eXL2H3C3DeBRI1ga_AQ4EqPZm_I-CLOnsG90gj2jJhIxdbzqQBXABaVUmgGVsets"
-                             alt="Ms. Reyes — VP of Operations"/>
-                    </div>
-                    <div class="w-full">
-                        <h3 class="font-headline-md text-tertiary uppercase text-lg">Ms. Reyes</h3>
-                        <p class="text-[10px] text-tertiary/60 font-bold uppercase tracking-widest mb-1">VP of Operations</p>
-                        <p class="text-[9px] text-tertiary/40 uppercase tracking-widest mb-2">Protocol / Efficiency</p>
-                        <!-- Difficulty rating: Hard (NEW) -->
-                        <div class="flex items-center justify-center gap-1">
-                            <span class="text-[9px] font-bold uppercase tracking-widest text-outline">Difficulty:</span>
-                            <span class="w-2 h-2 bg-[#ff4444] pixel-border inline-block"></span>
-                            <span class="w-2 h-2 bg-[#ff4444] pixel-border inline-block"></span>
-                            <span class="w-2 h-2 bg-[#ff4444] pixel-border inline-block"></span>
-                            <span class="text-[9px] font-bold text-[#ff4444] uppercase ml-1">Hard</span>
-                        </div>
-                    </div>
-                </div>
+    /* ── TYPEWRITER for role chips ── */
+  function typewriteJob(job) {
+    if (tyTimer) clearTimeout(tyTimer);
+    const t = document.getElementById('typed-text');
+    const c = document.getElementById('blink-cur');
+    c.classList.add('typing');
+    deleteThen(t, c, job);
+  }
+  function deleteThen(t, c, job) {
+    if (t.textContent.length > 0) {
+      t.textContent = t.textContent.slice(0, -1);
+      tyTimer = setTimeout(() => deleteThen(t, c, job), 30);
+    } else { typeIn(t, c, job); }
+  }
+  function typeIn(t, c, job) {
+    if (t.textContent.length < job.length) {
+      t.textContent = job.slice(0, t.textContent.length + 1);
+      tyTimer = setTimeout(() => typeIn(t, c, job), 60);
+    } else { c.classList.remove('typing'); }
+  }
 
-                <!-- Chill / Startup -->
-                <div class="character-card group flex flex-col items-center text-center gap-md p-lg bg-surface-container pixel-border hover:bg-outline/50"
-                     data-personality="startup" aria-pressed="false">
-                    <div class="relative w-24 h-24 pixel-border overflow-hidden bg-background shrink-0 shadow-[4px_4px_0_0_#190a08]">
-                        <img class="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all"
-                             src="https://lh3.googleusercontent.com/aida/ADBb0uiIg8fQtF_J1KqdCQK2ot7JYj-BmK7ywKUkVDq6If8en7IV7J9iAWiXhpDm5iujytcvscROUWXBm0XSSYD1JY-hMx_5yoaj6Ubzd3kgK0KT1qQfSpaMC76vO7sZJzm0lRETTspi1tvjPBszPw8oW9xypIlqghwi5jN9FEX_6xjo-Ui-iRihhJawpkmZ80cxl4pcjdCXCTY1s1zYCZ5g7y1bcNoZw5MLw8RGQVTckVkC7-P59lJWGBNMeXNxIj0pUKvmqpOaoJhpdw"
-                             alt="Kai — Co-founder & Culture Lead"/>
-                    </div>
-                    <div class="w-full">
-                        <h3 class="font-headline-md text-primary uppercase text-lg">Kai</h3>
-                        <p class="text-[10px] text-primary/80 font-bold uppercase tracking-widest mb-1">Co-founder &amp; Culture Lead</p>
-                        <p class="text-[9px] text-primary/40 uppercase tracking-widest mb-2">Vibe / Culture</p>
-                        <!-- Difficulty rating: Easy (NEW) -->
-                        <div class="flex items-center justify-center gap-1">
-                            <span class="text-[9px] font-bold uppercase tracking-widest text-outline">Difficulty:</span>
-                            <span class="w-2 h-2 bg-[#1aff7a] pixel-border inline-block"></span>
-                            <span class="w-2 h-2 bg-outline/30 pixel-border inline-block"></span>
-                            <span class="w-2 h-2 bg-outline/30 pixel-border inline-block"></span>
-                            <span class="text-[9px] font-bold text-[#1aff7a] uppercase ml-1">Easy</span>
-                        </div>
-                    </div>
-                </div>
+  function submitForm() {
+  if (document.getElementById('browser-layer').classList.contains('exit')) return;
 
-                <!-- Tough / Technical -->
-                <div class="character-card group flex flex-col items-center text-center gap-md p-lg bg-surface-container pixel-border hover:bg-outline/50"
-                     data-personality="technical" aria-pressed="false">
-                    <div class="relative w-24 h-24 pixel-border overflow-hidden bg-background shrink-0 shadow-[4px_4px_0_0_#190a08]">
-                        <div class="w-full h-full flex items-center justify-center bg-outline/20">
-                            <span class="material-symbols-outlined text-5xl text-tertiary">psychology</span>
-                        </div>
-                    </div>
-                    <div class="w-full">
-                        <h3 class="font-headline-md text-tertiary uppercase text-lg">Dr. Matsuda</h3>
-                        <p class="text-[10px] text-tertiary/60 font-bold uppercase tracking-widest mb-1">Principal Engineer</p>
-                        <p class="text-[9px] text-tertiary/40 uppercase tracking-widest mb-2">Logic / Stress</p>
-                        <!-- Difficulty rating: Expert (NEW) -->
-                        <div class="flex items-center justify-center gap-1">
-                            <span class="text-[9px] font-bold uppercase tracking-widest text-outline">Difficulty:</span>
-                            <span class="w-2 h-2 bg-[#ff4444] pixel-border inline-block"></span>
-                            <span class="w-2 h-2 bg-[#ff4444] pixel-border inline-block"></span>
-                            <span class="w-2 h-2 bg-[#ff4444] pixel-border inline-block"></span>
-                            <span class="text-[9px] font-bold text-[#ff4444] uppercase ml-1">Expert</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+  // Delegate validation + storage to upload.js
+  if (!validatePhase1()) return;
 
-    <!-- Role Selection -->
-    <div class="w-full">
-        <div class="bg-surface pixel-border p-lg shadow-[8px_8px_0_0_#190a08]">
-            <div class="flex items-center justify-between mb-lg border-b-2 border-outline pb-4">
-                <h2 class="font-headline-md text-primary flex items-center gap-2 uppercase tracking-tight">
-                    <span class="material-symbols-outlined text-3xl">work</span> Target Role
-                </h2>
-                <span class="text-[10px] font-label-bold bg-primary text-on-primary px-3 py-1 uppercase tracking-widest">Select Position</span>
-            </div>
-            <!-- role-cards class is used by upload.js for the shake animation -->
-            <div class="role-cards grid grid-cols-2 md:grid-cols-5 gap-md">
-                <div class="character-card flex flex-col items-center text-center gap-sm p-md bg-surface-container pixel-border hover:bg-outline/50"
-                     data-role="developer" aria-pressed="false">
-                    <span class="material-symbols-outlined text-3xl text-tertiary">code</span>
-                    <span class="text-[11px] font-label-bold text-tertiary uppercase tracking-widest">Developer</span>
-                </div>
-                <div class="character-card flex flex-col items-center text-center gap-sm p-md bg-surface-container pixel-border hover:bg-outline/50"
-                     data-role="designer" aria-pressed="false">
-                    <span class="material-symbols-outlined text-3xl text-tertiary">palette</span>
-                    <span class="text-[11px] font-label-bold text-tertiary uppercase tracking-widest">Designer</span>
-                </div>
-                <div class="character-card flex flex-col items-center text-center gap-sm p-md bg-surface-container pixel-border hover:bg-outline/50"
-                     data-role="analyst" aria-pressed="false">
-                    <span class="material-symbols-outlined text-3xl text-tertiary">bar_chart</span>
-                    <span class="text-[11px] font-label-bold text-tertiary uppercase tracking-widest">Analyst</span>
-                </div>
-                <div class="character-card flex flex-col items-center text-center gap-sm p-md bg-surface-container pixel-border hover:bg-outline/50"
-                     data-role="marketing" aria-pressed="false">
-                    <span class="material-symbols-outlined text-3xl text-tertiary">campaign</span>
-                    <span class="text-[11px] font-label-bold text-tertiary uppercase tracking-widest">Marketing</span>
-                </div>
-                <div class="character-card flex flex-col items-center text-center gap-sm p-md bg-surface-container pixel-border hover:bg-outline/50"
-                     data-role="general" aria-pressed="false">
-                    <span class="material-symbols-outlined text-3xl text-tertiary">person</span>
-                    <span class="text-[11px] font-label-bold text-tertiary uppercase tracking-widest">General</span>
-                </div>
-            </div>
-        </div>
-    </div>
+  // Pure animation — nothing else
+  document.getElementById('browser-layer').classList.add('exit');
+  setTimeout(() => {
+    document.getElementById('office-bg').classList.add('zoomed');
+    document.getElementById('doors-layer').classList.add('zoomed');
+    document.querySelectorAll('.door-wrap').forEach(w => w.classList.add('revealed'));
+    
+    setTimeout(() => {
+      ['diff-strict','diff-chill','diff-technical'].forEach((id, i) => {
+        setTimeout(() => {
+          const el = document.getElementById(id);
+          if (el) el.classList.add('revealed');
+        }, i * 220 + 500);
+      });
+      setTimeout(() => {
+        document.getElementById('doors-layer').classList.add('interactive');
+        document.getElementById('door-pick-ui').classList.add('show');
+        document.getElementById('choose-label-top').classList.add('show');
+      }, 900);
+    }, 700);
+  }, 450);
+}
 
-    <!-- Resume Input (The Dossier) -->
-    <div class="w-full max-w-4xl isometric-desk">
-        <div class="relative w-full">
-            <div class="bg-surface pixel-border shadow-[12px_12px_0_0_#190a08] flex flex-col overflow-hidden">
-                <!-- Terminal title bar -->
-                <div class="h-10 bg-surface-container border-b-4 border-[#190a08] flex items-center px-lg">
-                    <div class="flex gap-2 mr-6">
-                        <div class="w-3 h-3 bg-error pixel-border"></div>
-                        <div class="w-3 h-3 bg-primary pixel-border"></div>
-                    </div>
-                    <span class="font-label-bold text-tertiary uppercase tracking-[0.2em] text-[10px]">Project Dossier // ID_404</span>
-                    <span class="ml-auto material-symbols-outlined text-primary text-sm">terminal</span>
-                </div>
+function pickJobUI(el, job) {
+  document.querySelectorAll('.chip').forEach(s => s.classList.remove('selected'));
+  el.classList.add('selected');
+  typewriteJob(job);
+  pickJob(job);  // ← ADD THIS LINE
+}
 
-                <!-- Text area -->
-                <div class="flex-grow p-xl m-4 pixel-border flex flex-col overflow-hidden bg-white min-h-[300px]">
-                    <div class="flex items-center justify-between mb-md">
-                        <label class="font-label-bold uppercase text-xs tracking-widest text-background" for="resume-input">Input Credentials:</label>
-                        <span id="resume-char-count" class="text-[10px] font-mono text-background/60">0 characters</span>
-                    </div>
-                    <!-- id="resume-input" is required by upload.js -->
-                    <textarea
-                        id="resume-input"
-                        class="flex-grow bg-transparent p-lg border-none focus:ring-0 font-body-md resize-none text-lg leading-relaxed uppercase tracking-tight text-background placeholder-background/40"
-                        placeholder="Tell your story... describe the battles."
-                    ></textarea>
-                </div>
+function pickDoorUI(el, personality) {
+  document.querySelectorAll('.door-wrap').forEach(d => {
+    d.classList.remove('selected', 'dimmed');
+  });
 
-                <!-- File upload trigger -->
-                <div class="h-16 flex items-center justify-center px-lg pb-4">
-                    <label for="resume-file" class="flex items-center gap-md bg-surface-container px-lg py-2 pixel-border border-dashed border-primary/50 cursor-pointer hover:bg-primary/10 transition-colors">
-                        <span class="material-symbols-outlined text-primary text-xl">upload_file</span>
-                        <span class="text-[10px] font-black text-primary uppercase tracking-widest">Drop Artifact (.txt)</span>
-                    </label>
-                    <!-- id="resume-file" is required by upload.js -->
-                    <input type="file" id="resume-file" accept=".txt" class="hidden"/>
-                </div>
-            </div>
+  el.querySelector('.door-wrap').classList.add('selected');
 
-            <!-- HIRE ME sticker -->
-            <div class="absolute -top-4 -right-4 w-24 h-24 bg-secondary pixel-border flex items-center justify-center -rotate-6 shadow-[4px_4px_0_0_#190a08] hover:scale-110 transition-transform cursor-default">
-                <span class="font-black text-on-primary text-center leading-none text-lg uppercase italic tracking-tighter">HIRE<br/>ME</span>
-            </div>
-        </div>
-    </div>
+  document.querySelectorAll('.door-unit').forEach(u => {
+    if (u !== el) u.querySelector('.door-wrap').classList.add('dimmed');
+  });
 
-    <!-- Action Buttons -->
-    <div class="flex flex-col sm:flex-row items-center justify-center gap-xl w-full pt-lg">
-        <button onclick="clearSession(); navigateTo('index.html');"
-            class="arcade-button w-full sm:w-64 px-lg py-5 bg-surface-container pixel-border text-tertiary font-headline-md uppercase tracking-widest flex items-center justify-center gap-3">
-            <span class="material-symbols-outlined">delete</span> Scrap It
-        </button>
-        <!-- id="start-interview-btn" is required by upload.js -->
-        <button id="start-interview-btn"
-            class="arcade-button w-full sm:w-72 px-lg py-5 bg-primary pixel-border text-on-primary font-headline-md uppercase tracking-widest flex items-center justify-center gap-3">
-            Send to Boss <span class="material-symbols-outlined">rocket</span>
-        </button>
-    </div>
+  document.getElementById('enter-btn').classList.add('ready');
+  pickDoor(personality);
+}
 
-</div>
-</main>
+  /* ── HELPERS ── */
+  function clearForm() {
+    document.getElementById('resume-input').value = '';
+    document.getElementById('resume-char-count').textContent = '0 characters';
+    document.getElementById('typed-text').textContent = '';
+    document.querySelectorAll('.chip').forEach(s => s.classList.remove('selected'));
+    selectedRole = null;
+  }
 
-<script src="assets/js/main.js"></script>
+  function triggerFile() {
+    document.getElementById('resume-file').click();
+  }
+</script>
+
 <script src="assets/js/ai.js"></script>
+<script src="assets/js/main.js"></script>
 <script src="assets/js/upload.js"></script>
 </body>
 </html>
