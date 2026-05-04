@@ -7,120 +7,148 @@
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;700;900&family=Be+Vietnam+Pro:wght@400;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <style>
-        .pixel-scanline {
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 4px, 3px 100%;
-            pointer-events: none;
-        }
-        .pixel-dither {
-            background-image: radial-gradient(#1A0F0D 1px, transparent 0);
-            background-size: 4px 4px;
-        }
-        /* verdict stamp color changes based on data-verdict attribute set by JS */
-        body[data-verdict="hired"]     #verdict-text { color: #1aff7a; }
-        body[data-verdict="waitlisted"] #verdict-text { color: #ffcc00; }
-        body[data-verdict="fired"]     #verdict-text { color: #ff4444; }
+    .pixel-scanline {
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+        background-size: 100% 4px, 3px 100%;
+        pointer-events: none;
+    }
+    .pixel-dither {
+        background-image: radial-gradient(#1A0F0D 1px, transparent 0);
+        background-size: 4px 4px;
+    }
 
-        /* insight list items */
-        .insight-item { padding: 0.35rem 0; font-size: 0.85rem; }
-        .insight-item--strength { color: #1aff7a; }
-        .insight-item--weakness  { color: #ff4444; }
+    /* verdict stamp colors */
+    body[data-verdict="hired"]          #verdict-text { color: #1aff7a; border-color: #1aff7a; }
+    body[data-verdict="hired-lucky"]    #verdict-text { color: #1aff7a; border-color: #1aff7a; }
+    body[data-verdict="waitlisted"]     #verdict-text { color: #ffcc00; border-color: #ffcc00; }
+    body[data-verdict="fired-breakdown"] #verdict-text { color: #ff4444; border-color: #ff4444; }
+    body[data-verdict="fired-technical"] #verdict-text { color: #ff4444; border-color: #ff4444; }
+    body[data-verdict="fired-attitude"]  #verdict-text { color: #ff6a00; border-color: #ff6a00; }
 
-        @keyframes scanline {
-            0%   { transform: translateY(-100%); }
-            100% { transform: translateY(100vh); }
-        }
-        .animate-scanline { animation: scanline 8s linear infinite; }
-    </style>
+    /* verdict glow pulse */
+    @keyframes verdictGlow {
+        0%, 100% { text-shadow: 0 0 16px currentColor; }
+        50%       { text-shadow: 0 0 40px currentColor, 0 0 80px currentColor; }
+    }
+    .verdict--revealed { animation: verdictGlow 2.5s ease-in-out infinite; }
+
+    /* insight list items */
+    .insight-item { padding: 0.35rem 0; font-size: 0.85rem; }
+    .insight-item--strength { color: #1aff7a; }
+    .insight-item--weakness  { color: #ff4444; }
+
+    /* scanline sweep */
+    @keyframes scanline {
+        0%   { transform: translateY(-100%); }
+        100% { transform: translateY(100vh); }
+    }
+    .animate-scanline { animation: scanline 8s linear infinite; }
+
+    /* compensation card states */
+    .comp-card { transition: transform 0.15s ease; }
+    .comp-card:hover { transform: translateY(-4px); }
+    .comp-card.comp--void { opacity: 0.45; filter: grayscale(1); }
+    .comp-card.comp--void:hover { transform: none; }
+
+    /* stat cards start hidden for GSAP */
+    .stat-card { opacity: 0; transform: translateY(24px); }
+
+    /* portrait starts hidden */
+    #portrait-card { opacity: 0; }
+
+    /* verdict stamp starts hidden */
+    #verdict-stamp { opacity: 0; transform: scale(0.4) rotate(-20deg); }
+</style>
 <script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    "colors": {
-                        "surface-container-lowest": "#190a08",
-                        "on-secondary-container": "#c1b8a1",
-                        "tertiary-fixed": "#bbeceb",
-                        "surface-dim": "#1f0f0c",
-                        "on-primary": "#442925",
-                        "surface-container-highest": "#44302c",
-                        "on-secondary": "#35301f",
-                        "on-tertiary-fixed": "#002020",
-                        "surface-tint": "#e7bdb6",
-                        "on-tertiary": "#003737",
-                        "tertiary-fixed-dim": "#a0cfcf",
-                        "inverse-on-surface": "#402b28",
-                        "on-primary-fixed": "#2c1511",
-                        "primary-fixed": "#ffdad4",
-                        "on-error": "#690005",
-                        "on-surface-variant": "#d4c3c0",
-                        "on-primary-container": "#d4aba4",
-                        "surface": "#1f0f0c",
-                        "tertiary-container": "#1d4d4d",
-                        "tertiary": "#a0cfcf",
-                        "inverse-surface": "#fcdbd6",
-                        "on-tertiary-container": "#8ebdbc",
-                        "secondary-fixed-dim": "#cfc6ae",
-                        "secondary-fixed": "#ece2c9",
-                        "outline": "#9d8d8b",
-                        "secondary-container": "#4f4936",
-                        "on-background": "#fcdbd6",
-                        "on-secondary-fixed-variant": "#4c4634",
-                        "surface-container-high": "#382522",
-                        "inverse-primary": "#775651",
-                        "background": "#1f0f0c",
-                        "surface-container-low": "#281714",
-                        "surface-variant": "#44302c",
-                        "on-surface": "#fcdbd6",
-                        "on-secondary-fixed": "#201b0c",
-                        "outline-variant": "#504442",
-                        "surface-container": "#2d1b18",
-                        "primary": "#e7bdb6",
-                        "surface-bright": "#493431",
-                        "primary-container": "#5d3f3a",
-                        "on-error-container": "#ffdad6",
-                        "on-primary-fixed-variant": "#5d3f3a",
-                        "secondary": "#cfc6ae",
-                        "error": "#ffb4ab",
-                        "error-container": "#93000a",
-                        "on-tertiary-fixed-variant": "#1e4e4e",
-                        "primary-fixed-dim": "#e7bdb6"
-                    },
-                    "borderRadius": {
-                        "DEFAULT": "0.25rem",
-                        "lg": "0.5rem",
-                        "xl": "0.75rem",
-                        "full": "9999px"
-                    },
-                    "spacing": {
-                        "lg": "32px",
-                        "gutter": "16px",
-                        "margin": "24px",
-                        "xl": "64px",
-                        "unit": "4px",
-                        "sm": "8px",
-                        "md": "16px",
-                        "xs": "4px"
-                    },
-                    "fontFamily": {
-                        "headline-md": ["Space Grotesk"],
-                        "body-md": ["Be Vietnam Pro"],
-                        "headline-lg": ["Space Grotesk"],
-                        "body-lg": ["Be Vietnam Pro"],
-                        "label-caps": ["Space Grotesk"]
-                    },
-                    "fontSize": {
-                        "headline-md": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
-                        "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
-                        "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
-                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
-                        "label-caps": ["14px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "700"}]
-                    }
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                "colors": {
+                    "surface-container-lowest": "#190a08",
+                    "on-secondary-container": "#c1b8a1",
+                    "tertiary-fixed": "#bbeceb",
+                    "surface-dim": "#1f0f0c",
+                    "on-primary": "#442925",
+                    "surface-container-highest": "#44302c",
+                    "on-secondary": "#35301f",
+                    "on-tertiary-fixed": "#002020",
+                    "surface-tint": "#e7bdb6",
+                    "on-tertiary": "#003737",
+                    "tertiary-fixed-dim": "#a0cfcf",
+                    "inverse-on-surface": "#402b28",
+                    "on-primary-fixed": "#2c1511",
+                    "primary-fixed": "#ffdad4",
+                    "on-error": "#690005",
+                    "on-surface-variant": "#d4c3c0",
+                    "on-primary-container": "#d4aba4",
+                    "surface": "#1f0f0c",
+                    "tertiary-container": "#1d4d4d",
+                    "tertiary": "#a0cfcf",
+                    "inverse-surface": "#fcdbd6",
+                    "on-tertiary-container": "#8ebdbc",
+                    "secondary-fixed-dim": "#cfc6ae",
+                    "secondary-fixed": "#ece2c9",
+                    "outline": "#9d8d8b",
+                    "secondary-container": "#4f4936",
+                    "on-background": "#fcdbd6",
+                    "on-secondary-fixed-variant": "#4c4634",
+                    "surface-container-high": "#382522",
+                    "inverse-primary": "#775651",
+                    "background": "#1f0f0c",
+                    "surface-container-low": "#281714",
+                    "surface-variant": "#44302c",
+                    "on-surface": "#fcdbd6",
+                    "on-secondary-fixed": "#201b0c",
+                    "outline-variant": "#504442",
+                    "surface-container": "#2d1b18",
+                    "primary": "#e7bdb6",
+                    "surface-bright": "#493431",
+                    "primary-container": "#5d3f3a",
+                    "on-error-container": "#ffdad6",
+                    "on-primary-fixed-variant": "#5d3f3a",
+                    "secondary": "#cfc6ae",
+                    "error": "#ffb4ab",
+                    "error-container": "#93000a",
+                    "on-tertiary-fixed-variant": "#1e4e4e",
+                    "primary-fixed-dim": "#e7bdb6"
+                },
+                "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+                },
+                "spacing": {
+                    "lg": "32px",
+                    "gutter": "16px",
+                    "margin": "24px",
+                    "xl": "64px",
+                    "unit": "4px",
+                    "sm": "8px",
+                    "md": "16px",
+                    "xs": "4px"
+                },
+                "fontFamily": {
+                    "headline-md": ["Space Grotesk"],
+                    "body-md": ["Be Vietnam Pro"],
+                    "headline-lg": ["Space Grotesk"],
+                    "body-lg": ["Be Vietnam Pro"],
+                    "label-caps": ["Space Grotesk"]
+                },
+                "fontSize": {
+                    "headline-md": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "label-caps": ["14px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "700"}]
                 }
             }
         }
-    </script>
+    }
+</script>
 </head>
 <body class="bg-background text-on-surface font-body-md selection:bg-tertiary selection:text-surface min-h-screen">
 
@@ -130,7 +158,7 @@
     <div class="absolute inset-0 pixel-scanline opacity-20 pointer-events-none"></div>
 
     <!-- Terminal Header -->
-    <div class="flex justify-between items-center border-l-4 border-tertiary pl-4">
+    <div class="flex justify-between items-center border-l-4 border-tertiary pl-4 stat-card">
         <h1 class="font-headline-md text-tertiary tracking-widest uppercase">MockMode Output v2.0</h1>
         <p class="font-label-caps text-outline opacity-70">SESSION_ID: 8829-X</p>
     </div>
@@ -139,7 +167,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
 
         <!-- Left: Portrait + Verdict Stamp -->
-        <div class="lg:col-span-4 bg-surface-container border-4 border-surface-container-highest shadow-[4px_4px_0_0_#1A0F0D] relative overflow-hidden group p-md min-h-[500px] flex flex-col">
+        <div id="portrait-card" class="lg:col-span-4 bg-surface-container border-4 border-surface-container-highest shadow-[4px_4px_0_0_#1A0F0D] relative overflow-hidden group p-md min-h-[500px] flex flex-col">
             <div class="absolute top-2 left-2 z-10 font-label-caps text-[10px] bg-tertiary text-surface px-1">BIO_SCAN: ACTIVE</div>
             <img class="w-full h-full object-cover grayscale brightness-75 group-hover:grayscale-0 transition-all duration-500 border-2 border-surface-container-highest"
                  src="https://lh3.googleusercontent.com/aida/ADBb0ugDlvR1vyuSZB3tffgLz2e8W3fwdsdgSelNhQGRl2crgkvgj2TqfODvjOxOgJ7z0radSKrZf-amYvyGRwLa8RyMd-oTl2lbfNtBPQfyv_UVKi_ZYud8nmtK9LT4Cv4L0UctUr0W5NoLvXUZ9d9-vq2joBlYv6XH9f9MNhVk6PtIUhBjufNWPK3Z85wi6OXUG04lBkCk5dW0j3Rv4-okVN6_dFmxvxIQk_rMTjrCwcs1vPccUoKrXcX0lU-b"
@@ -148,11 +176,11 @@
             <!-- Status badge -->
             <div class="absolute bottom-4 left-4 right-4 bg-surface-container-low/90 p-md border-t-4 border-tertiary">
                 <p class="font-headline-md text-on-surface">RECRUIT_#7721</p>
-                <p class="font-label-caps text-tertiary">STATUS: VALIDATED</p>
+                <p id="status-label" class="font-label-caps text-tertiary">STATUS: VALIDATED</p>
             </div>
 
-            <!-- verdict-text: JS sets content and data-verdict triggers the color via CSS -->
-            <div class="absolute bottom-16 left-1/2 -translate-x-1/2 -rotate-12 z-20 border-[8px] border-tertiary px-4 py-2 opacity-90 pointer-events-none">
+            <!-- Verdict stamp — animated in by GSAP -->
+            <div id="verdict-stamp" class="absolute bottom-16 left-1/2 -translate-x-1/2 -rotate-12 z-20 border-[8px] border-tertiary px-4 py-2 opacity-90 pointer-events-none">
                 <span id="verdict-text"
                     class="text-6xl font-black text-tertiary tracking-tighter leading-none block uppercase font-headline-md"
                     style="text-shadow: 0 0 16px rgba(160,207,207,0.5)">
@@ -165,52 +193,52 @@
         <div class="lg:col-span-8 flex flex-col gap-gutter">
 
             <!-- Score block -->
-            <div class="bg-surface-container border-4 border-surface-container-highest shadow-[4px_4px_0_0_#1A0F0D] p-lg flex flex-col gap-md">
+            <div class="stat-card bg-surface-container border-4 border-surface-container-highest shadow-[4px_4px_0_0_#1A0F0D] p-lg flex flex-col gap-md">
                 <div class="flex items-center justify-between">
                     <p class="font-label-caps text-tertiary uppercase tracking-widest">Average Score</p>
-                    <!-- verdict-score: JS sets this to "Average Score: 82%" -->
                     <p id="verdict-score" class="font-headline-md text-on-surface">--</p>
                 </div>
-
-                <!-- scores-chart: JS renders a Chart.js bar chart here -->
                 <div class="relative h-48">
                     <canvas id="scores-chart"></canvas>
                 </div>
             </div>
 
             <!-- Verdict message -->
-            <div class="bg-surface-container border-4 border-surface-container-highest shadow-[4px_4px_0_0_#1A0F0D] p-lg flex flex-col gap-md">
+            <div class="stat-card bg-surface-container border-4 border-surface-container-highest shadow-[4px_4px_0_0_#1A0F0D] p-lg flex flex-col gap-md">
                 <p class="font-label-caps text-tertiary uppercase tracking-widest">Interviewer's Verdict</p>
-                <!-- verdict-message: JS fills this with the AI's in-character final words -->
                 <p id="verdict-message" class="font-body-lg text-on-surface-variant italic leading-relaxed">
                     Calculating...
                 </p>
-                <!-- verdict-tip: JS fills this with the actionable tip -->
                 <p id="verdict-tip" class="font-body-md text-secondary text-sm border-t border-outline-variant pt-md"></p>
+            </div>
+
+            <!-- Bonus stat: combo streak -->
+            <div class="stat-card bg-surface-container border-4 border-surface-container-highest shadow-[4px_4px_0_0_#1A0F0D] p-md flex items-center justify-between">
+                <div class="flex items-center gap-md">
+                    <span class="material-symbols-outlined text-tertiary">local_fire_department</span>
+                    <p class="font-label-caps text-on-surface-variant uppercase tracking-widest">Best Combo Streak</p>
+                </div>
+                <p id="combo-display" class="font-headline-md text-tertiary">—</p>
             </div>
         </div>
     </div>
 
     <!-- Resume Insights -->
-    <section class="space-y-md">
+    <section class="space-y-md stat-card">
         <div class="flex items-center gap-md">
             <span class="material-symbols-outlined text-tertiary">analytics</span>
             <h2 class="font-headline-md text-on-surface uppercase tracking-tight">RESUME_ANALYSIS</h2>
             <div class="flex-1 h-1 bg-surface-container-highest"></div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
-            <!-- Strengths -->
             <div class="bg-surface-container border-4 border-surface-container-highest shadow-[4px_4px_0_0_#1A0F0D] p-md">
                 <p class="font-label-caps text-[#1aff7a] uppercase tracking-widest mb-md">Strengths</p>
-                <!-- strengths-list: JS populates this with <li> elements -->
                 <ul id="strengths-list" class="space-y-xs font-body-md list-none">
                     <li class="text-on-surface-variant text-sm">Loading...</li>
                 </ul>
             </div>
-            <!-- Weaknesses -->
             <div class="bg-surface-container border-4 border-surface-container-highest shadow-[4px_4px_0_0_#1A0F0D] p-md">
                 <p class="font-label-caps text-[#ff4444] uppercase tracking-widest mb-md">Weaknesses</p>
-                <!-- weaknesses-list: JS populates this with <li> elements -->
                 <ul id="weaknesses-list" class="space-y-xs font-body-md list-none">
                     <li class="text-on-surface-variant text-sm">Loading...</li>
                 </ul>
@@ -218,56 +246,60 @@
         </div>
     </section>
 
-    <!-- Compensation package (static flavor section) -->
-    <section class="space-y-md">
+    <!-- Compensation Package -->
+    <section class="space-y-md stat-card">
         <div class="flex items-center gap-md">
             <span class="material-symbols-outlined text-tertiary">payments</span>
             <h2 class="font-headline-md text-on-surface uppercase tracking-tight">COMPENSATION_PACKAGE</h2>
             <div class="flex-1 h-1 bg-surface-container-highest"></div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
-            <div class="bg-[#ECE2C9] border-4 border-[#4F4936] p-md flex flex-col gap-sm shadow-[4px_4px_0_0_#1A0F0D] hover:translate-y-[-4px] transition-transform">
+
+            <!-- Card 1: Offer Letter -->
+            <div id="comp-offer" class="comp-card bg-[#ECE2C9] border-4 border-[#4F4936] p-md flex flex-col gap-sm shadow-[4px_4px_0_0_#1A0F0D]">
                 <div class="flex justify-between items-start">
-                    <span class="material-symbols-outlined text-[#35301F] text-3xl">assignment_turned_in</span>
-                    <div class="bg-[#35301F] text-[#ECE2C9] px-2 py-0.5 text-[10px] font-label-caps uppercase">SIGNED</div>
+                    <span id="comp-offer-icon" class="material-symbols-outlined text-[#35301F] text-3xl">assignment_turned_in</span>
+                    <div id="comp-offer-chip" class="bg-[#35301F] text-[#ECE2C9] px-2 py-0.5 text-[10px] font-label-caps uppercase">SIGNED</div>
                 </div>
                 <p class="font-headline-md text-[#35301F]">Offer Letter</p>
-                <p class="text-xs text-[#4C4634] leading-tight font-body-md">Legally binding employment agreement across all sectors and sub-terminal layers.</p>
+                <p id="comp-offer-desc" class="text-xs text-[#4C4634] leading-tight font-body-md">Legally binding employment agreement across all sectors and sub-terminal layers.</p>
             </div>
-            <div class="bg-surface-container border-4 border-tertiary p-md flex flex-col gap-sm shadow-[4px_4px_0_0_#1A0F0D] hover:translate-y-[-4px] transition-transform">
+
+            <!-- Card 2: Access Card -->
+            <div id="comp-access" class="comp-card bg-surface-container border-4 border-tertiary p-md flex flex-col gap-sm shadow-[4px_4px_0_0_#1A0F0D]">
                 <div class="flex justify-between items-start">
-                    <span class="material-symbols-outlined text-tertiary text-3xl">badge</span>
-                    <div class="bg-tertiary text-surface px-2 py-0.5 text-[10px] font-label-caps uppercase">ISSUED</div>
+                    <span id="comp-access-icon" class="material-symbols-outlined text-tertiary text-3xl">badge</span>
+                    <div id="comp-access-chip" class="bg-tertiary text-surface px-2 py-0.5 text-[10px] font-label-caps uppercase">ISSUED</div>
                 </div>
                 <p class="font-headline-md text-on-surface">Lv1 Access Card</p>
-                <p class="text-xs text-on-surface-variant leading-tight font-body-md">Clearance for standard cafeteria, dormitory, and core terminal facilities.</p>
+                <p id="comp-access-desc" class="text-xs text-on-surface-variant leading-tight font-body-md">Clearance for standard cafeteria, dormitory, and core terminal facilities.</p>
             </div>
-            <div class="bg-surface-container-low border-4 border-surface-container-highest p-md flex flex-col gap-sm shadow-[4px_4px_0_0_#1A0F0D] opacity-60">
+
+            <!-- Card 3: Caffeine -->
+            <div id="comp-caffeine" class="comp-card bg-surface-container-low border-4 border-surface-container-highest p-md flex flex-col gap-sm shadow-[4px_4px_0_0_#1A0F0D]">
                 <div class="flex justify-between items-start">
-                    <span class="material-symbols-outlined text-outline-variant text-3xl">coffee</span>
-                    <div class="bg-surface-container-highest text-outline px-2 py-0.5 text-[10px] font-label-caps uppercase">PENDING</div>
+                    <span id="comp-caffeine-icon" class="material-symbols-outlined text-outline-variant text-3xl">coffee</span>
+                    <div id="comp-caffeine-chip" class="bg-surface-container-highest text-outline px-2 py-0.5 text-[10px] font-label-caps uppercase">PENDING</div>
                 </div>
                 <p class="font-headline-md text-outline">Unlimited Caffeine</p>
-                <p class="text-xs text-outline-variant leading-tight font-body-md">Subject to availability at regional hub dispensers and supply chain stability.</p>
+                <p id="comp-caffeine-desc" class="text-xs text-outline-variant leading-tight font-body-md">Subject to availability at regional hub dispensers and supply chain stability.</p>
             </div>
+
         </div>
     </section>
 
     <!-- Action Buttons -->
-    <div class="flex justify-center gap-8 pt-md pb-xl">
-        <!-- try-again-btn: JS wires this to clearSession() + navigateTo('index.html') -->
+    <div class="stat-card flex justify-center gap-8 pt-md pb-xl">
         <button id="try-again-btn"
             class="flex items-center gap-3 px-8 py-3 bg-[#669BBC] text-[#2D1B18] shadow-[4px_4px_0_0_#1A0F0D] font-headline-md font-bold text-sm active:translate-x-1 active:translate-y-1 active:shadow-none transition-none hover:opacity-90">
             <span class="material-symbols-outlined">refresh</span>
             NEW GAME
         </button>
-        <!-- print-results-btn: JS wires this to window.print() -->
         <button id="print-results-btn"
             class="flex items-center gap-3 px-8 py-3 bg-[#5D3F3A] text-[#ECE2C9] shadow-[4px_4px_0_0_#1A0F0D] hover:bg-[#669BBC] hover:text-[#2D1B18] font-headline-md font-bold text-sm active:translate-x-1 active:translate-y-1 active:shadow-none transition-none">
             <span class="material-symbols-outlined">file_download</span>
             EXPORT LEDGER
         </button>
-        <!-- share-results-btn: JS wires this to Web Share API -->
         <button id="share-results-btn"
             class="flex items-center gap-3 px-8 py-3 bg-surface-container border-4 border-outline text-on-surface shadow-[4px_4px_0_0_#1A0F0D] font-headline-md font-bold text-sm active:translate-x-1 active:translate-y-1 active:shadow-none transition-none hover:opacity-90">
             <span class="material-symbols-outlined">share</span>
@@ -280,9 +312,7 @@
 <div class="fixed top-0 left-0 w-full h-full border-[12px] border-surface-container-lowest/50 pointer-events-none z-[100]"></div>
 <div class="fixed inset-0 pointer-events-none z-[101] bg-gradient-to-b from-transparent via-tertiary/5 to-transparent h-20 w-full -translate-y-full opacity-10 animate-scanline"></div>
 
-<!-- Chart.js must load before results.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- main.js must load before results.js -->
 <script src="assets/js/main.js"></script>
 <script src="assets/js/results.js"></script>
 </body>
