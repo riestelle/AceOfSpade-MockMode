@@ -23,9 +23,11 @@ async function handleWebcamConsent(choice) {
     try {
         await startWebcam('webcam-video');
         showToast('Webcam enabled for session.', 'success');
+        updateWebcamUiState('ready', 'Camera is Ready!');
     } catch (err) {
         console.error('[MockMode] Webcam failed:', err);
         showToast('Could not access webcam. Check browser permission.', 'error');
+        updateWebcamUiState('error', 'Camera failed to initialize.');
     } return;
     }
 
@@ -36,6 +38,7 @@ async function handleWebcamConsent(choice) {
         }
 
         showToast('Webcam skipped for this session.', 'warning');
+        updateWebcamUiState('skipped', 'Camera skipped');
     }
 }
 
@@ -62,6 +65,27 @@ async function startWebcam(videoElementId = 'webcam-video') {
     return stream;
 }
 
+function updateWebcamUiState(state, label) {
+  const pill = document.getElementById('webcam-status-pill');
+  const text = document.getElementById('webcam-status-text');
+
+  if (!pill || !text) {
+    return;
+  }
+
+  pill.classList.remove('ready', 'error', 'skipped');
+
+  if (state === 'ready') {
+    pill.classList.add('ready');
+  } else if (state === 'error') {
+    pill.classList.add('error');
+  } else if (state === 'skipped') {
+    pill.classList.add('skipped');
+  }
+
+  text.textContent = label;
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // ──── END: ID.1 ────
 // ───────────────────────────────────────────────────────────────────────────
@@ -74,7 +98,7 @@ async function startWebcam(videoElementId = 'webcam-video') {
 let faceMonitorTimer = null;
 let faceApiModelsLoaded = false;
 
-async function manageFaceMonitoring(enable, videoElementId = 'webcam-video', modelPath = '/assets/js/session-interview/models') {
+async function manageFaceMonitoring(enable, videoElementId = 'webcam-video', modelPath = 'assets/js/session-interview/models') {
   if (!enable) {
     if (faceMonitorTimer) {
       clearInterval(faceMonitorTimer);
@@ -140,11 +164,17 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof setWebcamUiState === 'function') {
     setWebcamUiState('loading', 'Starting Camera...');
   }
+  updateWebcamUiState('', 'Starting Camera...');
 
-  startWebcam('webcam-video').then(() => manageFaceMonitoring(true, 'webcam-video')).then(() => {
+  startWebcam('webcam-video')
+    .then(() => manageFaceMonitoring(true, 'webcam-video'))
+    .then(() => {
       if (typeof setWebcamUiState === 'function') {
         setWebcamUiState('ready', 'Camera is Ready!');
-      }}).catch((err) => {
+      }
+      updateWebcamUiState('ready', 'Camera is Ready!');
+    })
+    .catch((err) => {
       console.error('[MockMode] Auto webcam monitor failed:', err);
 
       sessionStorage.removeItem('mm_webcam_consent');
@@ -152,6 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (typeof setWebcamUiState === 'function') {
         setWebcamUiState('error', 'Camera failed to initialize.');
       }
+      updateWebcamUiState('error', 'Camera failed to initialize.');
     });
 });
 
