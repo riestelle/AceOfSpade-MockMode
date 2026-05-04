@@ -74,7 +74,7 @@ async function startWebcam(videoElementId = 'webcam-video') {
 let faceMonitorTimer = null;
 let faceApiModelsLoaded = false;
 
-async function manageFaceMonitoring(enable, videoElementId = 'webcam-video', modelPath = '/models') {
+async function manageFaceMonitoring(enable, videoElementId = 'webcam-video', modelPath = '/assets/js/session-interview/models') {
   if (!enable) {
     if (faceMonitorTimer) {
       clearInterval(faceMonitorTimer);
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setWebcamUiState('ready', 'Camera is Ready!');
       }}).catch((err) => {
       console.error('[MockMode] Auto webcam monitor failed:', err);
-      
+
       sessionStorage.removeItem('mm_webcam_consent');
       manageFaceMonitoring(false);
       if (typeof setWebcamUiState === 'function') {
@@ -157,8 +157,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ───────────────────────────────────────────────────────────────────────────
 // ──── END: ID.2 ────
-// ───────────────────────────────────────────────────────────────────────────
-
-// ───────────────────────────────────────────────────────────────────────────
-// ──── START: ID.3 ────
 // ───────────────────────────────────────────────────────────────────────────
