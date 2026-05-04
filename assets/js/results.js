@@ -120,10 +120,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const peakStress     = getFromStorage('peak_stress');
   const personality    = getFromStorage('personality');
   const questionCount  = getFromStorage('question_count');
+  const sessionComplete = getFromStorage('session_complete');
 
   // Guard: if critical data is missing, bounce to start
   if (!verdict || !scores) {
     showToast('No results found. Please complete an interview first.', 'warning');
+    setTimeout(() => navigateTo('index.html'), 2000);
+    return;
+  }
+
+  // Guard: stale data check — scores from a previous session may linger
+  // even after clearSession() if the page was opened without completing
+  // a new interview. session_complete is written last in finishInterview(),
+  // so its absence means the stat keys (peak_stress, best_combo, etc.) are
+  // from a different run or were never written.
+  if (!sessionComplete) {
+    console.warn('[MockMode] session_complete token missing — clearing stale data and redirecting.');
+    clearSession();
+    showToast('Session data incomplete. Please complete an interview first.', 'warning');
     setTimeout(() => navigateTo('index.html'), 2000);
     return;
   }
