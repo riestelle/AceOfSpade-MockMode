@@ -200,12 +200,20 @@ async function streamInterviewerMessage(prompt, personality, targetElement, onDo
 
   if (targetElement) targetElement.textContent = '';
 
+  // Accumulate full streamed text so onDone receives the complete string
+  let fullText = '';
+
   await askAIStream(
     messages,
     (token) => {
+      fullText += token;
       if (targetElement) targetElement.textContent += token;
     },
-    onDone
+    () => {
+      // Pass the fully-accumulated text to onDone so TTS speaks
+      // exactly what was shown in the dialogue box
+      if (onDone) onDone(fullText);
+    }
   );
 }
 

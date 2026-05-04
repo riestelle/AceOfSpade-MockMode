@@ -45,13 +45,15 @@ export default async function handler(req, res) {
   }
 
   // ── STREAMING MODE ────────────────────────────────────────────────────────
-  // Streams from first working Groq key, no fallback for streams
+  // Tries Groq streaming first; if all Groq keys fail, falls back to Gemini
+  // (non-streaming) and simulates SSE token-by-token so the client sees the
+  // same event format regardless of which provider answered.
   if (stream) {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    // Try each Groq key until one works
+    // ── Try each Groq key with real streaming ──────────────────────────
     for (const key of GROQ_KEYS) {
       try {
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -69,7 +71,10 @@ export default async function handler(req, res) {
           }),
         });
 
-        if (!response.ok) continue; // rate limited or bad key, try next
+        if (!response.ok) {
+          console.warn(`[MockMode] Groq stream key failed with status ${response.status}`);
+          continue; // rate limited or bad key, try next
+        }
 
         const reader  = response.body.getReader();
         const decoder = new TextDecoder();
@@ -105,7 +110,61 @@ export default async function handler(req, res) {
       }
     }
 
-    // All Groq keys failed for stream
+    // ── All Groq keys failed — fall back to Gemini (simulated stream) ──
+    console.warn('[MockMode] All Groq stream keys failed. Falling back to Gemini for stream.');
+
+    const systemMessage = messages.find(m => m.role === 'system');
+    const otherMessages = messages.filter(m => m.role !== 'system');
+    const contents = otherMessages.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+    const geminiPayload = { contents };
+    if (systemMessage) {
+      geminiPayload.systemInstruction = { parts: [{ text: systemMessage.content }] };
+    }
+
+    for (const key of GEMINI_KEYS) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(geminiPayload),
+          }
+        );
+
+        if (!response.ok) {
+          console.warn(`[MockMode] Gemini stream-fallback key failed with status ${response.status}`);
+          continue;
+        }
+
+        const data = await response.json();
+        const fullText = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
+
+        if (!fullText) {
+          console.warn('[MockMode] Gemini stream-fallback empty content:', JSON.stringify(data).slice(0, 200));
+          continue;
+        }
+
+        // Simulate streaming: send the text in small word-sized chunks
+        const words = fullText.split(' ');
+        for (let i = 0; i < words.length; i++) {
+          const token = (i === 0 ? '' : ' ') + words[i];
+          res.write(`data: ${JSON.stringify({ token })}\n\n`);
+        }
+        res.write(`data: [DONE]\n\n`);
+        res.end();
+        return;
+
+      } catch (_) {
+        continue;
+      }
+    }
+
+    // All providers failed for stream
+    console.error('[MockMode] All stream providers (Groq + Gemini) failed.');
     res.write(`data: ${JSON.stringify({ error: 'All stream providers failed' })}\n\n`);
     res.end();
     return;
