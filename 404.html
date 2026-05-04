@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MockMode — 404</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;700;900&family=Be+Vietnam+Pro:wght@400;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<style>
+    .pixel-scanline {
+        background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 50%),
+                    linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06));
+        background-size: 100% 4px, 3px 100%;
+        pointer-events: none;
+    }
+    .pixel-dither {
+        background-image: radial-gradient(#1A0F0D 1px, transparent 0);
+        background-size: 4px 4px;
+    }
+
+    @keyframes scanline {
+        0%   { transform: translateY(-100%); }
+        100% { transform: translateY(100vh); }
+    }
+    .animate-scanline { animation: scanline 8s linear infinite; }
+
+    /* Glitch effect on the 404 */
+    @keyframes glitch-1 {
+        0%, 100% { clip-path: inset(0 0 95% 0); transform: translate(-4px, 0); }
+        20%       { clip-path: inset(30% 0 50% 0); transform: translate(4px, 0); }
+        40%       { clip-path: inset(60% 0 20% 0); transform: translate(-2px, 0); }
+        60%       { clip-path: inset(80% 0 5%  0); transform: translate(3px, 0); }
+        80%       { clip-path: inset(10% 0 70% 0); transform: translate(-3px, 0); }
+    }
+    @keyframes glitch-2 {
+        0%, 100% { clip-path: inset(50% 0 30% 0); transform: translate(4px, 0); color: #ff4444; }
+        25%       { clip-path: inset(10% 0 80% 0); transform: translate(-4px, 0); color: #1aff7a; }
+        50%       { clip-path: inset(70% 0 10% 0); transform: translate(2px,  0); color: #a0cfcf; }
+        75%       { clip-path: inset(20% 0 60% 0); transform: translate(-2px, 0); color: #ffcc00; }
+    }
+
+    .glitch {
+        position: relative;
+        display: inline-block;
+    }
+    .glitch::before,
+    .glitch::after {
+        content: attr(data-text);
+        position: absolute;
+        inset: 0;
+        font: inherit;
+        letter-spacing: inherit;
+    }
+    .glitch::before {
+        animation: glitch-1 3.5s infinite steps(1);
+        opacity: 0.7;
+    }
+    .glitch::after {
+        animation: glitch-2 2.8s infinite steps(1);
+        opacity: 0.5;
+    }
+
+    /* Blink cursor */
+    @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50%       { opacity: 0; }
+    }
+    .cursor { animation: blink 1s step-end infinite; }
+
+    /* Fade in page */
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.6s ease forwards; }
+    .fade-up-2 { animation: fadeUp 0.6s 0.15s ease both; }
+    .fade-up-3 { animation: fadeUp 0.6s 0.3s  ease both; }
+    .fade-up-4 { animation: fadeUp 0.6s 0.45s ease both; }
+</style>
+<script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                colors: {
+                    'background':              '#1f0f0c',
+                    'surface-container':       '#2d1b18',
+                    'surface-container-high':  '#382522',
+                    'surface-container-highest':'#44302c',
+                    'surface-container-low':   '#281714',
+                    'on-surface':              '#fcdbd6',
+                    'on-surface-variant':      '#d4c3c0',
+                    'tertiary':                '#a0cfcf',
+                    'outline':                 '#9d8d8b',
+                    'outline-variant':         '#504442',
+                },
+                fontFamily: {
+                    headline: ['Space Grotesk'],
+                    body:     ['Be Vietnam Pro'],
+                },
+            }
+        }
+    }
+</script>
+</head>
+<body class="bg-background text-on-surface font-body min-h-screen flex items-center justify-center overflow-hidden">
+
+<!-- Background textures -->
+<div class="fixed inset-0 pixel-dither opacity-10 pointer-events-none"></div>
+<div class="fixed inset-0 pixel-scanline opacity-20 pointer-events-none"></div>
+<div class="fixed inset-0 pointer-events-none z-10 bg-gradient-to-b from-transparent via-tertiary/5 to-transparent h-20 w-full -translate-y-full opacity-10 animate-scanline"></div>
+
+<!-- UI border overlay -->
+<div class="fixed inset-0 border-[12px] border-[#190a08]/50 pointer-events-none z-50"></div>
+
+<main class="relative z-20 max-w-2xl w-full mx-auto px-6 py-16 text-center space-y-8">
+
+    <!-- Terminal breadcrumb -->
+    <div class="fade-up flex items-center justify-center gap-2 font-headline text-[11px] tracking-[0.2em] text-outline uppercase">
+        <span>MOCKMODE</span>
+        <span class="text-outline-variant">/</span>
+        <span class="text-tertiary">ERROR_LOG</span>
+        <span class="text-outline-variant">/</span>
+        <span class="text-[#ff4444]">404</span>
+    </div>
+
+    <!-- 404 glitch number -->
+    <div class="fade-up-2">
+        <span
+            class="glitch font-headline font-black text-[clamp(96px,20vw,180px)] leading-none tracking-tighter text-on-surface"
+            data-text="404"
+            style="text-shadow: 0 0 40px rgba(160,207,207,0.15)">
+            404
+        </span>
+    </div>
+
+    <!-- Error card -->
+    <div class="fade-up-3 bg-surface-container border-4 border-surface-container-highest shadow-[4px_4px_0_0_#190a08] p-6 text-left space-y-4">
+
+        <div class="flex items-center gap-3 border-b border-outline-variant pb-4">
+            <span class="material-symbols-outlined text-[#ff4444]">error</span>
+            <p class="font-headline font-bold text-on-surface tracking-wide uppercase text-sm">PAGE_NOT_FOUND</p>
+            <span class="ml-auto font-headline text-[10px] text-outline tracking-widest">EXIT_CODE: 0x404</span>
+        </div>
+
+        <p class="font-body text-on-surface-variant text-sm leading-relaxed">
+            The page you're looking for doesn't exist — or it got <span class="text-[#ff4444]">terminated</span> mid-interview.
+            Either way, your session record has been flagged.
+        </p>
+
+        <!-- Fake terminal log -->
+        <div class="bg-surface-container-low border border-outline-variant p-4 font-headline text-xs space-y-1">
+            <p class="text-outline">$ mockmode --resolve-path</p>
+            <p class="text-[#ff4444]">> ERR: route not found in registry</p>
+            <p class="text-outline">$ mockmode --suggest-redirect</p>
+            <p class="text-tertiary">> Redirecting to safe zone...<span class="cursor">█</span></p>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="fade-up-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a href="index.html"
+            class="flex items-center gap-3 px-8 py-3 bg-tertiary text-surface-container shadow-[4px_4px_0_0_#190a08] font-headline font-bold text-sm uppercase tracking-wide hover:opacity-90 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-none">
+            <span class="material-symbols-outlined text-base">home</span>
+            RETURN TO BASE
+        </a>
+        <a href="upload.html"
+            class="flex items-center gap-3 px-8 py-3 bg-surface-container border-4 border-outline text-on-surface shadow-[4px_4px_0_0_#190a08] font-headline font-bold text-sm uppercase tracking-wide hover:opacity-90 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-none">
+            <span class="material-symbols-outlined text-base">upload_file</span>
+            NEW INTERVIEW
+        </a>
+    </div>
+
+</main>
+
+</body>
+</html>
