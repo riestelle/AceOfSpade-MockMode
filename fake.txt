@@ -1,47 +1,53 @@
-John Dela Cruz
-Software Developer
-john.delacruz@email.com | Manila, Philippines | github.com/johndc
+Marcus T. Villanueva
+Full Stack Developer
+marcus.villanueva@devmail.io | Cebu City, Philippines | github.com/marcustv
 
 SUMMARY
-Fresh computer science graduate with hands-on experience in web and mobile development. Passionate about building clean, efficient software and learning new technologies fast.
+Results-driven software developer with 2 years of professional experience building scalable web applications. Strong foundation in both frontend and backend development with a focus on clean architecture and performance optimization.
 
 EDUCATION
-Bachelor of Science in Computer Science
-University of the East, 2024
-GPA: 1.5 | University Scholar
+Bachelor of Science in Information Technology
+Cebu Institute of Technology – University, 2022
+GPA: 1.75 | Dean's Lister (4 consecutive semesters)
 
 SKILLS
-Languages: Python, JavaScript, Java, PHP, C++
-Frontend: HTML, CSS, Bootstrap, Tailwind CSS, React
-Backend: Node.js, Express, Flask
-Database: MySQL, PostgreSQL
-Tools: Git, GitHub, VS Code, Postman, Figma
-Other: REST APIs, basic Docker, Linux CLI
+Languages: JavaScript, TypeScript, Python, Go, SQL
+Frontend: React, Next.js, Vue.js, Tailwind CSS, Sass
+Backend: Node.js, Express, FastAPI, Django
+Database: MySQL, MongoDB, Redis
+Tools: Docker, AWS EC2/S3, Git, Jira, Figma, Postman
+Other: REST APIs, GraphQL, CI/CD pipelines, unit testing
 
 EXPERIENCE
-Web Developer Intern
-TechStart PH, June 2023 - August 2023
-- Built and maintained internal dashboards using React and Node.js
-- Reduced page load time by 30% by optimizing database queries
-- Collaborated with a 4-person team using Git and Agile workflows
+Junior Software Developer
+Nexora Digital Solutions, Cebu City — March 2023 - Present
+- Developed and maintained 3 client-facing web apps using Next.js and Django
+- Improved API response time by 40% through query optimization and Redis caching
+- Wrote unit and integration tests achieving 85% code coverage
+- Mentored 2 intern developers during Q3 onboarding cycle
 
-Freelance Developer
-Self-employed, 2022 - Present
-- Developed 3 client websites using PHP and MySQL
-- Built a mobile app prototype using Flutter for a local logistics startup
-- Handled client communication, requirements gathering, and deployment
+Software Development Intern
+Brightline Technologies, Cebu City — June 2022 - February 2023
+- Built reusable React component library adopted across 5 internal projects
+- Integrated third-party payment gateway (PayMongo) for an e-commerce client
+- Participated in daily standups and 2-week sprint cycles using Agile/Scrum
 
 PROJECTS
-SafeRoute - Commute Safety App
-Flask backend, Flutter frontend, integrated PAGASA and MMDA APIs for real-time safety scoring and route recommendations for Metro Manila commuters.
+PulseBoard - Real-Time Analytics Dashboard
+Next.js + FastAPI + WebSockets. Live data visualization dashboard for small business owners tracking sales, inventory, and customer engagement metrics.
 
-Annyeong Market - E-commerce System
-PHP/MySQL full-stack web app with inventory management, order processing, and admin dashboard. Built as a university final project.
+TrailSync - Outdoor Activity Planner
+React Native + Node.js + Google Maps API. Mobile app that generates personalized hiking and biking routes based on user fitness level and weather conditions.
+
+VaultPass - Password Manager CLI
+Python + AES-256 encryption. Lightweight command-line password manager with local encrypted storage and clipboard integration.
 
 CERTIFICATIONS
-- IBM Full Stack Software Developer (Coursera, 2023)
-- Google IT Support Professional Certificate (2022)
+- AWS Certified Cloud Practitioner (2023)
+- Meta Front-End Developer Certificate (Coursera, 2022)
+- MongoDB Associate Developer (2023)
 
 LANGUAGES
-English - Fluent (TOEIC 920/990)
+English - Professional Working Proficiency
 Filipino - Native
+Cebuano - Native
