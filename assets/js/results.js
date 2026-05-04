@@ -213,7 +213,7 @@ function verdictToCompGroup(verdictKey) {
 function renderStatPanel(peakStress, combo, personality, questionCount) {
   const stressEl = document.getElementById('stat-stress');
   if (stressEl) {
-    stressEl.textContent = peakStress != null ? `${peakStress}%` : '—';
+    stressEl.textContent = (peakStress != null && peakStress !== '') ? `${peakStress}%` : '0%';
   }
 
   const comboEl = document.getElementById('stat-combo');
@@ -228,7 +228,8 @@ function renderStatPanel(peakStress, combo, personality, questionCount) {
 
   const questionsEl = document.getElementById('stat-questions');
   if (questionsEl) {
-    questionsEl.textContent = questionCount != null ? `${questionCount}` : '—';
+    // Fall back to 5 (default question count) if not saved
+    questionsEl.textContent = (questionCount != null && questionCount !== '') ? `${questionCount}` : '5';
   }
 }
 

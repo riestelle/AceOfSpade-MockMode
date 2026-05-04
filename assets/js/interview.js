@@ -369,9 +369,9 @@ async function finishInterview() {
   saveToStorage('scores', scores);
 
   // ── Save left-panel stat data for results.html ─────────────────────────
-  saveToStorage('peak_stress', Math.round(peakStressLevel));
+  saveToStorage('peak_stress', Math.round(peakStressLevel) || 0);
   saveToStorage('personality', personality);
-  saveToStorage('question_count', questions.length || scores.length);
+  saveToStorage('question_count', questions.length || scores.length || 5);
 
   // Best combo: longest streak of consecutive scores >= 60
   let bestCombo = 0, currentCombo = 0;
