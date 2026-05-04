@@ -114,6 +114,9 @@ function clearSession() {
     'mm_scores',
     'mm_resume_analysis',
     'mm_verdict',
+    'mm_peak_stress',
+    'mm_best_combo',
+    'mm_question_count',
   ];
 
   MM_KEYS.forEach(k => localStorage.removeItem(k));
