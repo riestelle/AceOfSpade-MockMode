@@ -177,6 +177,88 @@
     }
     .led-pulse { animation: led-pulse 1.8s ease-in-out infinite; }
 
+    body > :not(#loading-screen) {
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 1.1s ease, visibility 0s linear 1.1s;
+    }
+    body.loaded > :not(#loading-screen) {
+        visibility: visible;
+        opacity: 1;
+        transition: opacity 1.1s ease;
+    }
+
+    /* Loading screen animation */
+    #loading-screen {
+        z-index: 9999;
+    }
+    #loading-progress {
+        animation: progress-pulse 2s ease-in-out infinite;
+    }
+    @keyframes progress-pulse {
+        0%,100% { transform: translateY(0); color: #cfc6ae; }
+        50%      { transform: translateY(-2px); color: #ffffff; }
+    }
+
+    /* Background motion */
+    #bg-img {
+        animation: bg-pan 28s ease-in-out infinite alternate;
+        transform-origin: center center;
+    }
+    #bg-overlay {
+        animation: overlay-glow 9s ease-in-out infinite alternate;
+    }
+    @keyframes bg-pan {
+        from { transform: scale(1.02) rotate(0deg); }
+        to   { transform: scale(1.08) rotate(0.25deg); }
+    }
+    @keyframes overlay-glow {
+        from { background-color: rgba(31,16,12,0.42); }
+        to   { background-color: rgba(31,16,12,0.58); }
+    }
+
+    /* Panel and controls breathing */
+    #main-panel {
+        animation: panel-breathe 12s ease-in-out infinite alternate;
+    }
+    @keyframes panel-breathe {
+        from { transform: translateY(0px); }
+        to   { transform: translateY(-6px); }
+    }
+    .arcade-button {
+        animation: arcade-button-hover 6s ease-in-out infinite alternate;
+    }
+    @keyframes arcade-button-hover {
+        from { transform: translateY(0); }
+        to   { transform: translateY(-2px); }
+    }
+    #btn-start-inner,
+    #btn-how-inner {
+        animation: button-glow 3.5s ease-in-out infinite alternate;
+        will-change: transform, box-shadow;
+    }
+    @keyframes button-glow {
+        0% {
+            transform: scale(1) translateY(0);
+            box-shadow: 0 8px 0 0 #190a08, inset 0 0 0 2px rgba(255,255,255,0);
+        }
+        100% {
+            transform: scale(1.02) translateY(-1px);
+            box-shadow: 0 12px 0 0 rgba(25,14,8,0.95), inset 0 0 14px rgba(255,255,255,0.1);
+        }
+    }
+
+    /* Loading spinner */
+    .loader {
+        width: 64px;
+        height: 64px;
+        border: 8px solid rgba(160, 207, 207, 0.15);
+        border-top-color: #a0cfcf;
+        border-radius: 9999px;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     /* Modal */
     #how-to-play-modal { display:none; }
     #how-to-play-modal.open { display:flex; }
@@ -197,6 +279,13 @@
 </style>
 </head>
 <body class="bg-background text-on-background font-body-md overflow-hidden selection:bg-tertiary selection:text-on-tertiary">
+
+<!-- Loading Screen -->
+<div id="loading-screen" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#0c0b09] text-[#a0cfcf]">
+    <div class="loader mb-6"></div>
+    <div class="text-[14px] uppercase tracking-[0.35em] font-label-caps">LOADING MOCKMODE</div>
+    <div id="loading-progress" class="mt-4 text-[13px] uppercase tracking-[0.25em] text-[#cfc6ae]">LOADING 0%</div>
+</div>
 
 <!-- Background -->
 <div class="fixed inset-0 z-0">
@@ -306,7 +395,7 @@
             </button>
         </div>
         <div class="p-lg bg-[#2d1b18] relative z-10 flex flex-col gap-lg">
-            <div class="border-2 border-outline-variant p-md bg-surface-container-low/50 relative">
+            <div class="border-y-2 border-outline-variant p-md bg-surface-container-low/50 relative">
                 <div class="absolute -top-3 left-4 px-2 bg-surface-container font-label-caps text-outline text-xs uppercase tracking-widest">Operation: INTERVIEW</div>
                 <div class="flex flex-col gap-lg mt-2">
                     <div class="flex gap-md">
@@ -351,7 +440,7 @@
 <footer class="fixed bottom-6 left-6 right-6 z-20 flex justify-between items-end pointer-events-none">
     <div class="bg-surface-container/60 backdrop-blur-md p-3 border-2 border-[#190a08] shadow-[4px_4px_0_0_#190a08]">
         <div class="flex items-center gap-3 text-xs font-label-caps text-on-surface">
-            <div class="w-3 h-3 bg-error led-pulse"></div>
+            <div class="w-3 h-3 rounded-full bg-[#4CAF50] led-pulse"></div>
             SYSTEM ONLINE: 100%
         </div>
     </div>
@@ -378,6 +467,104 @@
             icon.textContent = 'light_mode';
         }
     }
+    let loadingProgress = 0;
+    let loadingFrame = null;
+    let pageLoaded = false;
+    let holdReady = false;
+    let finishStarted = false;
+    let holdTimer = null;
+
+    const progressEl = document.getElementById('loading-progress');
+    const loadingScreen = document.getElementById('loading-screen');
+
+    function updateProgress(value) {
+        loadingProgress = Math.min(100, Math.max(0, Math.round(value)));
+        if (progressEl) {
+            progressEl.textContent = `LOADING ${loadingProgress}%`;
+        }
+    }
+
+    function animateProgress(to, duration, callback) {
+        const startValue = loadingProgress;
+        const diff = to - startValue;
+        const startTime = performance.now();
+
+        if (loadingFrame) cancelAnimationFrame(loadingFrame);
+
+        function step(now) {
+            const t = Math.min(1, (now - startTime) / duration);
+            updateProgress(startValue + diff * t);
+            if (t < 1) {
+                loadingFrame = requestAnimationFrame(step);
+            } else {
+                loadingFrame = null;
+                if (callback) callback();
+            }
+        }
+
+        loadingFrame = requestAnimationFrame(step);
+    }
+
+    function startHoldTimer() {
+        if (holdTimer || holdReady) return;
+        const holdDelay = 4000 + Math.random() * 5000;
+        holdTimer = setTimeout(() => {
+            holdReady = true;
+            holdTimer = null;
+            if (pageLoaded && loadingProgress >= 69 && !finishStarted) {
+                animateProgress(100, 2300, finishLoading);
+            }
+        }, holdDelay);
+    }
+
+    function finishLoading() {
+        if (finishStarted) return;
+        finishStarted = true;
+        if (!loadingScreen) return;
+        document.body.classList.add('loaded');
+        loadingScreen.classList.add('opacity-0');
+        setTimeout(() => loadingScreen.remove(), 450);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        updateProgress(0);
+        animateProgress(60, 4200, () => {
+            animateProgress(69, 5200, () => {
+                startHoldTimer();
+                if (pageLoaded && holdReady) {
+                    animateProgress(100, 2300, finishLoading);
+                }
+            });
+        });
+    });
+
+    window.addEventListener('load', () => {
+        pageLoaded = true;
+        if (loadingProgress < 60) {
+            animateProgress(60, 4200, () => {
+                animateProgress(69, 5200, () => {
+                    startHoldTimer();
+                    if (pageLoaded && holdReady) {
+                        animateProgress(100, 2300, finishLoading);
+                    }
+                });
+            });
+        } else if (loadingProgress < 69) {
+            animateProgress(69, 5200, () => {
+                startHoldTimer();
+                if (pageLoaded && holdReady) {
+                    animateProgress(100, 2300, finishLoading);
+                }
+            });
+        } else if (loadingProgress < 100) {
+            startHoldTimer();
+            if (holdReady) {
+                animateProgress(100, 2300, finishLoading);
+            }
+        } else {
+            finishLoading();
+        }
+    });
 
     document.getElementById('btn-start').addEventListener('click', () => navigateTo('upload.html'));
 
