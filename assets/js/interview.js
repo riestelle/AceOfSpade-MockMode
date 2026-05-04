@@ -354,6 +354,19 @@ function updateProgressLabel() {
 
 async function finishInterview() {
   saveToStorage('scores', scores);
+
+  // ── Save left-panel stat data for results.html ─────────────────────────
+  saveToStorage('peak_stress', Math.round(stressLevel));
+  saveToStorage('personality', personality);
+  saveToStorage('question_count', questions.length);
+
+  // Best combo: longest streak of consecutive scores >= 60
+  let bestCombo = 0, currentCombo = 0;
+  for (const s of scores) {
+    if (s >= 60) { currentCombo++; bestCombo = Math.max(bestCombo, currentCombo); }
+    else { currentCombo = 0; }
+  }
+  saveToStorage('best_combo', bestCombo);
   showLoader('Calculating your verdict...');
 
   try {

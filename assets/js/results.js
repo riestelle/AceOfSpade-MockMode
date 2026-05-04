@@ -86,6 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const scores         = getFromStorage('scores');
   const resumeAnalysis = getFromStorage('resume_analysis');
   const combo          = getFromStorage('best_combo');
+  const peakStress     = getFromStorage('peak_stress');
+  const personality    = getFromStorage('personality');
+  const questionCount  = getFromStorage('question_count');
 
   // Guard: if critical data is missing, bounce to start
   if (!verdict || !scores) {
@@ -100,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Populate data (before animations so elements have content)
   applyVerdictData(verdict, config);
+  renderStatPanel(peakStress, combo, personality, questionCount);
   renderScoreChart(scores);
   renderResumeInsights(resumeAnalysis);
   renderCompensation(verdictKey);
@@ -121,9 +125,22 @@ document.addEventListener('DOMContentLoaded', () => {
  * @returns {string} one of the VERDICT_CONFIG keys
  */
 function resolveVerdictKey(v) {
+  const avg    = typeof v.average === 'number' ? v.average : null;
   const result = (v.verdict ?? '').toUpperCase();
-  if (result === 'HIRED')  return 'hired-confident';
-  if (result === 'FIRED')  return 'fired-breakdown';
+
+  // Score-based override: don't let a 0% average be "waitlisted" or "hired".
+  // The AI verdict string is used for flavour, but the math wins for the bucket.
+  if (avg !== null) {
+    if (avg >= 75) return result === 'HIRED' ? 'hired-confident' : 'hired-lucky';
+    if (avg >= 50) return 'waitlisted';
+    // avg < 50 → always fired
+    if (result === 'FIRED') return 'fired-technical';
+    return 'fired-breakdown';
+  }
+
+  // Fallback if average somehow missing — trust AI string
+  if (result === 'HIRED') return 'hired-confident';
+  if (result === 'FIRED') return 'fired-breakdown';
   return 'waitlisted';
 }
 
@@ -136,6 +153,38 @@ function verdictToCompGroup(verdictKey) {
   if (verdictKey.startsWith('hired'))    return 'hired';
   if (verdictKey.startsWith('fired'))    return 'fired';
   return 'waitlisted';
+}
+
+
+// ─── Left panel stats ─────────────────────────────────────────────────────────
+
+/**
+ * Populates the four stat rows in the Recruit Stats Panel.
+ * @param {number|null} peakStress
+ * @param {number|null} combo
+ * @param {string|null} personality
+ * @param {number|null} questionCount
+ */
+function renderStatPanel(peakStress, combo, personality, questionCount) {
+  const stressEl = document.getElementById('stat-stress');
+  if (stressEl) {
+    stressEl.textContent = peakStress != null ? `${peakStress}%` : '—';
+  }
+
+  const comboEl = document.getElementById('stat-combo');
+  if (comboEl) {
+    comboEl.textContent = (combo != null && combo > 0) ? `${combo}x` : '0x';
+  }
+
+  const personalityEl = document.getElementById('stat-personality');
+  if (personalityEl) {
+    personalityEl.textContent = personality ? formatPersonality(personality) : '—';
+  }
+
+  const questionsEl = document.getElementById('stat-questions');
+  if (questionsEl) {
+    questionsEl.textContent = questionCount != null ? `${questionCount}` : '—';
+  }
 }
 
 
