@@ -175,11 +175,15 @@ export default async function handler(req, res) {
           }
         );
 
-        if (!response.ok) continue; // rate limited or bad key, try next
+        if (!response.ok) {
+          console.warn(`[MockMode] Gemini key failed with status ${response.status}`);
+          continue;
+        }
 
         const data = await response.json();
         const content = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
         if (content) return content;
+        console.warn('[MockMode] Gemini empty content:', JSON.stringify(data).slice(0, 200));
 
       } catch (_) {
         continue;
@@ -209,10 +213,15 @@ export default async function handler(req, res) {
         }),
       });
 
-      if (!response.ok) return null;
+      if (!response.ok) {
+        console.warn(`[MockMode] OpenRouter failed with status ${response.status}`);
+        return null;
+      }
 
       const data = await response.json();
-      return data?.choices?.[0]?.message?.content ?? null;
+      const content = data?.choices?.[0]?.message?.content ?? null;
+      if (!content) console.warn('[MockMode] OpenRouter empty content:', JSON.stringify(data).slice(0, 200));
+      return content;
 
     } catch (_) {
       return null;
