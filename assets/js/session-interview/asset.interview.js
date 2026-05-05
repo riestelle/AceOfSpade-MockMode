@@ -138,35 +138,48 @@ class CharacterController {
           
           groups.forEach(g => {
             const titleEl = g.querySelector(':scope > title');
+            const rects = g.querySelectorAll('rect'); // Find all rectangles in this group
+
+            // 1. KILL BY NAME (Enhanced keyword list)
             if (titleEl) {
               const layerName = titleEl.textContent.trim().toLowerCase();
-              
-              // DEBUG: Uncomment the line below to see all layer names in your console
               console.log('Lottie Layer Found:', layerName);
 
-              // Improved matching: checks if the name INCLUDES these keywords
-              // Look for this block in CharacterController.init()[cite: 2]
               if (
                 layerName.includes('group 7') || 
                 layerName.includes('background') || 
                 layerName.includes('bg') ||
                 layerName.includes('solid') ||
-                layerName.includes('layer') // Add more keywords if the box persists
+                layerName.includes('mouth') || // Prevent manual mouth wobble box
+                layerName.includes('layer 48') || // Specific layer identified as the culprit
+                layerName.includes('null')
               ) {
                 g.style.display = 'none';
+                g.remove(); // Physically remove from DOM so shadows can't trace it[cite: 2]
               }
             }
+
+            // 2. KILL BY SHAPE (Surgical strike for the 172x172 ghost box)
+            rects.forEach(r => {
+              const w = r.getAttribute('width');
+              const h = r.getAttribute('height');
+              // Target the specific 172px rectangle identified in the layer structure[cite: 2]
+              if (w === "172" || h === "172") { 
+                g.style.display = 'none';
+                g.remove(); 
+              }
+            });
           });
         }
 
         const skeleton = document.getElementById('lottie-interviewer-skeleton');
-        if (skeleton) skeleton.classList.add('hidden');
+        if (skeleton) skeleton.classList.add('hidden');[cite: 2, 3]
         resolve();
       });
       
-      setTimeout(resolve, 3000);
+      setTimeout(resolve, 3000); 
     });
-  }
+
   // ── Idle: pause at frame 0
   goIdle() {
     this.state = 'idle';
