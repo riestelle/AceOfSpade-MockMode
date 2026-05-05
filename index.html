@@ -96,6 +96,120 @@
         box-shadow: 0 8px 0 0 #190a08;
     }
     .arcade-button:active { transform: translateY(4px); box-shadow: 0 4px 0 0 #190a08; }
+
+    /* ── Navbar icon buttons: bounce on hover ── */
+    @keyframes nav-btn-bounce {
+        0%   { transform: translateY(0) scale(1); }
+        30%  { transform: translateY(-5px) scale(1.15); }
+        55%  { transform: translateY(1px) scale(0.95); }
+        75%  { transform: translateY(-3px) scale(1.05); }
+        100% { transform: translateY(0) scale(1); }
+    }
+    header .arcade-button:hover {
+        animation: nav-btn-bounce 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards !important;
+        background-color: rgba(102,155,188,0.15) !important;
+    }
+    header .arcade-button:hover .material-symbols-outlined {
+        color: #a0cfcf !important;
+    }
+
+    /* ── START GAME: scanline wipe on hover ── */
+    @keyframes start-scan {
+        0%   { top: -100%; }
+        100% { top: 200%; }
+    }
+    #btn-start-inner::before {
+        content: '';
+        position: absolute;
+        left: 0; right: 0;
+        top: -100%;
+        height: 40%;
+        background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.22), transparent);
+        pointer-events: none;
+        z-index: 1;
+        opacity: 0;
+        transition: opacity 0.1s;
+    }
+    #btn-start:hover #btn-start-inner::before {
+        opacity: 1;
+        animation: start-scan 0.55s linear forwards;
+    }
+    #btn-start:hover #btn-start-inner {
+        filter: brightness(1.12) drop-shadow(0 0 8px rgba(160,207,207,0.6));
+        transform: scale(1.03) translateY(-2px) !important;
+        box-shadow: 0 14px 0 0 #190a08, 0 0 20px rgba(160,207,207,0.25) !important;
+    }
+    @keyframes icon-spin-cw {
+        0%   { transform: rotate(0deg) scale(1); }
+        60%  { transform: rotate(200deg) scale(1.3); }
+        100% { transform: rotate(360deg) scale(1); }
+    }
+    #btn-start:hover .material-symbols-outlined {
+        animation: icon-spin-cw 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    }
+
+    /* ── HOW TO PLAY: shimmer + wiggle on hover ── */
+    #btn-how-inner::before {
+        content: '';
+        position: absolute;
+        top: 0; left: -80%;
+        width: 50%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(102,155,188,0.25), transparent);
+        opacity: 0;
+        pointer-events: none;
+        z-index: 1;
+        transition: opacity 0.1s;
+    }
+    @keyframes how-shimmer {
+        0%   { left: -80%; }
+        100% { left: 140%; }
+    }
+    @keyframes how-wiggle {
+        0%,100% { transform: scale(1.02) translateY(-2px) rotate(0deg); }
+        25%     { transform: scale(1.02) translateY(-2px) rotate(-1.5deg); }
+        75%     { transform: scale(1.02) translateY(-2px) rotate(1.5deg); }
+    }
+    #btn-how:hover #btn-how-inner {
+        animation: how-wiggle 0.4s ease-in-out forwards !important;
+        filter: brightness(1.1) drop-shadow(0 0 6px rgba(102,155,188,0.4));
+        box-shadow: 0 14px 0 0 #190a08 !important;
+    }
+    #btn-how:hover #btn-how-inner::before {
+        opacity: 1;
+        animation: how-shimmer 0.5s ease forwards;
+    }
+    @keyframes icon-spin-ccw {
+        0%   { transform: rotate(0deg) scale(1); }
+        60%  { transform: rotate(-180deg) scale(1.3); }
+        100% { transform: rotate(-360deg) scale(1); }
+    }
+    #btn-how:hover .material-symbols-outlined {
+        animation: icon-spin-ccw 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    }
+
+    /* ── Pixel burst on click ── */
+    @keyframes pixel-burst {
+        0%   { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 1; }
+        100% { transform: translate(calc(var(--dx) * 3.5), calc(var(--dy) * 3.5)) scale(0); opacity: 0; }
+    }
+    .burst-particle {
+        position: fixed;
+        width: 6px; height: 6px;
+        pointer-events: none;
+        z-index: 9999;
+        animation: pixel-burst 0.5s cubic-bezier(0.25,0.46,0.45,0.94) forwards;
+    }
+
+    /* ── Modal buttons: pop on hover ── */
+    @keyframes modal-btn-pop {
+        0%   { transform: scale(1); }
+        50%  { transform: scale(1.08); }
+        100% { transform: scale(1.04); }
+    }
+    #how-to-play-modal .arcade-button:hover {
+        animation: modal-btn-pop 0.2s ease forwards !important;
+        filter: brightness(1.1);
+    }
     .crt-glow { text-shadow: 0 0 10px rgba(102,155,188,0.5); }
     .retro-glow { text-shadow: 2px 2px 0px rgba(0,0,0,1); }
 
@@ -257,6 +371,16 @@
     <source src="sounds/lobby music.mp3" type="audio/mpeg">
 </audio>
 
+<!-- Hover Sound -->
+<audio id="hover-sound" preload="auto">
+    <source src="sounds/index buttton hover.wav" type="audio/wav">
+</audio>
+
+<!-- Click Sound -->
+<audio id="click-sound" preload="auto">
+    <source src="sounds/index button click.wav" type="audio/wav">
+</audio>
+
 <!-- Loading Screen -->
 <div id="loading-screen" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#0c0b09] text-[#a0cfcf]">
     <div class="loader mb-6"></div>
@@ -284,13 +408,13 @@
         </div>
     </div>
     <div class="flex items-center gap-3">
-        <button id="volume-btn" onclick="toggleMusic()" class="arcade-button w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
+        <button id="volume-btn" onclick="playClick(); spawnBurst(event); toggleMusic()" onmouseenter="playHover()" class="arcade-button w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
             <span id="volume-icon" class="material-symbols-outlined text-[#669BBC]">volume_off</span>
         </button>
-        <button id="theme-toggle" onclick="toggleTheme()" class="arcade-button w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
+        <button id="theme-toggle" onclick="playClick(); spawnBurst(event); toggleTheme()" onmouseenter="playHover()" class="arcade-button w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
             <span id="theme-icon" class="material-symbols-outlined text-[#669BBC]">light_mode</span>
         </button>
-        <button onclick="document.getElementById('how-to-play-modal').classList.add('open')" class="arcade-button w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
+        <button onclick="playClick(); spawnBurst(event); document.getElementById('how-to-play-modal').classList.add('open')" onmouseenter="playHover()" class="arcade-button w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
             <span class="material-symbols-outlined text-[#669BBC]">help</span>
         </button>
     </div>
@@ -327,14 +451,14 @@
         </div>
 
         <div class="flex flex-col sm:flex-row gap-6 w-full max-w-sm relative z-10">
-            <button id="btn-start" class="flex-1 group relative">
+            <button id="btn-start" onmouseenter="playHover()" class="flex-1 group relative">
                 <div class="absolute inset-0 bg-[#1A0F0D] translate-x-2 translate-y-2"></div>
                 <div id="btn-start-inner" class="relative bg-[#a0cfcf] text-[#002020] font-headline-md py-4 border-2 border-[#190a08] flex items-center justify-center gap-2 arcade-button active:translate-x-2 active:translate-y-2">
                     <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1;">play_arrow</span>
                     START GAME
                 </div>
             </button>
-            <button id="btn-how" class="flex-1 group relative" onclick="document.getElementById('how-to-play-modal').classList.add('open')">
+            <button id="btn-how" onmouseenter="playHover()" onclick="playClick(); spawnBurst(event); document.getElementById('how-to-play-modal').classList.add('open')" class="flex-1 group relative">
                 <div class="absolute inset-0 bg-[#1A0F0D] translate-x-2 translate-y-2"></div>
                 <div id="btn-how-inner" class="relative bg-surface-container text-[#669BBC] font-headline-md py-4 border-2 border-[#190a08] flex items-center justify-center gap-2 arcade-button active:translate-x-2 active:translate-y-2">
                     <span class="material-symbols-outlined">help_center</span>
@@ -357,7 +481,7 @@
         <div class="absolute inset-0 pixel-dither pointer-events-none opacity-10"></div>
         <div class="bg-[#2D1B18] border-b-4 border-[#1A0F0D] px-6 py-4 flex justify-between items-center relative z-10">
             <h2 class="font-headline-md text-[#a0cfcf] tracking-tighter uppercase crt-glow">HOW TO PLAY</h2>
-            <button onclick="document.getElementById('how-to-play-modal').classList.remove('open')"
+            <button onclick="playClick(); spawnBurst(event); document.getElementById('how-to-play-modal').classList.remove('open')" onmouseenter="playHover()"
                 class="arcade-button w-10 h-10 bg-error text-on-error border-2 border-[#1A0F0D] flex items-center justify-center hover:opacity-90">
                 <span class="material-symbols-outlined font-black">close</span>
             </button>
@@ -390,7 +514,7 @@
                 </div>
             </div>
             <div class="flex justify-end">
-                <button onclick="document.getElementById('how-to-play-modal').classList.remove('open')"
+                <button onclick="playClick(); spawnBurst(event); document.getElementById('how-to-play-modal').classList.remove('open')" onmouseenter="playHover()"
                     class="arcade-button bg-primary text-on-primary font-headline-md px-lg py-sm border-4 border-[#1A0F0D] flex items-center gap-md group hover:opacity-90">
                     <span class="uppercase">I UNDERSTAND</span>
                     <span class="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
@@ -438,7 +562,49 @@
 
     /* ── Music ── */
     const music = document.getElementById('lobby-music');
+    music.volume = 0.2;
     let musicPlaying = false;
+
+    /* ── Hover Sound ── */
+    const hoverSfx = document.getElementById('hover-sound');
+    hoverSfx.volume = 0.4;
+    function playHover() {
+        hoverSfx.currentTime = 0;
+        hoverSfx.play().catch(() => {});
+    }
+
+    /* ── Click Sound ── */
+    const clickSfx = document.getElementById('click-sound');
+    clickSfx.volume = 0.5;
+    function playClick() {
+        clickSfx.currentTime = 0;
+        clickSfx.play().catch(() => {});
+    }
+
+    /* ── Pixel Burst on Click ── */
+    const BURST_COLORS = ['#a0cfcf','#e7bdb6','#669BBC','#cfc6ae','#bbeceb','#ffffff'];
+    function spawnBurst(e) {
+        const count = 10;
+        const cx = e.clientX, cy = e.clientY;
+        for (let i = 0; i < count; i++) {
+            const el = document.createElement('div');
+            el.className = 'burst-particle';
+            const angle = (360 / count) * i + (Math.random() * 20 - 10);
+            const dist  = 18 + Math.random() * 22;
+            const rad   = angle * Math.PI / 180;
+            const dx    = Math.round(Math.cos(rad) * dist);
+            const dy    = Math.round(Math.sin(rad) * dist);
+            el.style.cssText = `
+                left: ${cx - 3}px;
+                top:  ${cy - 3}px;
+                background: ${BURST_COLORS[i % BURST_COLORS.length]};
+                --dx: ${dx}px;
+                --dy: ${dy}px;
+            `;
+            document.body.appendChild(el);
+            el.addEventListener('animationend', () => el.remove());
+        }
+    }
 
     function toggleMusic() {
         const icon = document.getElementById('volume-icon');
@@ -447,6 +613,7 @@
             icon.textContent = 'volume_off';
             musicPlaying = false;
         } else {
+            music.volume = 0.2;
             music.play();
             icon.textContent = 'volume_up';
             musicPlaying = true;
@@ -506,8 +673,8 @@
         document.body.classList.add('loaded');
         loadingScreen.classList.add('opacity-0');
         setTimeout(() => loadingScreen.remove(), 450);
-        // Play music immediately after loading, at 50% volume
-        music.volume = 0.5;
+        // Play music immediately after loading, at 20% volume
+        music.volume = 0.2;
         music.play().then(() => {
             musicPlaying = true;
             document.getElementById('volume-icon').textContent = 'volume_up';
@@ -556,7 +723,7 @@
         }
     });
 
-    document.getElementById('btn-start').addEventListener('click', () => navigateTo('upload.html'));
+    document.getElementById('btn-start').addEventListener('click', (e) => { playClick(); spawnBurst(e); navigateTo('upload.html'); });
 
     /* ── Floating pixel particles ── */
     (function spawnParticles() {
