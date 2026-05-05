@@ -259,3 +259,8 @@ transition: opacity 0.2s, color 0.2s;
   color: #ff4444;
   text-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
 }
+
+/* Hide the background rect layer inside the interviewer Lottie */
+#lottie-interviewer svg > g:first-child {
+  display: none;
+}
