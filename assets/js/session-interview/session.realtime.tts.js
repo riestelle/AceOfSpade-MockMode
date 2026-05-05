@@ -46,39 +46,56 @@ function toggleSound() {
 
 function speakText(text) {
   if (!soundOn || !ttsSupported || !text) return;
-
+  
   // Hard stop — user must toggle sound off/on to reset
   if (ttsRetryCount >= TTS_MAX_RETRIES) {
     console.warn('[MockMode] TTS hard-stopped. Toggle sound off/on to reset.');
     return;
   }
 
-  window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.rate   = 0.95;
-  utter.pitch  = 1.05;
-  utter.volume = 0.9;
-
-  utter.onstart = () => {
-    currentUtterance = utter;
-    ttsRetryCount = 0; // clean start resets the counter
-  };
-  utter.onend = () => {
-    if (currentUtterance === utter) currentUtterance = null;
-  };
-  utter.onerror = (event) => {
-    console.warn('[MockMode] TTS error:', event.error);
-    if (currentUtterance === utter) currentUtterance = null;
-    ttsRetryCount++;
-    if (ttsRetryCount >= TTS_MAX_RETRIES) {
-      console.warn('[MockMode] TTS giving up. Toggle sound off/on to retry.');
-      if (typeof showToast === 'function')
-        showToast('Voice output failed. Toggle sound off and on to retry.', 'warning');
+  // Ensure voices are loaded before speaking
+  const trySpeak = () => {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) {
+      // Voices not ready yet — retry once after 100ms
+      setTimeout(trySpeak, 100);
+      return;
     }
+
+    // Optional: pick a preferred voice (English)
+    const preferredVoice = voices.find(v => 
+      v.lang.startsWith('en-') && (v.name.includes('Google') || v.name.includes('Natural'))
+    ) || voices[0];
+
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate   = 0.95;
+    utter.pitch  = 1.05;
+    utter.volume = 0.9;
+    if (preferredVoice) utter.voice = preferredVoice;
+    
+    utter.onstart = () => {
+      currentUtterance = utter;
+      ttsRetryCount = 0;
+    };
+    utter.onend = () => {
+      if (currentUtterance === utter) currentUtterance = null;
+    };
+    utter.onerror = (event) => {
+      console.warn('[MockMode] TTS error:', event.error);
+      if (currentUtterance === utter) currentUtterance = null;
+      ttsRetryCount++;
+      if (ttsRetryCount >= TTS_MAX_RETRIES) {
+        console.warn('[MockMode] TTS giving up. Toggle sound off/on to retry.');
+        if (typeof showToast === 'function')
+          showToast('Voice output failed. Toggle sound off and on to retry.', 'warning');
+      }
+    };
+    currentUtterance = utter;
+    window.speechSynthesis.speak(utter);
   };
 
-  currentUtterance = utter;
-  window.speechSynthesis.speak(utter);
+  trySpeak();
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -166,8 +183,9 @@ if (!sttSupported) {
 function startRecognition() {
   // Add this debug check
   if (!window.isSecureContext) {
-    showToast('Speech recognition requires HTTPS or localhost.', 'error');
+    showToast('Speech recognition requires HTTPS or localhost. Use http://localhost instead.', 'error');
     console.error('[MockMode] Not a secure context! SpeechRecognition will fail.');
+    micHardStopped = true;
     return;
   }
 
@@ -213,32 +231,24 @@ function startRecognition() {
     console.warn('[MockMode] Mic error:', event.error);
     setMicUI(false);
 
-    // 'aborted' = we called stop() intentionally.
-    // 'no-speech' = user was quiet. Neither counts as a real failure.
     if (event.error === 'aborted' || event.error === 'no-speech') return;
 
-    // Show specific error messages
-    if (typeof showToast === 'function') {
-      const errorMessages = {
-        'network': 'Network error. Check your connection and try again.',
-        'audio-capture': 'No microphone found. Please connect a mic.',
-        'not-allowed': 'Microphone access denied. Enable it in browser settings.',
-        'service-not-allowed': 'Speech service not allowed. Check browser permissions.',
-        'invalid-state': 'Invalid state. Try refreshing the page.',
-        'no-speech': 'No speech detected. Try speaking louder.'
-      };
-      
-      const errorMsg = errorMessages[event.error] || `Mic error: ${event.error}`;
-      showToast(errorMsg, 'error');
+    // Brave-specific hint
+    if (event.error === 'network' && /Brave/i.test(navigator.userAgent)) {
+      showToast('Ad-blockers may be blocking speech recognition.', 'error');
+    } else if (event.error === 'network') {
+      showToast('Network error: Cannot connect to speech service. Check connection or ad-blockers.', 'error');
+    } else if (event.error === 'not-allowed') {
+      showToast('Microphone access denied. Enable permissions in browser settings.', 'error');
+    } else {
+      showToast(`Mic error: ${event.error}`, 'error');
     }
 
     micRetryCount++;
 
     if (micRetryCount >= STT_MAX_RETRIES) {
       micHardStopped = true;
-      console.warn(`[MockMode] Mic hard-stopped after ${STT_MAX_RETRIES} errors.`);
-      if (typeof showToast === 'function')
-        showToast('Mic disabled after 3 failures. Click mic button to retry.', 'error');
+      showToast('Mic disabled after 3 failures. Click mic button to retry.', 'error');
       return;
     }
 
@@ -273,22 +283,41 @@ function startRecognition() {
 if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', () => {
 
-    // ── TTS diagnostics ──
-    // getVoices() returns [] on first call — voices load async.
-    // Listen for voiceschanged, then also log immediately for Firefox.
+    // ── TTS diagnostics + voice loader ──
     if (ttsSupported) {
-      const logVoices = () => {
+      let voicesLoaded = false;
+      
+      const loadVoices = () => {
         const v = window.speechSynthesis.getVoices();
-        console.info(`[MockMode] TTS voices available: ${v.length}`);
+        if (v.length > 0 && !voicesLoaded) {
+          voicesLoaded = true;
+          console.info(`[MockMode] ✅ TTS voices loaded: ${v.length}`);
+          // Optional: log first few voices for debugging
+          // v.slice(0, 3).forEach(v => console.log(`  - ${v.name} (${v.lang})`));
+          return true;
+        }
+        return false;
       };
-      window.speechSynthesis.addEventListener('voiceschanged', logVoices, { once: true });
-      logVoices(); // immediate call in case already loaded
+
+      // Try immediately
+      if (!loadVoices()) {
+        // Listen for the event
+        window.speechSynthesis.addEventListener('voiceschanged', () => loadVoices(), { once: true });
+        
+        // Fallback: poll every 200ms for up to 3 seconds (Brave/Firefox workaround)
+        let attempts = 0;
+        const pollInterval = setInterval(() => {
+          attempts++;
+          if (loadVoices() || attempts >= 15) {
+            clearInterval(pollInterval);
+            if (!voicesLoaded) {
+              console.warn('[MockMode] ⚠️ TTS voices still not loaded after 3s. Speech may fail.');
+            }
+          }
+        }, 200);
+      }
     } else {
       console.warn('[MockMode] TTS is not supported in this browser.');
-    }
-
-    if (!sttSupported) {
-      console.warn('[MockMode] STT (SpeechRecognition) is not supported in this browser.');
     }
 
     // ── Sound icon initial state ──
