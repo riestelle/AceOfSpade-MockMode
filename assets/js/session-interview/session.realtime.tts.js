@@ -77,12 +77,12 @@ function speakText(text, onDone) {
     // Try a speculative unlock. This succeeds on most browsers once the
     // page has loaded, even before an explicit user gesture on the mic/submit.
     unlockSpeech();
-    // Give the browser 300 ms to process the unlock, then flush.
+    // Give user 1.5s to make a gesture (click/keydown); unlockOnInteraction flushes earlier if so.
     setTimeout(() => {
       _audioUnlockedByGesture = true;
       _flushSpeechQueue();
-    }, 300);
-    console.info('[MockMode] TTS: speculative unlock attempted — will flush in 300 ms.');
+    }, 1500);
+    console.info('[MockMode] TTS: queued — waiting for gesture/unlock (1.5s timeout).');
     return;
   }
 
@@ -108,11 +108,20 @@ function _speakNow(text, onDone) {
     return;
   }
 
+  // FIX: Reset voiceLoadRetries for THIS call — don't let it accumulate
+  let localVoiceRetries = 0;
+
   const trySpeak = () => {
     const voices = window.speechSynthesis.getVoices();
-    if (voices.length === 0 && voiceLoadRetries < 8) {
-      voiceLoadRetries++;
+    if (voices.length === 0 && localVoiceRetries < 8) {
+      localVoiceRetries++;
       setTimeout(trySpeak, 150);
+      return;
+    }
+    
+    if (voices.length === 0) {
+      console.warn('[MockMode] No TTS voices available after retries.');
+      if (typeof onDone === 'function') onDone();
       return;
     }
 
