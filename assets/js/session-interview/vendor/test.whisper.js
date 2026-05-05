@@ -50,31 +50,6 @@ async function ensureTranscriber() {
       showToast('Loading speech model... (first time only)', 'info');
     }
 
-    const { pipeline } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
-
-    // Explicitly use Hugging Face CDN
-    transcriberPromise = pipeline('automatic-speech-recognition', 
-      'https://huggingface.co/Xenova/whisper-tiny.en',
-      {
-        cache_dir: 'https://cdn.huggingface.co',
-      }
-    )
-    .then(p => {
-      info('model loaded');
-      return p;
-    })
-    .catch(err => {
-      transcriberPromise = null;
-      throw err;
-    });
-  }
-  return transcriberPromise;
-  if (!transcriberPromise) {
-    // Show loading toast for first-time model download
-    if (typeof showToast === 'function') {
-      showToast('Loading speech model... (first time only)', 'info');
-    }
-
     transcriberPromise = loadTransformersPipeline()
       .then((pipeline) => pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en'))
       .then(p => {
