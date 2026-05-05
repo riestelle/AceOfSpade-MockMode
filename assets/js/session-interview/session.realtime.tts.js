@@ -273,18 +273,37 @@ function startRecognition() {
   recognition.continuous = true;
   recognition.interimResults = true;
   recognition.lang = 'en-US';
+  recognition.maxAlternatives = 1;  // FIX: Reduce alternatives for faster processing
+  
   const input = document.getElementById('answer-input');
   let finalTranscript = (input && input.value.trim()) ? input.value.trim() + ' ' : '';
+  let lastDisplayValue = '';  // Cache to avoid excessive DOM updates
 
-  recognition.onstart = () => setMicUI(true);
+  recognition.onstart = () => {
+    setMicUI(true);
+    console.info('[MockMode] STT: microphone listening...');
+  };
   
   recognition.onresult = (event) => {
     let interim = '';
     for (let i = event.resultIndex; i < event.results.length; i++) {
-      if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
-      else interim += event.results[i][0].transcript;
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalTranscript += transcript + ' ';
+        console.info('[MockMode] STT final:', transcript);
+      } else {
+        interim += transcript;
+      }
     }
-    if (input) input.value = finalTranscript + interim;
+    
+    // FIX: Only update DOM if the display value actually changed (reduce reflows)
+    const displayValue = finalTranscript + interim;
+    if (input && displayValue !== lastDisplayValue) {
+      input.value = displayValue;
+      lastDisplayValue = displayValue;
+      // Dispatch input event so form listeners update
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
   };
 
   recognition.onend = () => {
