@@ -66,6 +66,169 @@ const INTERVIEWER_PERSONAS = {
   },
 };
 
+// ── Interviewer Lottie animation map ──────────────────────────────────────
+// Maps each personality to its Lottie JSON path and eye definitions.
+// Paths are relative to the project root — adjust if your asset folder differs.
+const INTERVIEWER_ANIMATIONS = {
+  startup: {
+    // Kai — Co-founder & Culture Lead
+    path: 'assets/animations/kai.json',
+    eyes: [
+      { left: '28%', top: '30%', w: '14%', h: '8%', color: '#c8b89a' },
+      { left: '57%', top: '30%', w: '14%', h: '8%', color: '#c8b89a' },
+    ],
+  },
+  technical: {
+    // Dr. Matsuda — Principal Engineer
+    path: 'assets/animations/matsuda.json',
+    eyes: [
+      { left: '27%', top: '28%', w: '14%', h: '8%', color: '#c8b89a' },
+      { left: '57%', top: '28%', w: '14%', h: '8%', color: '#c8b89a' },
+    ],
+  },
+  corporate: {
+    // Ms. Reyes — VP of Operations
+    path: 'assets/animations/reyes.json',
+    eyes: [
+      { left: '28%', top: '30%', w: '14%', h: '8%', color: '#c8b89a' },
+      { left: '57%', top: '30%', w: '14%', h: '8%', color: '#c8b89a' },
+    ],
+  },
+};
+
+// ── CharacterController ────────────────────────────────────────────────────
+// Manages the Lottie animation for the active interviewer character.
+// startTalking() → play animation
+// stopTalking()  → pause at frame 0 (idle)
+// destroy()      → cleanup
+
+class CharacterController {
+  constructor(containerId, animPath, eyeDefs = []) {
+    this.container   = document.getElementById(containerId);
+    this.animPath    = animPath;
+    this.eyeDefs     = eyeDefs;
+    this.anim        = null;
+    this.state       = 'stopped';
+    this._mouthTimer = null;
+    this._lottieWrap = null;
+  }
+
+  async init() {
+    if (!this.container) throw new Error('[MockMode Lottie] Container not found: ' + this.container);
+
+    // Clear previous content (including the loading skeleton's inner html)
+    this.container.innerHTML = '';
+
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'width:100%;height:100%;position:relative;';
+    this.container.appendChild(wrap);
+    this._lottieWrap = wrap;
+
+    this.anim = lottie.loadAnimation({
+      container: wrap,
+      renderer:  'svg',
+      loop:      true,
+      autoplay:  false,
+      path:      this.animPath,
+    });
+
+    return new Promise(resolve => {
+      this.anim.addEventListener('DOMLoaded', () => {
+        // Hide the skeleton once animation is rendered
+        const skeleton = document.getElementById('lottie-interviewer-skeleton');
+        if (skeleton) skeleton.classList.add('hidden');
+        resolve();
+      });
+      // Fallback in case DOMLoaded never fires (network issues etc.)
+      setTimeout(resolve, 3000);
+    });
+  }
+
+  // ── Idle: pause at frame 0
+  goIdle() {
+    this.state = 'idle';
+    if (this.anim) this.anim.goToAndStop(0, true);
+    this._stopMouthAnim();
+    if (this.container) {
+      this.container.classList.remove('is-talking');
+      this.container.classList.add('is-idle');
+    }
+  }
+
+  // ── Talking: play animation + mouth wobble
+  startTalking() {
+    if (this.state === 'talking') return;
+    this.state = 'talking';
+    if (this.anim) {
+      this.anim.setSpeed(1.0);
+      this.anim.play();
+    }
+    this._startMouthAnim();
+    if (this.container) {
+      this.container.classList.remove('is-idle');
+      this.container.classList.add('is-talking');
+    }
+  }
+
+  stopTalking() {
+    if (this.state !== 'talking') return;
+    this._stopMouthAnim();
+    this.goIdle();
+  }
+
+  // ── Mouth animation — animates the 'mouth' layer rect in the Lottie SVG
+  _startMouthAnim() {
+    this._stopMouthAnim();
+    const svgEl = this._lottieWrap?.querySelector('svg');
+    if (!svgEl) return;
+
+    const mouthEl = this._findLayerEl(svgEl, 'mouth');
+    if (!mouthEl) return; // Graceful fallback — animation still plays
+
+    let t = 0;
+    const origH = parseFloat(
+      mouthEl.getAttribute('height') || mouthEl.style.height || 14
+    );
+
+    this._mouthTimer = setInterval(() => {
+      const newH = origH + Math.abs(Math.sin(t++ * 0.45)) * (origH * 0.8);
+      try {
+        mouthEl.setAttribute('height', newH);
+        mouthEl.setAttribute(
+          'y',
+          parseFloat(mouthEl.getAttribute('y') || 0) - (newH - origH) * 0.5
+        );
+      } catch (_) { /* SVG element may be mid-update */ }
+    }, 30);
+  }
+
+  _stopMouthAnim() {
+    clearInterval(this._mouthTimer);
+    this._mouthTimer = null;
+  }
+
+  // Traverse Lottie SVG <g> tree to find a group whose title matches layerName
+  _findLayerEl(svgEl, layerName) {
+    const groups = svgEl.querySelectorAll('g');
+    for (const g of groups) {
+      const title = g.querySelector(':scope > title');
+      if (title && title.textContent.toLowerCase().includes(layerName.toLowerCase())) {
+        return g.querySelector('rect, path, ellipse') || g;
+      }
+    }
+    return null;
+  }
+
+  destroy() {
+    this._stopMouthAnim();
+    if (this.anim) { this.anim.destroy(); this.anim = null; }
+    if (this.container) this.container.innerHTML = '';
+  }
+}
+
+// Module-level reference to the active controller — exposed for speakText bridge
+let _interviewerCtrl = null;
+
 // ── DOM references ─────────────────────────────────────────────────────────
 
 let dialogueBox = null;
@@ -153,12 +316,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // ── Set flavored interviewer name (NEW) ────────────────────────────────
+  // ── Set flavored interviewer name ──────────────────────────────────────
   const nameEl = document.getElementById('interviewer-name');
   if (nameEl) {
     const persona = INTERVIEWER_PERSONAS[personality];
     nameEl.textContent = persona ? `${persona.display}:` : `${formatPersonality(personality)}:`;
   }
+
+  // ── Boot the Lottie character animation ────────────────────────────────
+  // Resolves personality → animation JSON path, then loads CharacterController.
+  // The controller is stored at module scope (_interviewerCtrl) so speakText
+  // can call startTalking() / stopTalking() from session.realtime.tts.js.
+  (async () => {
+    const animDef = INTERVIEWER_ANIMATIONS[personality] ?? INTERVIEWER_ANIMATIONS['corporate'];
+    if (typeof lottie !== 'undefined') {
+      try {
+        _interviewerCtrl = new CharacterController('lottie-interviewer', animDef.path, animDef.eyes);
+        await _interviewerCtrl.init();
+        _interviewerCtrl.goIdle();
+        // Expose globally so session.realtime.tts.js can reach it
+        window._interviewerCtrl = _interviewerCtrl;
+      } catch (err) {
+        console.warn('[MockMode] Lottie init failed — running without character animation:', err);
+      }
+    } else {
+      console.warn('[MockMode] lottie-web not loaded — character animation skipped.');
+    }
+  })();
 
   // Load or generate questions
   const cached = getFromStorage('questions');
@@ -447,13 +631,20 @@ async function askCurrentQuestion() {
 
           const ttsFallback = setTimeout(() => {
             console.warn('[MockMode] TTS fallback timeout → forcing UI unlock');
+            // Stop the animation if TTS falls back silently
+            if (window._interviewerCtrl) window._interviewerCtrl.stopTalking();
             _safeEnableAnsweringPhase();
           }, estimatedMs);
+
+          // Start the character animation before TTS speaks
+          if (window._interviewerCtrl) window._interviewerCtrl.startTalking();
 
           // FIX #1 & #2: speakText is called immediately after stream ends.
           // The onDone callback is the ONLY normal path to enableAnsweringPhase.
           speakText(fullText || question, () => {
             clearTimeout(ttsFallback);
+            // Stop animation when the interviewer finishes speaking
+            if (window._interviewerCtrl) window._interviewerCtrl.stopTalking();
             _safeEnableAnsweringPhase();
           });
 
@@ -489,6 +680,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // does NOT call onDone (to avoid double-firing). We call the safe
       // bridge instead so the guard in askCurrentQuestion() is respected.
       window.speechSynthesis && window.speechSynthesis.cancel();
+      // Stop character animation immediately on voice skip
+      if (window._interviewerCtrl) window._interviewerCtrl.stopTalking();
       if (typeof window._skipVoiceBridge === 'function') {
         window._skipVoiceBridge();
       } else {
@@ -503,6 +696,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.code === 'Space' && btn && !btn.classList.contains('hidden')) {
       e.preventDefault();
       window.speechSynthesis && window.speechSynthesis.cancel();
+      if (window._interviewerCtrl) window._interviewerCtrl.stopTalking();
       if (typeof window._skipVoiceBridge === 'function') {
         window._skipVoiceBridge();
       } else {
