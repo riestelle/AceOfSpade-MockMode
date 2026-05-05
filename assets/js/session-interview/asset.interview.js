@@ -642,3 +642,28 @@ async function finishInterview() {
     }
   }
 }
+// ── Timer UI Bridge ──
+// asset.interview.js calls this every second[cite: 1]
+function updateTimerDisplay(seconds) {
+  const display = document.getElementById('timer-display');
+  const container = document.getElementById('timer-container');
+  if (!display || !container) return;
+
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  display.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+  // Visual warning when time is low (under 10s)
+  if (seconds <= 10) {
+    display.classList.replace('text-tertiary', 'text-error');
+    container.classList.add('animate-pulse-slow'); // Uses your CSS pulse[cite: 5]
+    container.style.borderColor = '#ff4444';
+  } else {
+    display.classList.replace('text-error', 'text-tertiary');
+    container.classList.remove('animate-pulse-slow');
+    container.style.borderColor = '';
+  }
+}
+
+// Ensure the main logic file can find this function[cite: 1]
+window.updateTimerDisplay = updateTimerDisplay;
