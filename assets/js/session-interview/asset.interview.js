@@ -3,8 +3,8 @@
 // transitions to the results page.
 // Depends on: main.js, ai.js
 // New in this version:
-//   - TTS via speakText() (defined in interview.html)
-//   - STT via mic button (wired in interview.html)
+//   - TTS via speakText() (defined in session.realtime.tts.js)
+//   - STT via mic button (wired in session.realtime.tts.js)
 //   - Skip question button (one per session, +15 stress)
 //   - Answer history drawer integration
 //   - Loading indicator between questions

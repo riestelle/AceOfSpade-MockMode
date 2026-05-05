@@ -70,7 +70,7 @@
     <div class="flex gap-2">
       <!-- Sound toggle (TTS) — now functional via Web Speech API -->
       <div class="flex flex-col items-center gap-0.5">
-        <button id="sound-btn" onclick="toggleSound()"
+        <button id="sound-btn"
           class="w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step active-shadow-step hover:bg-surface-container-high transition-all"
           title="Toggle voice output">
           <span id="sound-icon" class="material-symbols-outlined text-[#669BBC]">volume_up</span>
@@ -246,90 +246,6 @@
 </div>
 
 <script>
-  // ── TTS / Sound toggle ──
-  let soundOn = true;
-  let currentUtterance = null;
-
-  function toggleSound() {
-    soundOn = !soundOn;
-    const icon = document.getElementById('sound-icon');
-    icon.textContent = soundOn ? 'volume_up' : 'volume_off';
-    if (!soundOn && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-  }
-
-  /**
-   * Speaks text via Web Speech API TTS.
-   * Called by interview.js after a question is shown.
-   * @param {string} text
-   */
-  function speakText(text) {
-    if (!soundOn || !window.speechSynthesis || !text) return;
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.rate = 0.95;
-    utter.pitch = 1.05;
-    utter.volume = 0.9;
-    currentUtterance = utter;
-    window.speechSynthesis.speak(utter);
-  }
-
-  // ── STT / Mic ──
-  let recognition = null;
-  let isRecording = false;
-
-  function setupSTT() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-
-    const answerInput = document.getElementById('answer-input');
-    const micBtn = document.getElementById('mic-btn');
-
-    recognition.onstart = () => {
-      isRecording = true;
-      micBtn.classList.add('recording');
-      if (answerInput) answerInput.placeholder = 'LISTENING...';
-    };
-
-    recognition.onresult = (e) => {
-      let transcript = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        transcript += e.results[i][0].transcript;
-      }
-      if (answerInput) answerInput.value = transcript;
-    };
-
-    recognition.onend = () => {
-      isRecording = false;
-      micBtn.classList.remove('recording');
-      if (answerInput) answerInput.placeholder = 'TYPE YOUR DEFENSE...';
-    };
-
-    recognition.onerror = () => {
-      isRecording = false;
-      micBtn.classList.remove('recording');
-      if (answerInput) answerInput.placeholder = 'TYPE YOUR DEFENSE...';
-    };
-  }
-
-  function toggleMic() {
-    if (!recognition) {
-      showToast('Speech recognition not supported in this browser.', 'warning');
-      return;
-    }
-    if (isRecording) {
-      recognition.stop();
-    } else {
-      recognition.start();
-    }
-  }
-
   // ── History Drawer ──
   const answerHistory = []; // { q, a, score }
 
@@ -389,22 +305,11 @@
       document.getElementById('webcam-consent').classList.remove('visible');
     }
 
-    // Setup STT
-    setupSTT();
-
-    // Wire mic button
-    const micBtn = document.getElementById('mic-btn');
-    if (micBtn) micBtn.addEventListener('click', toggleMic);
-
-    // Keyboard shortcuts
+    // Keyboard shortcuts for history drawer only; speech shortcuts are handled by session.realtime.tts.js.
     document.addEventListener('keydown', (e) => {
-      // Ignore if typing in input
       if (document.activeElement === document.getElementById('answer-input')) return;
-
       switch (e.key.toLowerCase()) {
-        case 's': toggleSound(); break;
         case 'h': openHistoryDrawer(); break;
-        case 'm': toggleMic(); break;
         case 'escape': closeHistoryDrawer(); break;
       }
     });
@@ -415,6 +320,7 @@
 <script src="assets/js/main.js"></script>
 <script src="assets/js/ai.js"></script>
 
+
 <!-- 
   Face Cam
   START: ID.1
@@ -422,11 +328,11 @@
   ELLIE WORKAROUNDS
 -->
 
-<script src="assets/js/session-interview/asset.interview.js"></script>
-
 <!-- <script src="assets/js/session-interview/vendor/face-api.min.js"></script> -->
 <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 <script src="assets/js/session-interview/asset.webcam.js"></script>
+<script src="assets/js/session-interview/session.realtime.tts.js"></script>
+<script src="assets/js/session-interview/asset.interview.js"></script>
 
 <!-- 
   END: ID.1
