@@ -453,15 +453,6 @@
         }
     }
 
-    // Start music on first click anywhere
-    document.addEventListener('click', function startOnce() {
-        music.play().then(() => {
-            musicPlaying = true;
-            document.getElementById('volume-icon').textContent = 'volume_up';
-        }).catch(() => {});
-        document.removeEventListener('click', startOnce);
-    }, { once: true });
-
     /* ── Loading ── */
     let loadingProgress = 0;
     let loadingFrame = null;
@@ -515,6 +506,14 @@
         document.body.classList.add('loaded');
         loadingScreen.classList.add('opacity-0');
         setTimeout(() => loadingScreen.remove(), 450);
+        // Play music immediately after loading, at 50% volume
+        music.volume = 0.5;
+        music.play().then(() => {
+            musicPlaying = true;
+            document.getElementById('volume-icon').textContent = 'volume_up';
+        }).catch(() => {
+            // Browser blocked autoplay — will play on first click instead
+        });
     }
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -593,4 +592,4 @@
     });
 </script>
 </body>
-</html>git add index.html
+</html>
