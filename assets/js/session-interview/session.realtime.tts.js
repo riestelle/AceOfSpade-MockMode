@@ -164,6 +164,13 @@ if (!sttSupported) {
 }
 
 function startRecognition() {
+  // Add this debug check
+  if (!window.isSecureContext) {
+    showToast('Speech recognition requires HTTPS or localhost.', 'error');
+    console.error('[MockMode] Not a secure context! SpeechRecognition will fail.');
+    return;
+  }
+
   // ── Hard-stop gate — nothing gets past this after 3 real errors ──────────
   if (micHardStopped || !sttSupported) return;
   if (micRetryCount >= STT_MAX_RETRIES) {
