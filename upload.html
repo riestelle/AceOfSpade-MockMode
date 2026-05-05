@@ -6,6 +6,7 @@
 <title>MockMode — The Desk</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Courier+Prime:wght@400;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap" rel="stylesheet">
 <script id="tailwind-config">
   tailwind.config = {
     darkMode: "class",
@@ -190,91 +191,90 @@ body.mm-fade-out { opacity: 0; }
 }
 
 /* ── DOOR CARD ── */
-.pd-frame {
-  position: absolute; inset: 0;
-  background: #3d211e;
-  padding: 6px;
-}
-.pd-body {
-  position: absolute;
-  inset: 6px;
-  background: #d8815b;
+/* Container for the whole unit */
+.door-unit {
   display: flex;
   flex-direction: column;
-}
-.pd-body::before {
-  content: '';
-  position: absolute; inset: 0;
-  border-top: 8px solid #f2b08a;
-  border-left: 8px solid #f2b08a;
-  pointer-events: none;
-}
-.pd-main-panel {
-  flex: 1;
-  margin: 12px;
-  background: #d8815b;
-  border: 6px solid #8c4a38;
-  display: flex;
-  flex-direction: column;
-  align-items: center;      /* ← horizontal center */
-  justify-content: center;  /* ← vertical center */
-  gap: 4px;
-  padding: 10px 6px;
-  position: relative;
-  z-index: 1;
-  text-align: center;       /* ← ADD THIS for text nodes */
-}
-.pd-knob {
-  position: absolute;
-  right: 8px;
-  top: 55%;
-  width: 12px;
-  height: 28px;
-  background: #2a343d;
-  z-index: 5;
-}
-.pd-knob::after {
-  content: '';
-  position: absolute;
-  top: 8px; left: 0; right: 0;
-  height: 8px;
-  background: #fcf9f8;
+  align-items: center;
+  cursor: pointer;
+  gap: 10px;
+  transition: transform 0.2s ease;
 }
 
-/* Door text */
-.door-name {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 14px;           /* ← slightly smaller so long names fit */
-  font-weight: 800;
-  text-transform: uppercase;
-  color: #1f0f0c;
-  margin-top: 0;             /* ← remove the old margin pushing it off */
+/* Hover effect for the whole unit */
+.door-unit:hover {
+  transform: translateY(-5px);
+}
+
+/* The Door box itself */
+.door-wrap {
+  width: 140px; 
+  height: 220px;
+  position: relative;
+}
+
+/* Text Container below the door */
+.door-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
 }
 
+.door-name {
+  font-family: 'Courier Prime', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #ffffff;
+  margin: 0;
+}
+
+/*
 .door-role {
   font-family: 'Courier Prime', monospace;
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.1em;
-  color: #5c3d2e;
+  color: #a0a0a0;
   text-transform: uppercase;
-  margin-bottom: 0;          /* ← remove old margin */
+  margin-bottom: 4px;
+}*/
+
+.door-desc {
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  font-style: normal;
+  color: #a0a0a0;
+  margin: 3px 0 0 0;
+  max-width: 160px;
   text-align: center;
 }
+
+/*
 .door-diff {
   font-family: 'Courier Prime', monospace;
   font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
+  margin-top: auto;
 }
-.d-hard { color: #8b0000 !important; }
-.d-easy { color: #006400 !important; }
-.d-med  { color: #f8c331 !important; }
+
+.d-hard { color: #ff4d4d; }
+.d-easy { color: #40ff40; }
+.d-med  { color: #f8c331; }
+*/
+
+.door-unit.selected .door-name {
+  color: #f8c331;
+  text-shadow: 0 0 8px rgba(248, 195, 49, 0.4),
+             0 0 20px rgba(248, 195, 49, 0.2);
+}
+
+.door-unit.selected .door-desc {
+  color: #f8c331;
+  text-shadow: 0 0 8px rgba(248, 195, 49, 0.4),
+             0 0 20px rgba(248, 195, 49, 0.2);
+}
 
 /* ── BROWSER LAYER ── */
 #browser-layer {
@@ -465,29 +465,32 @@ body.mm-fade-out { opacity: 0; }
 #start-interview-btn:hover { background: #c97b5a; color: #fdf3e3; border-color: #5c3d2e; }
 #start-interview-btn:active { transform: translate(4px,4px); box-shadow: none; }
 
-/* Hire stamp */
 .hire-stamp {
   position: absolute;
-  top: -18px; left: -18px;
-  width: 58px; height: 58px;
-  background: #c97b5a;
-  border: 3px solid #5c3d2e;
-  transform: rotate(-12deg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 3px 3px 0 #0f0806;
+  top: -20px;
+  right: -20px;
+  left: auto;
+  width: 90px;
+  height: 90px;
+  transform: rotate(8deg);
+  box-shadow: 3px 4px 0 #0f0806;
   z-index: 30;
   cursor: default;
+  background: none;
+  border: none;
 }
+
 .hire-stamp span {
-  font-size: 9px;
-  font-weight: 900;
-  color: #fdf3e3;
-  letter-spacing: 0.05em;
+  font-family: 'Caveat', cursive;
+  font-size: 22px;
+  font-weight: 700;
+  color: #2a1a0e;
   text-align: center;
   line-height: 1.2;
-  font-family: 'Courier Prime', monospace;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 /* ── DOOR PICK UI ── */
@@ -568,54 +571,306 @@ body.mm-fade-out { opacity: 0; }
 
     <div id="doors-row">
 
-      <div class="door-unit" onclick="pickDoorUI(this,'strict')">
+      <!-- Strict Corporate Door -->
+       <div class="door-unit" onclick="pickDoorUI(this,'strict')">
         <div class="door-wrap" id="wrap-strict">
-            
-          <div class="pd-frame">
-            <div class="pd-body">
-              <div class="pd-main-panel">
-                <div class="door-avatar"><img src="assets/download.jpg" alt="Avatar"/></div>
-                <div class="door-name">Ms. Reyes</div>
-                <div class="door-role">Strict Corporate</div>
-                <div class="door-diff d-hard" id="diff-strict">STRICT ■■■</div>
-              </div>
-            </div>
-            <div class="pd-knob"></div>
-          </div>
-        </div>
-      </div>
+            <svg viewBox="0 0 40 64" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" style="width:100%;height:100%;display:block;image-rendering:pixelated">
 
-      <div class="door-unit" onclick="pickDoorUI(this,'chill')">
-        <div class="door-wrap" id="wrap-chill">
-          <div class="pd-frame">
-            <div class="pd-body">
-              <div class="pd-main-panel">
-                <div class="door-avatar"><img src="IMAGE_URL_HERE" alt="Avatar"/></div>
-                <div class="door-name">Kai</div>
-                <div class="door-role">Chill Startup</div>
-                <div class="door-diff d-easy" id="diff-chill">CHILL ■■■</div>
-              </div>
-            </div>
-            <div class="pd-knob"></div>
-          </div>
-        </div>
-      </div>
+                <!-- outer frame dark burgundy -->
+                <rect x="0" y="0" width="40" height="64" fill="#3a0a10"/>
+                <rect x="0" y="8"  width="5" height="56" fill="#2e0810"/>
+                <rect x="1" y="8"  width="1" height="56" fill="#5a1820"/>
+                <rect x="4" y="8"  width="1" height="56" fill="#220608"/>
+                <rect x="35" y="8" width="5" height="56" fill="#2e0810"/>
+                <rect x="35" y="8" width="1" height="56" fill="#5a1820"/>
+                <rect x="39" y="8" width="1" height="56" fill="#220608"/>
 
-      <div class="door-unit" onclick="pickDoorUI(this,'technical')">
-        <div class="door-wrap" id="wrap-technical">
-          <div class="pd-frame">
-            <div class="pd-body">
-              <div class="pd-main-panel">
-                <div class="door-avatar"><img src="IMAGE_URL_HERE" alt="Avatar"/></div>
-                <div class="door-name">Dr. Matsuda</div>
-                <div class="door-role">Technical Lead</div>
-                <div class="door-diff d-med" id="diff-technical">TECHNICAL ■■■</div>
-              </div>
+                <!-- top cornice -->
+                <rect x="5" y="0"  width="30" height="8"  fill="#2e0810"/>
+                <rect x="5" y="0"  width="30" height="1"  fill="#5a1820"/>
+                <rect x="5" y="7"  width="30" height="1"  fill="#220608"/>
+                <rect x="6" y="2"  width="28" height="1"  fill="#220608"/>
+                <rect x="6" y="4"  width="28" height="2"  fill="#3a0a10"/>
+                <rect x="6" y="6"  width="28" height="1"  fill="#220608"/>
+                <!-- gold cornice accent -->
+                <rect x="7" y="3"  width="26" height="1"  fill="#c8a040"/>
+
+                <!-- door body split -->
+                <rect x="5"  y="8"  width="30" height="56" fill="#5a1018"/>
+                <rect x="6"  y="9"  width="13" height="54" fill="#6e1a20"/>
+                <rect x="21" y="9"  width="13" height="54" fill="#6e1a20"/>
+                <rect x="19" y="9"  width="2"  height="54" fill="#3a0810"/>
+
+                <!-- glass top half left door — diagonal lines -->
+                <rect x="7"  y="10" width="11" height="26" fill="#1e2a38"/>
+                <rect x="7"  y="10" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="8"  y="11" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="9"  y="12" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="10" y="13" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="11" y="14" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="12" y="15" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="13" y="16" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="14" y="17" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="15" y="18" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="16" y="19" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="17" y="20" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="7"  y="13" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="8"  y="14" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="9"  y="15" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="10" y="16" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="11" y="17" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="12" y="18" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="13" y="19" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="14" y="20" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="15" y="21" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="16" y="22" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="17" y="23" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="7"  y="16" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="8"  y="17" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="9"  y="18" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="10" y="19" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="11" y="20" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="12" y="21" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="13" y="22" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="14" y="23" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="15" y="24" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="16" y="25" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="17" y="26" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="7"  y="19" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="8"  y="20" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="9"  y="21" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="10" y="22" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="11" y="23" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="12" y="24" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="13" y="25" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="14" y="26" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="15" y="27" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="16" y="28" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="17" y="29" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="7"  y="22" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="8"  y="23" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="9"  y="24" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="10" y="25" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="11" y="26" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="12" y="27" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="13" y="28" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="14" y="29" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="15" y="30" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="16" y="31" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="17" y="32" width="1" height="1" fill="#5a8a9a"/>
+
+                <!-- gold frame left glass -->
+                <rect x="7"  y="10" width="11" height="1" fill="#c8a040"/>
+                <rect x="7"  y="35" width="11" height="1" fill="#c8a040"/>
+                <rect x="7"  y="10" width="1"  height="26" fill="#c8a040"/>
+                <rect x="17" y="10" width="1"  height="26" fill="#c8a040"/>
+
+                <!-- glass top half right door — diagonal lines -->
+                <rect x="22" y="10" width="11" height="26" fill="#1e2a38"/>
+                <rect x="22" y="10" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="23" y="11" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="24" y="12" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="25" y="13" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="26" y="14" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="27" y="15" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="28" y="16" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="29" y="17" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="30" y="18" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="31" y="19" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="32" y="20" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="22" y="13" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="23" y="14" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="24" y="15" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="25" y="16" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="26" y="17" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="27" y="18" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="28" y="19" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="29" y="20" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="30" y="21" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="31" y="22" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="32" y="23" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="22" y="16" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="23" y="17" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="24" y="18" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="25" y="19" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="26" y="20" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="27" y="21" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="28" y="22" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="29" y="23" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="30" y="24" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="31" y="25" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="32" y="26" width="1" height="1" fill="#3a6a7a"/>
+                <rect x="22" y="19" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="23" y="20" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="24" y="21" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="25" y="22" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="26" y="23" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="27" y="24" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="28" y="25" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="29" y="26" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="30" y="27" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="31" y="28" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="32" y="29" width="1" height="1" fill="#4a7a8a"/>
+                <rect x="22" y="22" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="23" y="23" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="24" y="24" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="25" y="25" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="26" y="26" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="27" y="27" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="28" y="28" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="29" y="29" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="30" y="30" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="31" y="31" width="1" height="1" fill="#5a8a9a"/>
+                <rect x="32" y="32" width="1" height="1" fill="#5a8a9a"/>
+
+                <!-- gold frame right glass -->
+                <rect x="22" y="10" width="11" height="1" fill="#c8a040"/>
+                <rect x="22" y="35" width="11" height="1" fill="#c8a040"/>
+                <rect x="22" y="10" width="1"  height="26" fill="#c8a040"/>
+                <rect x="32" y="10" width="1"  height="26" fill="#c8a040"/>
+
+                <!-- lower solid panels -->
+                <rect x="7"  y="37" width="11" height="24" fill="#5a1018"/>
+                <rect x="8"  y="38" width="9"  height="22" fill="#6e1a20"/>
+                <rect x="22" y="37" width="11" height="24" fill="#5a1018"/>
+                <rect x="23" y="38" width="9"  height="22" fill="#6e1a20"/>
+
+                <!-- gold knockers center -->
+                <rect x="17" y="44" width="3" height="6" fill="#c8a040"/>
+                <rect x="17" y="44" width="3" height="1" fill="#e8c060"/>
+                <rect x="17" y="49" width="3" height="1" fill="#a07820"/>
+                <rect x="20" y="44" width="3" height="6" fill="#c8a040"/>
+                <rect x="20" y="44" width="3" height="1" fill="#e8c060"/>
+                <rect x="20" y="49" width="3" height="1" fill="#a07820"/>
+
+                <!-- bottom step -->
+                <rect x="5"  y="62" width="30" height="2" fill="#220608"/>
+                <rect x="5"  y="62" width="30" height="1" fill="#3a0a10"/>
+
+                <!-- corner caps -->
+                <rect x="0"  y="6" width="5" height="3" fill="#3a0a10"/>
+                <rect x="35" y="6" width="5" height="3" fill="#3a0a10"/>
+            </svg>
             </div>
-            <div class="pd-knob"></div>
-          </div>
+        <!-- The Text Info (Now cleanly below the door) -->
+        <div class="door-info">
+            <div class="door-name">Ms. Reyes</div>
+            <div class="door-desc">"zero patience, high standards"</div>
         </div>
-      </div>
+    </div>
+
+      <!-- Chill Startup Door -->
+    <div class="door-unit" onclick="pickDoorUI(this,'chill')">
+    <div class="door-wrap" id="wrap-chill" style="position: relative;">
+        <!-- 1. The SVG Background (Z-Index 1) -->
+        <svg viewBox="0 0 40 64" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" style="width:100%; height:100%; display:block; image-rendering:pixelated; position: absolute; top: 0; left: 0; z-index: 1;">
+        <rect x="0" y="0" width="40" height="64" fill="#1e1410"/>
+        <rect x="1" y="1" width="38" height="62" fill="#4a2e14"/>
+        <rect x="2" y="2" width="36" height="60" fill="#5a3a1c"/>
+        <rect x="4" y="4" width="32" height="56" fill="#a06030"/>
+        <rect x="4"  y="12" width="32" height="1" fill="#906020"/>
+        <rect x="4"  y="22" width="32" height="1" fill="#906020"/>
+        <rect x="4"  y="35" width="32" height="1" fill="#906020"/>
+        <rect x="4"  y="47" width="32" height="1" fill="#906020"/>
+        <rect x="7"  y="7"  width="26" height="20" fill="#8a5228"/>
+        <rect x="8"  y="8"  width="24" height="18" fill="#b87040"/>
+        <rect x="8"  y="8"  width="24" height="1"  fill="#d09060"/>
+        <rect x="8"  y="8"  width="1"  height="18" fill="#d09060"/>
+        <rect x="8"  y="25" width="24" height="1"  fill="#7a4820"/>
+        <rect x="31" y="8"  width="1"  height="18" fill="#7a4820"/>
+        <rect x="10" y="21" width="20" height="3"  fill="#c8a040"/>
+        <rect x="10" y="21" width="20" height="1"  fill="#e8c060"/>
+        <rect x="7"  y="33" width="26" height="24" fill="#8a5228"/>
+        <rect x="8"  y="34" width="24" height="22" fill="#b87040"/>
+        <rect x="8"  y="34" width="24" height="1"  fill="#d09060"/>
+        <rect x="8"  y="34" width="1"  height="22" fill="#d09060"/>
+        <rect x="8"  y="55" width="24" height="1"  fill="#7a4820"/>
+        <rect x="31" y="34" width="1"  height="22" fill="#7a4820"/>
+        <rect x="10" y="51" width="20" height="3"  fill="#c8a040"/>
+        <rect x="10" y="51" width="20" height="1"  fill="#e8c060"/>
+        <rect x="30" y="29" width="4"  height="4"  fill="#c8a040"/>
+        <rect x="31" y="29" width="2"  height="1"  fill="#e8c060"/>
+        <rect x="30" y="32" width="4"  height="1"  fill="#a07820"/>
+        <rect x="2"  y="2"  width="36" height="1" fill="#7a5030"/>
+        <rect x="2"  y="2"  width="1"  height="60" fill="#7a5030"/>
+        <rect x="2"  y="61" width="36" height="1" fill="#3a2010"/>
+        <rect x="37" y="2"  width="1"  height="60" fill="#3a2010"/>
+        </svg>
+    </div>
+    <!-- The Text Info (Now cleanly below the door) -->
+        <div class="door-info">
+            <div class="door-name">Kai</div>
+            <div class="door-desc">"Laid-back but still paying attention"</div>
+        </div>
+    </div>
+
+      <!-- Technical Lead Door -->
+    <div class="door-unit" onclick="pickDoorUI(this,'technical')">
+    <div class="door-wrap" id="wrap-technical" style="position: relative;">
+        <!-- 1. The SVG Background (Z-Index 1) -->
+        <svg viewBox="0 0 40 64" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" style="width:100%; height:100%; display:block; image-rendering:pixelated; position: absolute; top: 0; left: 0; z-index: 1;">
+        <rect x="0" y="0" width="40" height="64" fill="#2a1f2e"/>
+        <rect x="1" y="1" width="38" height="62" fill="#3d2d42"/>
+        <rect x="2" y="2" width="36" height="60" fill="#4a3550"/>
+        <rect x="4" y="4" width="32" height="56" fill="#1e2a38"/>
+        <rect x="5"  y="5"  width="6" height="5" fill="#3a5a6a"/>
+        <rect x="12" y="5"  width="7" height="5" fill="#5a8090"/>
+        <rect x="20" y="5"  width="6" height="5" fill="#2e4a58"/>
+        <rect x="27" y="5"  width="7" height="5" fill="#4a7080"/>
+        <rect x="5"  y="11" width="7" height="6" fill="#4a7080"/>
+        <rect x="13" y="11" width="6" height="6" fill="#2e4a58"/>
+        <rect x="20" y="11" width="7" height="6" fill="#5a8090"/>
+        <rect x="28" y="11" width="6" height="6" fill="#3a5a6a"/>
+        <rect x="5"  y="18" width="5" height="6" fill="#2e4a58"/>
+        <rect x="11" y="18" width="8" height="6" fill="#3a5a6a"/>
+        <rect x="20" y="18" width="5" height="6" fill="#4a7080"/>
+        <rect x="26" y="18" width="8" height="6" fill="#5a8090"/>
+        <rect x="5"  y="25" width="7" height="5" fill="#5a8090"/>
+        <rect x="13" y="25" width="5" height="5" fill="#4a7080"/>
+        <rect x="19" y="25" width="8" height="5" fill="#3a5a6a"/>
+        <rect x="28" y="25" width="6" height="5" fill="#2e4a58"/>
+        <rect x="5"  y="31" width="6" height="6" fill="#3a5a6a"/>
+        <rect x="12" y="31" width="7" height="6" fill="#5a8090"/>
+        <rect x="20" y="31" width="6" height="6" fill="#4a7080"/>
+        <rect x="27" y="31" width="7" height="6" fill="#2e4a58"/>
+        <rect x="5"  y="38" width="7" height="5" fill="#4a7080"/>
+        <rect x="13" y="38" width="6" height="5" fill="#2e4a58"/>
+        <rect x="20" y="38" width="7" height="5" fill="#5a8090"/>
+        <rect x="28" y="38" width="6" height="5" fill="#3a5a6a"/>
+        <rect x="5"  y="44" width="5" height="6" fill="#5a8090"/>
+        <rect x="11" y="44" width="8" height="6" fill="#3a5a6a"/>
+        <rect x="20" y="44" width="5" height="6" fill="#2e4a58"/>
+        <rect x="26" y="44" width="8" height="6" fill="#4a7080"/>
+        <rect x="5"  y="51" width="7" height="7" fill="#2e4a58"/>
+        <rect x="13" y="51" width="6" height="7" fill="#4a7080"/>
+        <rect x="20" y="51" width="7" height="7" fill="#3a5a6a"/>
+        <rect x="28" y="51" width="6" height="7" fill="#5a8090"/>
+        <rect x="5"  y="10" width="30" height="1" fill="#1e2a38"/>
+        <rect x="5"  y="17" width="30" height="1" fill="#1e2a38"/>
+        <rect x="5"  y="24" width="30" height="1" fill="#1e2a38"/>
+        <rect x="5"  y="30" width="30" height="1" fill="#1e2a38"/>
+        <rect x="5"  y="37" width="30" height="1" fill="#1e2a38"/>
+        <rect x="5"  y="43" width="30" height="1" fill="#1e2a38"/>
+        <rect x="5"  y="50" width="30" height="1" fill="#1e2a38"/>
+        <rect x="11" y="5"  width="1" height="53" fill="#1e2a38"/>
+        <rect x="19" y="5"  width="1" height="53" fill="#1e2a38"/>
+        <rect x="27" y="5"  width="1" height="53" fill="#1e2a38"/>
+        <rect x="31" y="28" width="3" height="8" fill="#c8a040"/>
+        <rect x="30" y="29" width="1" height="6" fill="#a07820"/>
+        <rect x="32" y="27" width="2" height="2" fill="#e8c060"/>
+        <rect x="2"  y="2"  width="36" height="1" fill="#6a4870"/>
+        <rect x="2"  y="2"  width="1"  height="60" fill="#6a4870"/>
+        <rect x="2"  y="61" width="36" height="1" fill="#2a1f30"/>
+        <rect x="37" y="2"  width="1"  height="60" fill="#2a1f30"/>
+        <rect x="4"  y="59" width="32" height="4" fill="#1a0a08"/>
+        </svg>
+    </div>
+    <!-- The Text Info (Now cleanly below the door) -->
+        <div class="door-info">
+            <div class="door-name">Dr. Matsuda</div>
+            <div class="door-desc">"cares about the details"</div>
+        </div>
+    </div>
 
     </div><!-- end #doors-row -->
 
@@ -632,7 +887,30 @@ body.mm-fade-out { opacity: 0; }
   <div id="browser-layer">
     <div id="browser">
 
-      <div class="hire-stamp"><span>HIRE<br>ME</span></div>
+        <div class="hire-stamp">
+            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"
+                shape-rendering="crispEdges"
+                style="width:100%;height:100%;image-rendering:pixelated">
+                <!-- main body -->
+                <rect x="0" y="0" width="32" height="32" fill="#e87a9a"/>
+                <rect x="0" y="0" width="32" height="1" fill="#f0a0b8"/>
+                <rect x="0" y="0" width="1" height="32" fill="#f0a0b8"/>
+                <rect x="0" y="31" width="32" height="1" fill="#b84870"/>
+                <rect x="31" y="0" width="1" height="32" fill="#b84870"/>
+                <!-- tape -->
+                <rect x="10" y="0" width="12" height="4" fill="#d0e8f0" opacity="0.8"/>
+                <rect x="10" y="0" width="12" height="1" fill="#b0c8d8" opacity="0.5"/>
+                <rect x="10" y="3" width="12" height="1" fill="#b0c8d8" opacity="0.5"/>
+                <!-- folded bottom-left -->
+                <polygon points="0,22 0,32 10,32" fill="#b84870"/>
+                <polygon points="0,22 10,32 10,22" fill="#d06088"/>
+                <!-- crumple lines -->
+                <rect x="12" y="6"  width="6" height="1" fill="#b84870" opacity="0.5"/>
+                <rect x="4"  y="14" width="5" height="1" fill="#b84870" opacity="0.5"/>
+                <rect x="22" y="19" width="7" height="1" fill="#b84870" opacity="0.5"/>
+            </svg>
+            <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)">HIRE<br>ME</span>
+            </div>
 
       <div class="b-chrome">
         <div class="chrome-dots">
@@ -641,7 +919,7 @@ body.mm-fade-out { opacity: 0; }
           <div class="cd cd-g"></div>
         </div>
         <div class="chrome-url">project-dossier // submission_id_404</div>
-        <span style="font-size:9px;color:#9d8d8b;font-family:'Courier Prime',monospace;letter-spacing:0.08em;">AUTOSAVING...</span>
+        <span style="font-size:9px;color:#9d8d8b;font-family:'Courier Prime',monospace;letter-spacing:0.08em;"> Search</span>
       </div>
 
       <div class="b-body">
@@ -768,8 +1046,14 @@ function pickDoorUI(el, personality) {
   document.querySelectorAll('.door-wrap').forEach(d => {
     d.classList.remove('selected', 'dimmed');
   });
+  
+  // also clear selected from all units first
+  document.querySelectorAll('.door-unit').forEach(u => {
+    u.classList.remove('selected');
+  });
 
   el.querySelector('.door-wrap').classList.add('selected');
+  el.classList.add('selected'); // ← add this
 
   document.querySelectorAll('.door-unit').forEach(u => {
     if (u !== el) u.querySelector('.door-wrap').classList.add('dimmed');

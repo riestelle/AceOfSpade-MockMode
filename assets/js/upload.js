@@ -318,7 +318,7 @@ function validatePhase1() {
   }
 
   // ── MATCH CONFIRMED ──
-  setRoleValidationState('success', `✅ Role matched! Your resume fits "${role}".`);
+  //setRoleValidationState('success', `✅ Role matched! Your resume fits "${role}".`);
   //saveToStorage('resume', resume);
   return true;
 }
