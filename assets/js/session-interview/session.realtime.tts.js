@@ -18,12 +18,24 @@ const ttsSupported =
   'speechSynthesis' in window &&
   'SpeechSynthesisUtterance' in window;
 
+// Track whether the browser's audio context has been unlocked by a user gesture.
+// Until it is, we queue speech so the first question isn't silently dropped.
+let _audioUnlockedByGesture = false;
+let _pendingSpeechQueue = []; // texts queued before the first user gesture
+
 function unlockSpeech() {
   if (!ttsSupported) return;
   const unlock = new SpeechSynthesisUtterance('');
   unlock.volume = 0;
   try { window.speechSynthesis.speak(unlock); }
   catch (err) { console.warn('[MockMode] TTS unlock failed:', err); }
+}
+
+function _flushSpeechQueue() {
+  if (_pendingSpeechQueue.length === 0) return;
+  const text = _pendingSpeechQueue.shift();
+  _pendingSpeechQueue = []; // discard older queued items — only speak latest
+  _speakNow(text);
 }
 
 function toggleSound() {
@@ -47,13 +59,27 @@ function toggleSound() {
 
 function speakText(text) {
   if (!soundOn || !ttsSupported || !text) return;
-  
+
+  // If the browser hasn't been unlocked by a user gesture yet, queue it.
+  // It will be flushed the moment the user first clicks or presses a key.
+  if (!_audioUnlockedByGesture) {
+    _pendingSpeechQueue = [text]; // only keep the latest
+    console.info('[MockMode] TTS queued — waiting for user gesture to unlock audio.');
+    return;
+  }
+
+  _speakNow(text);
+}
+
+function _speakNow(text) {
+  if (!soundOn || !ttsSupported || !text) return;
+
   if (ttsRetryCount >= TTS_MAX_RETRIES) {
     console.warn('[MockMode] TTS hard-stopped. Toggle sound off/on to reset.');
     return;
   }
 
-  // ── NEW: Wait for voices to load before speaking ──
+  // ── Wait for voices to load before speaking ──
   const trySpeak = () => {
     const voices = window.speechSynthesis.getVoices();
     
@@ -103,7 +129,7 @@ function speakText(text) {
   };
 
   trySpeak(); // Start the attempt
-}
+} // end _speakNow
 
 // ────────────────────────────────────────────────────────────────────────────
 // STT — Speech-to-Text (mic → answer input)
@@ -210,25 +236,31 @@ function startRecognition() {
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SR();
-  recognition.continuous     = false;
+  recognition.continuous     = true;   // keep listening until user stops
   recognition.interimResults = true;
   recognition.lang           = 'en-US';
   const input = document.getElementById('answer-input');
+  let finalTranscript = ''; // accumulate finals across multiple result events
 
   recognition.onstart = () => {
     setMicUI(true);
+    finalTranscript = (input && input.value.trim()) ? input.value.trim() + ' ' : '';
     if (typeof showToast === 'function')
       showToast('Microphone enabled — speaking...', 'success');
   };
 
   recognition.onresult = (event) => {
-    let interim = '', final = '';
-      for (let i = 0; i < event.results.length; i++) {
-        if (event.results[i].isFinal) final   += event.results[i][0].transcript;
-        else                          interim += event.results[i][0].transcript;
+    let interim = '';
+    // Walk only new results from resultIndex onward
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        finalTranscript += event.results[i][0].transcript;
+      } else {
+        interim += event.results[i][0].transcript;
       }
-      if (input) input.value = final || interim;
-    };
+    }
+    if (input) input.value = finalTranscript + interim;
+  };
 
     recognition.onend = () => {
     setMicUI(false);
@@ -240,27 +272,50 @@ function startRecognition() {
 
     if (event.error === 'aborted' || event.error === 'no-speech') return;
 
-    // Brave-specific hint
-    if (event.error === 'network' && /Brave/i.test(navigator.userAgent)) {
-      showToast('Ad-blockers may be blocking speech recognition.', 'error');
-    } else if (event.error === 'network') {
-      showToast('Network error: Cannot connect to speech service. Check connection or ad-blockers.', 'error');
-    } else if (event.error === 'not-allowed') {
-      showToast('Microphone access denied. Enable permissions in browser settings.', 'error');
-    } else {
-      showToast(`Mic error: ${event.error}`, 'error');
+    // Network errors are transient (service blip, ad-blocker, proxy).
+    // Give user a helpful message but retry with backoff instead of quitting fast.
+    if (event.error === 'network') {
+      if (/Brave/i.test(navigator.userAgent)) {
+        if (typeof showToast === 'function')
+          showToast('Brave ad-shield may be blocking speech recognition. Disable shields for this page.', 'error');
+      } else {
+        if (typeof showToast === 'function')
+          showToast('Speech service unreachable (network). Retrying…', 'warning');
+      }
+      micRetryCount++;
+      if (micRetryCount >= STT_MAX_RETRIES) {
+        micHardStopped = true;
+        if (typeof showToast === 'function')
+          showToast('Mic disabled after repeated network failures. Click mic to try again.', 'error');
+        return;
+      }
+      // Exponential backoff: 1s, 2s, 4s
+      const delay = Math.pow(2, micRetryCount - 1) * 1000;
+      console.info(`[MockMode] Mic network retry ${micRetryCount}/${STT_MAX_RETRIES} in ${delay}ms…`);
+      retryTimeout = setTimeout(startRecognition, delay);
+      return;
     }
 
-    micRetryCount++;
+    if (event.error === 'not-allowed') {
+      if (typeof showToast === 'function')
+        showToast('Microphone access denied. Enable permissions in browser settings.', 'error');
+      micHardStopped = true;
+      return;
+    }
 
+    if (typeof showToast === 'function')
+      showToast(`Mic error: ${event.error}`, 'error');
+
+    micRetryCount++;
     if (micRetryCount >= STT_MAX_RETRIES) {
       micHardStopped = true;
-      showToast('Mic disabled after 3 failures. Click mic button to retry.', 'error');
+      if (typeof showToast === 'function')
+        showToast('Mic disabled after 3 failures. Click mic button to retry.', 'error');
       return;
     }
 
     console.info(`[MockMode] Mic retry ${micRetryCount}/${STT_MAX_RETRIES}...`);
-    setTimeout(startRecognition, 800);
+    retryTimeout = setTimeout(startRecognition, 800);
   };
 
   try {
@@ -333,12 +388,16 @@ if (typeof window !== 'undefined') {
 
     // ── Auto-unlock audio on first user interaction anywhere ──
     // Browsers block speech synthesis until a user gesture has occurred.
-    // We hook the first click/keydown on the page to silently unlock it.
+    // We hook the first click/keydown on the page to silently unlock it,
+    // then flush any speech that was queued before the gesture.
     let audioUnlocked = false;
     function unlockOnInteraction() {
       if (audioUnlocked) return;
       audioUnlocked = true;
+      _audioUnlockedByGesture = true;
       unlockSpeech();
+      // Flush any TTS that was queued while waiting for the gesture
+      setTimeout(_flushSpeechQueue, 100);
       document.removeEventListener('click', unlockOnInteraction, true);
       document.removeEventListener('keydown', unlockOnInteraction, true);
     }
