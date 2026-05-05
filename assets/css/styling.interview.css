@@ -246,3 +246,16 @@ transition: opacity 0.2s, color 0.2s;
   END: ID.1
   ELLIE WORKAROUNDS
 */
+
+/* Timer specific styling to match source: 5 */
+#timer-container.timer-low {
+  border-color: #ff4444;
+}
+#timer-display {
+  font-family: 'Space Grotesk', monospace;
+  text-shadow: 0 0 5px rgba(160, 207, 207, 0.3);
+}
+#timer-display.text-error {
+  color: #ff4444;
+  text-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
+}
