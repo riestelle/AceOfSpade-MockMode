@@ -164,6 +164,7 @@ function startMicCapture() {
   if (!micArmed || !recognition || isRecording || fatalError) return;
 
   softPaused = false;
+  finalTranscript = ''; // reset transcript for new question
 
   try {
     recognition.start();
