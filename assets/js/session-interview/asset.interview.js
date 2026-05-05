@@ -343,16 +343,24 @@ async function askCurrentQuestion() {
 
   let streamFinished = false;
 
+  // 🔥 START VOICE IMMEDIATELY (KEY FIX)
+  if (typeof speakText === 'function') {
+    speakText(question);
+  }
+
+  // 🔥 Unlock UI immediately (no waiting)
+  enableAnsweringPhase();
+
   // 🔥 HARD FALLBACK if stream hangs
   const streamTimeout = setTimeout(() => {
     if (!streamFinished) {
       console.warn("Stream failed → forcing UI");
       dialogueBox.textContent = question;
-      enableAnsweringPhase();
     }
   }, 10000);
 
   try {
+    // Stream ONLY for visual text (non-blocking feel)
     await streamInterviewerMessage(
       questionPrompt,
       personality,
@@ -363,27 +371,8 @@ async function askCurrentQuestion() {
 
         if (skipVoiceBtn) skipVoiceBtn.classList.remove('hidden');
 
-        if (typeof speakText === 'function') {
-          let called = false;
-
-          const fallback = setTimeout(() => {
-            if (!called) {
-              console.warn("TTS failed → forcing timer start");
-              enableAnsweringPhase();
-            }
-          }, 8000);
-
-          speakText(fullText || question, () => {
-            if (!called) {
-              called = true;
-              clearTimeout(fallback);
-              enableAnsweringPhase();
-            }
-          });
-
-        } else {
-          enableAnsweringPhase();
-        }
+        // ❌ DO NOT trigger TTS here anymore
+        // (we already started it above)
       }
     );
 
@@ -391,7 +380,6 @@ async function askCurrentQuestion() {
     console.error(err);
     clearTimeout(streamTimeout);
     dialogueBox.textContent = question;
-    enableAnsweringPhase();
   }
 }
 
