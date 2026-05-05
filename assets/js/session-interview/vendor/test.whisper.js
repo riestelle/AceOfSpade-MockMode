@@ -2,10 +2,9 @@
 // Whisper STT via Transformers.js in-browser pipeline. No background recording. No infinite loops.
 // Toggle mic with button or [M]. Records a short clip, then transcribes into #answer-input.
 
-import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
-
 const MIC_MAX_ERRORS = 3;
 const TARGET_SR = 16000;
+const TRANSFORMERS_CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0';
 
 let micErrors = 0;
 let micHardStopped = false;
@@ -16,9 +15,21 @@ let chunks = [];
 let recording = false;
 
 let transcriberPromise = null;
+let transformersPipeline = null;
 
 function warn(...args) { console.warn('[MockMode][Whisper]', ...args); }
 function info(...args) { console.info('[MockMode][Whisper]', ...args); }
+
+async function loadTransformersPipeline() {
+  if (!transformersPipeline) {
+    const mod = await import(TRANSFORMERS_CDN);
+    transformersPipeline = mod.pipeline;
+    if (typeof transformersPipeline !== 'function') {
+      throw new Error('Transformers pipeline() not available');
+    }
+  }
+  return transformersPipeline;
+}
 
 function setMicUI(active) {
   const btn = document.getElementById('mic-btn');
@@ -34,29 +45,27 @@ function setMicUI(active) {
 }
 
 async function ensureTranscriber() {
-if (!transcriberPromise) {
-  // Show loading toast for first-time model download
-  if (typeof showToast === 'function') {
-    showToast('Loading speech model... (first time only)', 'info');
+  if (!transcriberPromise) {
+    // Show loading toast for first-time model download
+    if (typeof showToast === 'function') {
+      showToast('Loading speech model... (first time only)', 'info');
+    }
+
+    transcriberPromise = loadTransformersPipeline()
+      .then((pipeline) => pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en'))
+      .then(p => {
+        info('model loaded');
+        return p;
+      })
+      .catch(err => {
+        transcriberPromise = null;
+        if (typeof showToast === 'function') {
+          showToast('Failed to load speech model. Check your connection or browser settings.', 'error');
+        }
+        throw err;
+      });
   }
-  
-  // Smallest practical English model. Cached by the browser once downloaded.
-  transcriberPromise = pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en')
-    .then(p => {
-      info('model loaded');
-      // Optional: show success toast
-      // if (typeof showToast === 'function') showToast('Speech model ready!', 'success');
-      return p;
-    })
-    .catch(err => {
-      transcriberPromise = null;
-      if (typeof showToast === 'function') {
-        showToast('Failed to load speech model. Check your connection.', 'error');
-      }
-      throw err;
-    });
-}
-return transcriberPromise;
+  return transcriberPromise;
 }
 
 async function requestMic() {
