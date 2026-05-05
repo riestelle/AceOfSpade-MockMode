@@ -24,14 +24,14 @@ let _audioUnlockedByGesture = false;
 let _pendingSpeechQueue = []; // texts queued before the first user gesture
 
 function unlockSpeech() {
-  window.unlockSpeech = unlockSpeech;
+  
   if (!ttsSupported) return;
   const unlock = new SpeechSynthesisUtterance('');
   unlock.volume = 0;
   try { window.speechSynthesis.speak(unlock); }
   catch (err) { console.warn('[MockMode] TTS unlock failed:', err); }
 }
-
+window.unlockSpeech = unlockSpeech;
 function _flushSpeechQueue() {
   if (_pendingSpeechQueue.length === 0) return;
   const item = _pendingSpeechQueue.shift();

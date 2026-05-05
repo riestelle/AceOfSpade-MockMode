@@ -327,7 +327,6 @@ async function askCurrentQuestion() {
 
   clearReactionBox();
 
-  // Lock UI
   if (answerInput) {
     answerInput.value = '';
     answerInput.disabled = true;
@@ -342,38 +341,55 @@ async function askCurrentQuestion() {
     ? `React to: "${lastAnswerContext.answer}". Then ask: "${question}"`
     : `Ask: "${question}"`;
 
+  let streamFinished = false;
+
+  // 🔥 HARD FALLBACK if stream hangs
+  const streamTimeout = setTimeout(() => {
+    if (!streamFinished) {
+      console.warn("Stream failed → forcing UI");
+      dialogueBox.textContent = question;
+      enableAnsweringPhase();
+    }
+  }, 10000);
+
   try {
-    await streamInterviewerMessage(questionPrompt, personality, dialogueBox, (fullText) => {
+    await streamInterviewerMessage(
+      questionPrompt,
+      personality,
+      dialogueBox,
+      (fullText) => {
+        streamFinished = true;
+        clearTimeout(streamTimeout);
 
-      // Show skip button
-      if (skipVoiceBtn) skipVoiceBtn.classList.remove('hidden');
+        if (skipVoiceBtn) skipVoiceBtn.classList.remove('hidden');
 
-      // 🔥 SAFE TTS HANDLING
-      if (typeof speakText === 'function') {
-        let called = false;
+        if (typeof speakText === 'function') {
+          let called = false;
 
-        const fallback = setTimeout(() => {
-          if (!called) {
-            console.warn("TTS failed → forcing timer start");
-            enableAnsweringPhase();
-          }
-        }, 8000);
+          const fallback = setTimeout(() => {
+            if (!called) {
+              console.warn("TTS failed → forcing timer start");
+              enableAnsweringPhase();
+            }
+          }, 8000);
 
-        speakText(fullText || question, () => {
-          if (!called) {
-            called = true;
-            clearTimeout(fallback);
-            enableAnsweringPhase();
-          }
-        });
+          speakText(fullText || question, () => {
+            if (!called) {
+              called = true;
+              clearTimeout(fallback);
+              enableAnsweringPhase();
+            }
+          });
 
-      } else {
-        enableAnsweringPhase();
+        } else {
+          enableAnsweringPhase();
+        }
       }
-    });
+    );
 
   } catch (err) {
     console.error(err);
+    clearTimeout(streamTimeout);
     dialogueBox.textContent = question;
     enableAnsweringPhase();
   }
