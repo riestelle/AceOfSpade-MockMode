@@ -275,7 +275,6 @@ function handleTimerTimeout() {
 
 // Helper to enable the UI once audio is done or skipped
 function enableAnsweringPhase() {
-    stopVoiceAudio(); // Stop any actual playing audio
     document.getElementById('skip-voice-btn').classList.add('hidden');
     
     if (answerInput) {
@@ -283,11 +282,12 @@ function enableAnsweringPhase() {
         answerInput.placeholder = "Type your answer here...";
         answerInput.focus();
     }
+    if (submitBtn) submitBtn.disabled = false;
     
     // Enable microphone capture
     if (typeof startMicCapture === 'function') startMicCapture();
     
-    startTimer(); // Now the timer starts[cite: 1, 15]
+    startTimer(); // Now the timer starts
 }
 
 async function askCurrentQuestion() {
@@ -332,26 +332,32 @@ async function askCurrentQuestion() {
     }
 }
 
-// Global voice stopper
+// Global voice stopper (called by skip button and when submitting)
 function stopVoiceAudio() {
     if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
     }
 }
 
-// Wire the Skip Voice button
-document.getElementById('skip-voice-btn').addEventListener('click', (e) => {
-    spawnBurst(e); //[cite: 13]
-    enableAnsweringPhase();
-});
+// Wire the Skip Voice button and spacebar shortcut — deferred until DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  const skipVoiceBtn = document.getElementById('skip-voice-btn');
+  if (skipVoiceBtn) {
+    skipVoiceBtn.addEventListener('click', (e) => {
+      if (typeof spawnBurst === 'function') spawnBurst(e);
+      stopVoiceAudio(); // OK to cancel here since user explicitly skipped
+      enableAnsweringPhase();
+    });
+  }
 
-// Shortcut: Allow Spacebar to skip voice
-document.addEventListener('keydown', (e) => {
-    const skipBtn = document.getElementById('skip-voice-btn');
-    if (e.code === 'Space' && !skipBtn.classList.contains('hidden')) {
-        e.preventDefault();
-        enableAnsweringPhase();
+  document.addEventListener('keydown', (e) => {
+    const btn = document.getElementById('skip-voice-btn');
+    if (e.code === 'Space' && btn && !btn.classList.contains('hidden')) {
+      e.preventDefault();
+      stopVoiceAudio();
+      enableAnsweringPhase();
     }
+  });
 });
 
 // ── Answer submission ──────────────────────────────────────────────────────
