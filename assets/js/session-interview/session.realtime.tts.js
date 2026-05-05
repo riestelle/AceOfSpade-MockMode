@@ -7,9 +7,10 @@
 // TTS — Text-to-Speech (interviewer voice output)
 // ─────────────────────────────────────────────────────────────────────────────
 
-let soundOn          = false;
+let soundOn          = true;   // auto-enabled on load — user can toggle off
 let currentUtterance = null;
-let ttsRetryCount    = 0;
+let ttsRetryCount    = 0;   // error counter — resets on success
+let voiceLoadRetries = 0;   // separate counter just for voice-load polling
 const TTS_MAX_RETRIES = 3;
 
 const ttsSupported =
@@ -57,15 +58,16 @@ function speakText(text) {
     const voices = window.speechSynthesis.getVoices();
     
     if (voices.length === 0) {
-      // Voices not ready — retry once after 100ms (max 3 retries)
-      if (ttsRetryCount < 3) {
-        ttsRetryCount++;
-        setTimeout(trySpeak, 100);
+      // Voices not ready — use separate counter so error quota isn't burned
+      if (voiceLoadRetries < 5) {
+        voiceLoadRetries++;
+        setTimeout(trySpeak, 150);
         return;
       }
       console.warn('[MockMode] TTS: No voices available after waiting.');
       return;
     }
+    voiceLoadRetries = 0; // reset once voices are found
 
     // ✅ Voices ready — proceed with speech
     const preferredVoice = voices.find(v => 
@@ -328,6 +330,20 @@ if (typeof window !== 'undefined') {
     // ── Sound icon initial state ──
     const soundIcon = document.getElementById('sound-icon');
     if (soundIcon) soundIcon.textContent = soundOn ? 'volume_up' : 'volume_off';
+
+    // ── Auto-unlock audio on first user interaction anywhere ──
+    // Browsers block speech synthesis until a user gesture has occurred.
+    // We hook the first click/keydown on the page to silently unlock it.
+    let audioUnlocked = false;
+    function unlockOnInteraction() {
+      if (audioUnlocked) return;
+      audioUnlocked = true;
+      unlockSpeech();
+      document.removeEventListener('click', unlockOnInteraction, true);
+      document.removeEventListener('keydown', unlockOnInteraction, true);
+    }
+    document.addEventListener('click', unlockOnInteraction, true);
+    document.addEventListener('keydown', unlockOnInteraction, true);
 
     // ── Sound button ──
     const soundBtn = document.getElementById('sound-btn');
