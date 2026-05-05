@@ -33,9 +33,13 @@ function unlockSpeech() {
 
 function _flushSpeechQueue() {
   if (_pendingSpeechQueue.length === 0) return;
-  const text = _pendingSpeechQueue.shift();
+  const item = _pendingSpeechQueue.shift();
   _pendingSpeechQueue = []; // discard older queued items — only speak latest
-  _speakNow(text);
+  if (item && typeof item === 'object') {
+    _speakNow(item.text, item.onDone);
+  } else {
+    _speakNow(item); // legacy plain-string fallback
+  }
 }
 
 function toggleSound() {
@@ -57,25 +61,33 @@ function toggleSound() {
   }
 }
 
-function speakText(text) {
-  if (!soundOn || !ttsSupported || !text) return;
+function speakText(text, onDone) {
+  if (!soundOn || !ttsSupported || !text) {
+    // Even if TTS is off/unsupported, fire the callback so the UI unlocks
+    if (typeof onDone === 'function') onDone();
+    return;
+  }
 
   // If the browser hasn't been unlocked by a user gesture yet, queue it.
   // It will be flushed the moment the user first clicks or presses a key.
   if (!_audioUnlockedByGesture) {
-    _pendingSpeechQueue = [text]; // only keep the latest
+    _pendingSpeechQueue = [{ text, onDone }]; // only keep the latest
     console.info('[MockMode] TTS queued — waiting for user gesture to unlock audio.');
     return;
   }
 
-  _speakNow(text);
+  _speakNow(text, onDone);
 }
 
-function _speakNow(text) {
-  if (!soundOn || !ttsSupported || !text) return;
+function _speakNow(text, onDone) {
+  if (!soundOn || !ttsSupported || !text) {
+    if (typeof onDone === 'function') onDone();
+    return;
+  }
 
   if (ttsRetryCount >= TTS_MAX_RETRIES) {
     console.warn('[MockMode] TTS hard-stopped. Toggle sound off/on to reset.');
+    if (typeof onDone === 'function') onDone(); // still unlock the UI
     return;
   }
 
@@ -91,6 +103,7 @@ function _speakNow(text) {
         return;
       }
       console.warn('[MockMode] TTS: No voices available after waiting.');
+      if (typeof onDone === 'function') onDone(); // unlock UI even if voices missing
       return;
     }
     voiceLoadRetries = 0; // reset once voices are found
@@ -113,6 +126,7 @@ function _speakNow(text) {
     };
     utter.onend = () => {
       if (currentUtterance === utter) currentUtterance = null;
+      if (typeof onDone === 'function') onDone(); // ✅ unlock UI after speech ends
     };
     utter.onerror = (event) => {
       console.warn('[MockMode] TTS error:', event.error);
@@ -122,6 +136,7 @@ function _speakNow(text) {
         if (typeof showToast === 'function')
           showToast('Voice output failed. Toggle sound to retry.', 'warning');
       }
+      if (typeof onDone === 'function') onDone(); // ✅ unlock UI even on error
     };
     
     currentUtterance = utter;
@@ -143,9 +158,15 @@ let recognition    = null;
 let retryTimeout   = null;
 
 function startMicCapture() {
-  if (micHardStopped) return;
+  // Called by enableAnsweringPhase() to prepare mic (but don't auto-start —
+  // leave that to the user pressing the mic button to avoid permission errors
+  // on page load and the "network" error from starting before user interaction)
   if (retryTimeout) { clearTimeout(retryTimeout); retryTimeout = null; }
   micRetryCount = 0;
+  micHardStopped = false;
+  // Note: we do NOT auto-call startRecognition() here — user must press mic btn.
+  // This avoids the "network" error from browsers that reject mic start
+  // before a deliberate user gesture on the mic button specifically.
 }
 
 function stopMicCapture() {
