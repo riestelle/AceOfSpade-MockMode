@@ -145,14 +145,15 @@ class CharacterController {
               console.log('Lottie Layer Found:', layerName);
 
               // Improved matching: checks if the name INCLUDES these keywords
+              // Look for this block in CharacterController.init()[cite: 2]
               if (
                 layerName.includes('group 7') || 
                 layerName.includes('background') || 
                 layerName.includes('bg') ||
-                layerName.includes('solid')
+                layerName.includes('solid') ||
+                layerName.includes('layer') // Add more keywords if the box persists
               ) {
                 g.style.display = 'none';
-                g.style.opacity = '0'; // Double-kill to ensure it stays hidden
               }
             }
           });
