@@ -116,9 +116,7 @@ class CharacterController {
   async init() {
     if (!this.container) throw new Error('[MockMode Lottie] Container not found: ' + this.container);
 
-    // Clear previous content (including the loading skeleton's inner html)
     this.container.innerHTML = '';
-
     const wrap = document.createElement('div');
     wrap.style.cssText = 'width:100%;height:100%;position:relative;';
     this.container.appendChild(wrap);
@@ -134,30 +132,37 @@ class CharacterController {
 
     return new Promise(resolve => {
       this.anim.addEventListener('DOMLoaded', () => {
-        // --- NEW OPTION B LOGIC START ---
         const svgEl = this._lottieWrap?.querySelector('svg');
         if (svgEl) {
-          // Hide the background rect layer that shows as a square on the head
           const groups = svgEl.querySelectorAll('g');
-          for (const g of groups) {
-            const title = g.querySelector(':scope > title');
-            if (title && (
-              title.textContent === 'Group 7' ||
-              title.textContent === 'Background'
-            )) {
-              g.style.display = 'none';
-            }
-          }
-        }
-        // --- NEW OPTION B LOGIC END ---
+          
+          groups.forEach(g => {
+            const titleEl = g.querySelector(':scope > title');
+            if (titleEl) {
+              const layerName = titleEl.textContent.trim().toLowerCase();
+              
+              // DEBUG: Uncomment the line below to see all layer names in your console
+              // console.log('Lottie Layer Found:', layerName);
 
-        // Hide the skeleton once animation is rendered
+              // Improved matching: checks if the name INCLUDES these keywords
+              if (
+                layerName.includes('group 7') || 
+                layerName.includes('background') || 
+                layerName.includes('bg') ||
+                layerName.includes('solid')
+              ) {
+                g.style.display = 'none';
+                g.style.opacity = '0'; // Double-kill to ensure it stays hidden
+              }
+            }
+          });
+        }
+
         const skeleton = document.getElementById('lottie-interviewer-skeleton');
         if (skeleton) skeleton.classList.add('hidden');
         resolve();
       });
       
-      // Fallback in case DOMLoaded never fires (network issues etc.)
       setTimeout(resolve, 3000);
     });
   }
