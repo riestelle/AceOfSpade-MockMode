@@ -13,33 +13,33 @@
 
 // ── Session state ──────────────────────────────────────────────────────────
 
-let resumeText      = null;
-let personality     = null;
-let role            = null;
-let questions       = [];
-let scores          = [];
-let currentIndex    = 0;
-let stressLevel     = 30;     // SPEC: starts at 30, not 0
+let resumeText = null;
+let personality = null;
+let role = null;
+let questions = [];
+let scores = [];
+let currentIndex = 0;
+let stressLevel = 30;     // SPEC: starts at 30, not 0
 let peakStressLevel = 30;
-let moodScore       = 0;      // hidden: -100 to +100, affects AI tone only
-let comboCount      = 0;      // live combo counter, resets on score < 70
-let isProcessing    = false;
-let skipUsed        = false;
-let isBossQuestion  = false;  // true when currentIndex === 4 (Q5)
+let moodScore = 0;      // hidden: -100 to +100, affects AI tone only
+let comboCount = 0;      // live combo counter, resets on score < 70
+let isProcessing = false;
+let skipUsed = false;
+let isBossQuestion = false;  // true when currentIndex === 4 (Q5)
 let lastAnswerContext = null; // { answer, score } from previous question — used to connect questions
-let verdictAttempts   = 0;    // counts finishInterview retries — hard-stops at 3
+let verdictAttempts = 0;    // counts finishInterview retries — hard-stops at 3
 
 // ── Timer state ────────────────────────────────────────────────────────────
 // Logic is wired — UI hookup (display element) is frontend's job.
-let timerInterval   = null;
-let timeRemaining   = 45;
+let timerInterval = null;
+let timeRemaining = 45;
 const TIMER_DURATION = 45;
 
 // ── Personality score multipliers (SPEC) ──────────────────────────────────
 const PERSONALITY_MULTIPLIER = {
-  corporate:  0.9,   // strict  → penalises score
-  startup:    1.1,   // chill   → boosts score
-  technical:  1.0,   // neutral
+  corporate: 0.9,   // strict  → penalises score
+  startup: 1.1,   // chill   → boosts score
+  technical: 1.0,   // neutral
 };
 
 // ── Boss question multiplier (SPEC) ───────────────────────────────────────
@@ -68,21 +68,21 @@ const INTERVIEWER_PERSONAS = {
 
 // ── DOM references ─────────────────────────────────────────────────────────
 
-let dialogueBox     = null;
-let answerInput     = null;
-let submitBtn       = null;
-let skipBtn         = null;    // NEW
-let stressFill      = null;
-let stressLabel     = null;
-let reactionBox     = null;
-let qCurrentSpan    = null;    // FIX: was progressLabel (full element)
-let qTotalSpan      = null;
+let dialogueBox = null;
+let answerInput = null;
+let submitBtn = null;
+let skipBtn = null;    // NEW
+let stressFill = null;
+let stressLabel = null;
+let reactionBox = null;
+let qCurrentSpan = null;    // FIX: was progressLabel (full element)
+let qTotalSpan = null;
 
 // ── Toast notification system ──────────────────────────────────────────────
 
 function showToast(message, type = 'info') {
   const host = document.getElementById('mm-toast-host');
-  if (!host) { console.warn('[MockMode] Toast host not found'); return;}
+  if (!host) { console.warn('[MockMode] Toast host not found'); return; }
 
   const toast = document.createElement('div');
   toast.className = `mm-toast ${type}`;
@@ -133,19 +133,19 @@ window.showToast = showToast;
 // ── Init ───────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
-  dialogueBox  = document.getElementById('dialogue-text');
-  answerInput  = document.getElementById('answer-input');
-  submitBtn    = document.getElementById('submit-answer-btn');
-  skipBtn      = document.getElementById('skip-btn');           // NEW
-  stressFill   = document.getElementById('stress-fill');
-  stressLabel  = document.getElementById('stress-label');
-  reactionBox  = document.getElementById('reaction-box');
+  dialogueBox = document.getElementById('dialogue-text');
+  answerInput = document.getElementById('answer-input');
+  submitBtn = document.getElementById('submit-answer-btn');
+  skipBtn = document.getElementById('skip-btn');           // NEW
+  stressFill = document.getElementById('stress-fill');
+  stressLabel = document.getElementById('stress-label');
+  reactionBox = document.getElementById('reaction-box');
   qCurrentSpan = document.getElementById('q-current');         // FIX
-  qTotalSpan   = document.getElementById('q-total');           // FIX
+  qTotalSpan = document.getElementById('q-total');           // FIX
 
-  resumeText  = getFromStorage('resume');
+  resumeText = getFromStorage('resume');
   personality = getFromStorage('personality');
-  role        = getFromStorage('role') ?? 'general';
+  role = getFromStorage('role') ?? 'general';
 
   if (!resumeText || !personality) {
     showToast('Session expired. Please start over.', 'warning');
@@ -200,9 +200,17 @@ async function loadQuestions() {
 
   showLoader('Preparing your interview questions...');
   try {
-    const generated = await generateQuestions(resumeText, personality, role);
-    if (!Array.isArray(generated) || generated.length === 0) {
-      throw new Error('No questions returned from AI.');
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("AI timeout")), 15000)
+    );
+
+    const generated = await Promise.race([
+      generateQuestions(resumeText, personality, role),
+      timeout
+    ]);
+    if (!generated || !Array.isArray(generated) || generated.length !== 5) {
+      console.error("Invalid questions:", generated);
+      throw new Error('Invalid questions returned from AI.');
     }
     loadQuestionsAttempts = 0; // reset on success
     questions = generated;
@@ -228,6 +236,10 @@ async function loadQuestions() {
 // ── Interview flow ─────────────────────────────────────────────────────────
 
 function startInterview() {
+  if (typeof unlockSpeech === 'function') {
+    unlockSpeech();
+  }
+
   updateProgressLabel();
   updateStressMeter(30);
   askCurrentQuestion();
@@ -244,24 +256,24 @@ function startInterview() {
 function startTimer() {
   stopTimer(); // Always clear previous intervals first
   timeRemaining = TIMER_DURATION; // Reset to 45[cite: 2]
-  
+
   // Force immediate UI update to 00:45
   if (typeof updateTimerDisplay === 'function') {
-    updateTimerDisplay(timeRemaining);[cite: 3]
+    updateTimerDisplay(timeRemaining);
   }
 
   console.log("Timer started at:", timeRemaining);
 
   timerInterval = setInterval(() => {
     timeRemaining--;
-    
+
     if (typeof updateTimerDisplay === 'function') {
-      updateTimerDisplay(timeRemaining);[cite: 3]
+      updateTimerDisplay(timeRemaining);
     }
 
     if (timeRemaining <= 0) {
       stopTimer();
-      handleTimerTimeout();[cite: 2]
+      handleTimerTimeout();
     }
   }, 1000);
 }
@@ -270,141 +282,108 @@ function startTimer() {
 
 function handleTimerTimeout() {
   if (isProcessing) return;
-  
+
   // Apply penalty
   stressLevel = Math.min(100, stressLevel + 15);
   if (stressLevel > peakStressLevel) peakStressLevel = stressLevel;
   updateStressMeter(stressLevel);
-  
+
   if (checkLoseCondition()) return;
 
   // Reset display immediately so it doesn't stay at 0:00
-  timeRemaining = TIMER_DURATION; 
+  timeRemaining = TIMER_DURATION;
   if (typeof updateTimerDisplay === 'function') updateTimerDisplay(timeRemaining);
 
   if (answerInput) answerInput.value = '[No answer — time ran out]';
   submitAnswer();
 }
 
-async function askCurrentQuestion() {
-    if (!dialogueBox) return;
-    clearReactionBox();
-    
-    // Lock UI and show thinking state
-    if (typeof showThinkingIndicator === 'function') showThinkingIndicator();
-    
-    if (answerInput) {
-        answerInput.value = '';
-        answerInput.disabled = true;
-        answerInput.placeholder = "Interviewer is thinking...";
-    }
-    if (submitBtn) submitBtn.disabled = true;
-    
-    const question = questions[currentIndex];
-    const skipVoiceBtn = document.getElementById('skip-voice-btn');
 
-    let questionPrompt = currentIndex > 0 && lastAnswerContext 
-        ? `React to the candidate's last answer: "${lastAnswerContext.answer}". Then ask this specific question: "${question}"`
-        : `Begin the interview by asking: "${question}"`;
-
-    try {
-        await streamInterviewerMessage(questionPrompt, personality, dialogueBox, (fullText) => {
-            // AI finished generating text:
-            // 1. Hide thinking indicator so text is visible
-            if (typeof hideThinkingIndicator === 'function') hideThinkingIndicator();
-            
-            // 2. Show skip button
-            if (skipVoiceBtn) skipVoiceBtn.classList.remove('hidden');
-            
-            // 3. Start voice. Timer starts ONLY when voice finishes (via the callback).
-            if (typeof speakText === 'function') {
-                speakText(fullText || question, () => {
-                    enableAnsweringPhase();
-                });
-            } else {
-                enableAnsweringPhase();
-            }
-        });
-    } catch (err) {
-        if (typeof hideThinkingIndicator === 'function') hideThinkingIndicator();
-        dialogueBox.textContent = question;
-        enableAnsweringPhase();
-    }
-}
 
 // Helper to enable the UI once audio is done or skipped
 function enableAnsweringPhase() {
-    // Hide voice-skip since speaking is done[cite: 2]
-    const skipVoiceBtn = document.getElementById('skip-voice-btn');
-    if (skipVoiceBtn) skipVoiceBtn.classList.add('hidden');
-    
-    // Unlock input[cite: 2]
-    if (answerInput) {
-        answerInput.disabled = false;
-        answerInput.placeholder = "Type your answer here...";
-        answerInput.focus();
-    }
-    if (submitBtn) submitBtn.disabled = false;
-    
-    // Start mic and timer[cite: 2]
-    if (typeof startMicCapture === 'function') {
-        try { startMicCapture(); } catch(e) { console.error(e); }
-    }
-    
-    startTimer(); 
+  // Hide voice-skip since speaking is done[cite: 2]
+  const skipVoiceBtn = document.getElementById('skip-voice-btn');
+  if (skipVoiceBtn) skipVoiceBtn.classList.add('hidden');
+
+  // Unlock input[cite: 2]
+  if (answerInput) {
+    answerInput.disabled = false;
+    answerInput.placeholder = "Type your answer here...";
+    answerInput.focus();
+  }
+  if (submitBtn) submitBtn.disabled = false;
+
+  // Start mic and timer[cite: 2]
+  if (typeof startMicCapture === 'function') {
+    try { startMicCapture(); } catch (e) { console.error(e); }
+  }
+
+  startTimer();
 }
 
 async function askCurrentQuestion() {
-    if (!dialogueBox) return;
-    clearReactionBox();
-    
-    // 1. Keep everything LOCKED initially
-    if (answerInput) {
-        answerInput.value = '';
-        answerInput.disabled = true;
-        answerInput.placeholder = "Interviewer is speaking...";
-    }
-    if (submitBtn) submitBtn.disabled = true;
-    
-    const question = questions[currentIndex];
-    const skipBtn = document.getElementById('skip-voice-btn');
+  if (!dialogueBox) return;
 
-    // 2. Prepare the prompt
-    let questionPrompt = currentIndex > 0 && lastAnswerContext 
-        ? `React to: "${lastAnswerContext.answer}". Then ask: "${question}"`
-        : `Ask: "${question}"`;
+  clearReactionBox();
 
-    try {
-        await streamInterviewerMessage(questionPrompt, personality, dialogueBox, (fullText) => {
-            // Show skip button once text is ready
-            skipBtn.classList.remove('hidden');
-            
-            // 3. Play voice with a callback
-            // FIND THIS BLOCK inside askCurrentQuestion()
-              if (typeof speakText === 'function') {
-                  // Add a safety timeout in case speakText hangs
-                  const safetyTimer = setTimeout(() => {
-                      console.warn("TTS timed out - force unlocking Submit button");
-                      enableAnsweringPhase();
-                  }, 10000); // Force unlock after 10 seconds
+  // Lock UI
+  if (answerInput) {
+    answerInput.value = '';
+    answerInput.disabled = true;
+    answerInput.placeholder = "Interviewer is speaking...";
+  }
+  if (submitBtn) submitBtn.disabled = true;
 
-                  speakText(fullText || question, () => {
-                      clearTimeout(safetyTimer); // Clear safety if it worked normally
-                      enableAnsweringPhase();
-                  });
-              }
+  const question = questions[currentIndex];
+  const skipVoiceBtn = document.getElementById('skip-voice-btn');
+
+  let questionPrompt = currentIndex > 0 && lastAnswerContext
+    ? `React to: "${lastAnswerContext.answer}". Then ask: "${question}"`
+    : `Ask: "${question}"`;
+
+  try {
+    await streamInterviewerMessage(questionPrompt, personality, dialogueBox, (fullText) => {
+
+      // Show skip button
+      if (skipVoiceBtn) skipVoiceBtn.classList.remove('hidden');
+
+      // 🔥 SAFE TTS HANDLING
+      if (typeof speakText === 'function') {
+        let called = false;
+
+        const fallback = setTimeout(() => {
+          if (!called) {
+            console.warn("TTS failed → forcing timer start");
+            enableAnsweringPhase();
+          }
+        }, 8000);
+
+        speakText(fullText || question, () => {
+          if (!called) {
+            called = true;
+            clearTimeout(fallback);
+            enableAnsweringPhase();
+          }
         });
-    } catch (err) {
-        dialogueBox.textContent = question;
+
+      } else {
         enableAnsweringPhase();
-    }
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    dialogueBox.textContent = question;
+    enableAnsweringPhase();
+  }
 }
 
 // Global voice stopper (called by skip button and when submitting)
 function stopVoiceAudio() {
-    if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-    }
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
 }
 
 // Wire the Skip Voice button and spacebar shortcut — deferred until DOM is ready
@@ -447,7 +426,7 @@ async function submitAnswer() {
   isProcessing = true;
   stopTimer();  // stop countdown the moment they submit
   if (submitBtn) submitBtn.disabled = true;
-  if (skipBtn)   skipBtn.disabled   = true;
+  if (skipBtn) skipBtn.disabled = true;
   if (answerInput) answerInput.disabled = true;
 
   const question = questions[currentIndex];
@@ -647,7 +626,7 @@ function updateProgressLabel() {
   // FIX: the HTML has two <span> elements (q-current and q-total),
   // not a single element whose textContent is replaced.
   if (qCurrentSpan) qCurrentSpan.textContent = currentIndex + 1;
-  if (qTotalSpan)   qTotalSpan.textContent   = questions.length || 5;
+  if (qTotalSpan) qTotalSpan.textContent = questions.length || 5;
 }
 
 // ── Lose condition ─────────────────────────────────────────────────────────

@@ -24,6 +24,7 @@ let _audioUnlockedByGesture = false;
 let _pendingSpeechQueue = []; // texts queued before the first user gesture
 
 function unlockSpeech() {
+  window.unlockSpeech = unlockSpeech;
   if (!ttsSupported) return;
   const unlock = new SpeechSynthesisUtterance('');
   unlock.volume = 0;
