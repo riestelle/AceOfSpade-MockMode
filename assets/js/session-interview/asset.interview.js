@@ -164,7 +164,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const cached = getFromStorage('questions');
   if (Array.isArray(cached) && cached.length === 5) {
     questions = cached;
-    startInterview();
+    // FIX: Even for cached questions, wait for TTS voices before starting
+    // so the loading screen persists until everything is truly ready.
+    waitForVoicesThenStart();
   } else {
     await loadQuestions();
   }
@@ -184,6 +186,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     skipBtn.addEventListener('click', skipQuestion);
   }
 });
+
+// ── Voice readiness helper ─────────────────────────────────────────────────
+// Waits until the browser has loaded TTS voices (or times out after 3 s),
+// then hides the loader and kicks off the interview.
+// This ensures the loading screen stays up until everything is truly ready.
+
+function waitForVoicesThenStart() {
+  const ttsOk = typeof window !== 'undefined' && 'speechSynthesis' in window;
+  if (!ttsOk) {
+    // No TTS support — start immediately
+    hideLoader();
+    startInterview();
+    return;
+  }
+
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length > 0) {
+    // Voices already available
+    hideLoader();
+    startInterview();
+    return;
+  }
+
+  // Voices not yet loaded — wait for them (max 3 s)
+  let resolved = false;
+  const resolve = () => {
+    if (resolved) return;
+    resolved = true;
+    clearTimeout(timeout);
+    hideLoader();
+    startInterview();
+  };
+
+  const timeout = setTimeout(resolve, 3000); // Give up after 3 s and start anyway
+  window.speechSynthesis.addEventListener('voiceschanged', resolve, { once: true });
+}
 
 // ── Question generation ────────────────────────────────────────────────────
 
@@ -215,8 +253,12 @@ async function loadQuestions() {
     loadQuestionsAttempts = 0; // reset on success
     questions = generated;
     saveToStorage('questions', questions);
-    hideLoader();
-    startInterview();
+
+    // FIX: Don't hide the loader until TTS voices are actually ready.
+    // This prevents the "Preparing your interview..." screen from disappearing
+    // while the voice list is still loading, which caused the first question
+    // to play silently (or not at all) while the UI was already live.
+    waitForVoicesThenStart();
   } catch (err) {
     hideLoader();
     loadQuestionsAttempts++;
@@ -365,6 +407,10 @@ async function askCurrentQuestion() {
     enableAnsweringPhase();
   }
 
+  // FIX: Expose _safeEnableAnsweringPhase so the skip-voice button (wired in
+  // session.realtime.tts.js) can fire through the guard without double-enabling.
+  window._skipVoiceBridge = _safeEnableAnsweringPhase;
+
   let streamFinished = false;
 
   // Hard fallback: if the stream hangs for 10 s, show question text and unblock UI
@@ -436,8 +482,16 @@ document.addEventListener('DOMContentLoaded', () => {
   if (skipVoiceBtn) {
     skipVoiceBtn.addEventListener('click', (e) => {
       if (typeof spawnBurst === 'function') spawnBurst(e);
-      stopVoiceAudio(); // OK to cancel here since user explicitly skipped
-      enableAnsweringPhase();
+      // FIX: Cancel TTS — the 'interrupted' onerror handler intentionally
+      // does NOT call onDone (to avoid double-firing). We call the safe
+      // bridge instead so the guard in askCurrentQuestion() is respected.
+      window.speechSynthesis && window.speechSynthesis.cancel();
+      if (typeof window._skipVoiceBridge === 'function') {
+        window._skipVoiceBridge();
+      } else {
+        // Fallback if bridge not yet set (shouldn't happen, but safe)
+        enableAnsweringPhase();
+      }
     });
   }
 
@@ -445,8 +499,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('skip-voice-btn');
     if (e.code === 'Space' && btn && !btn.classList.contains('hidden')) {
       e.preventDefault();
-      stopVoiceAudio();
-      enableAnsweringPhase();
+      window.speechSynthesis && window.speechSynthesis.cancel();
+      if (typeof window._skipVoiceBridge === 'function') {
+        window._skipVoiceBridge();
+      } else {
+        enableAnsweringPhase();
+      }
     }
   });
 });

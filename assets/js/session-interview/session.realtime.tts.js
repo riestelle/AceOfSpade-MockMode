@@ -210,17 +210,22 @@ function startMicCapture() {
   // on page load and the "network" error from starting before user interaction)
   if (retryTimeout) { clearTimeout(retryTimeout); retryTimeout = null; }
   micRetryCount = 0;
+  // FIX: Reset micHardStopped so the mic button works again on the next question
+  // (stopMicCapture sets this to true to break the auto-restart loop).
   micHardStopped = false;
+  micActive = false;
   // Note: we do NOT auto-call startRecognition() here — user must press mic btn.
-  // This avoids the "network" error from browsers that reject mic start
-  // before a deliberate user gesture on the mic button specifically.
 }
 
 function stopMicCapture() {
   if (retryTimeout) { clearTimeout(retryTimeout); retryTimeout = null; }
-  if (recognition) { 
-    recognition.onend = null; // Prevent the auto-restart loop
-    try { recognition.stop(); } catch (_) {} 
+  // FIX: Clear micActive BEFORE stopping recognition so the onend handler
+  // doesn't see micActive=true and auto-restart the mic.
+  micHardStopped = true;
+  micActive = false;
+  if (recognition) {
+    recognition.onend = null; // Belt-and-suspenders: also null the handler
+    try { recognition.stop(); } catch (_) {}
   }
   setMicUI(false);
   micRetryCount = 0;
