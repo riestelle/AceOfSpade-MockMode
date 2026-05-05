@@ -81,34 +81,49 @@ function speakText(text) {
   window.speechSynthesis.speak(utter);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
 // STT — Speech-to-Text (mic → answer input)
 // ─────────────────────────────────────────────────────────────────────────────
-
 const sttSupported =
   typeof window !== 'undefined' &&
   ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
-
 const STT_MAX_RETRIES = 3;
-
 let micRetryCount  = 0;
-let micHardStopped = false; // true after 3 real failures; only resets on user click
+let micHardStopped = false;
 let micActive      = false;
 let recognition    = null;
+let retryTimeout   = null; // NEW: Tracks pending retry to prevent stacking
 
 // Called by asset_interview.js when a new question is displayed.
 // Resets per-question state so the mic button is ready — does NOT auto-start.
 function startMicCapture() {
   if (micHardStopped) return;
+  
+  // Clear any pending retries from previous questions/errors
+  if (retryTimeout) {
+    clearTimeout(retryTimeout);
+    retryTimeout = null;
+  }
+  
+  // Only reset counter when explicitly starting a fresh question
   micRetryCount = 0;
 }
 
 // Called by asset_interview.js on submit and skip.
 function stopMicCapture() {
+  // Kill any pending retry timeouts immediately
+  if (retryTimeout) {
+    clearTimeout(retryTimeout);
+    retryTimeout = null;
+  }
+  
   if (recognition && micActive) {
     try { recognition.stop(); } catch (_) {}
   }
+  
   setMicUI(false);
+  // Reset retry counter when user explicitly stops/submits
+  micRetryCount = 0;
 }
 
 function setMicUI(active) {
@@ -126,14 +141,16 @@ function setMicUI(active) {
 }
 
 function toggleMic() {
-  if (!sttSupported) {
-    if (typeof showToast === 'function')
-      showToast('Speech recognition is not available in this browser.', 'warning');
+if (!sttSupported) {
+  if (typeof showToast === 'function')
+    showToast('Speech recognition is not available in this browser. Try Chrome or Edge.', 'warning');
     return;
   }
 
   if (micActive) {
     stopMicCapture();
+  if (typeof showToast === 'function')
+    showToast('Microphone disabled', 'info');
     return;
   }
 
@@ -149,14 +166,14 @@ function toggleMic() {
 function startRecognition() {
   // ── Hard-stop gate — nothing gets past this after 3 real errors ──────────
   if (micHardStopped || !sttSupported) return;
-
   if (micRetryCount >= STT_MAX_RETRIES) {
     micHardStopped = true;
     console.warn(`[MockMode] Mic hard-stopped after ${STT_MAX_RETRIES} errors. Click mic to retry.`);
+    
     if (typeof showToast === 'function')
-      showToast('Mic failed to start. Click the mic button to try again.', 'warning');
-    setMicUI(false);
-    return;
+      showToast('Mic failed repeatedly. Click the mic button to try again.', 'error');
+      setMicUI(false);
+      return;
   }
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -164,28 +181,24 @@ function startRecognition() {
   recognition.continuous     = false;
   recognition.interimResults = true;
   recognition.lang           = 'en-US';
-
   const input = document.getElementById('answer-input');
 
   recognition.onstart = () => {
-    // Do NOT reset micRetryCount here — onstart fires before any network
-    // error, so resetting here causes the counter to stay at 1 and loop forever.
-    // Counter only resets when the user deliberately clicks mic again.
     setMicUI(true);
+    if (typeof showToast === 'function')
+      showToast('Microphone enabled — speaking...', 'success');
   };
 
   recognition.onresult = (event) => {
     let interim = '', final = '';
-    for (let i = 0; i < event.results.length; i++) {
-      if (event.results[i].isFinal) final   += event.results[i][0].transcript;
-      else                          interim += event.results[i][0].transcript;
-    }
-    if (input) input.value = final || interim;
-  };
+      for (let i = 0; i < event.results.length; i++) {
+        if (event.results[i].isFinal) final   += event.results[i][0].transcript;
+        else                          interim += event.results[i][0].transcript;
+      }
+      if (input) input.value = final || interim;
+    };
 
-  recognition.onend = () => {
-    // Ended cleanly (silence or stopMicCapture called) — do NOT auto-restart.
-    // User must click mic again. No recursive restart here.
+    recognition.onend = () => {
     setMicUI(false);
   };
 
@@ -197,19 +210,31 @@ function startRecognition() {
     // 'no-speech' = user was quiet. Neither counts as a real failure.
     if (event.error === 'aborted' || event.error === 'no-speech') return;
 
+    // Show specific error messages
+    if (typeof showToast === 'function') {
+      const errorMessages = {
+        'network': 'Network error. Check your connection and try again.',
+        'audio-capture': 'No microphone found. Please connect a mic.',
+        'not-allowed': 'Microphone access denied. Enable it in browser settings.',
+        'service-not-allowed': 'Speech service not allowed. Check browser permissions.',
+        'invalid-state': 'Invalid state. Try refreshing the page.',
+        'no-speech': 'No speech detected. Try speaking louder.'
+      };
+      
+      const errorMsg = errorMessages[event.error] || `Mic error: ${event.error}`;
+      showToast(errorMsg, 'error');
+    }
+
     micRetryCount++;
 
     if (micRetryCount >= STT_MAX_RETRIES) {
-      // Set flag FIRST — this is what blocks any further recognition.start() calls.
       micHardStopped = true;
       console.warn(`[MockMode] Mic hard-stopped after ${STT_MAX_RETRIES} errors.`);
       if (typeof showToast === 'function')
-        showToast('Mic failed repeatedly. Click the mic button to try again.', 'warning');
-      return; // no retry, no recursive call — stops here
+        showToast('Mic disabled after 3 failures. Click mic button to retry.', 'error');
+      return;
     }
 
-    // Only retry on transient errors (e.g. 'network', 'audio-capture')
-    // with a short delay so we don't hammer the browser.
     console.info(`[MockMode] Mic retry ${micRetryCount}/${STT_MAX_RETRIES}...`);
     setTimeout(startRecognition, 800);
   };
@@ -217,10 +242,20 @@ function startRecognition() {
   try {
     recognition.start();
   } catch (err) {
-    // recognition.start() can throw synchronously if already started
     console.warn('[MockMode] Mic start threw:', err);
     micRetryCount++;
     setMicUI(false);
+
+    if (typeof showToast === 'function')
+      showToast('Failed to start microphone. Check permissions.', 'error');
+
+    if (micRetryCount >= STT_MAX_RETRIES) {
+      micHardStopped = true;
+      if (typeof showToast === 'function')
+        showToast('Mic disabled. Click to retry.', 'error');
+    } else {
+      setTimeout(startRecognition, 800);
+    }
   }
 }
 

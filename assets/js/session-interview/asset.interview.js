@@ -77,6 +77,58 @@ let reactionBox     = null;
 let qCurrentSpan    = null;    // FIX: was progressLabel (full element)
 let qTotalSpan      = null;
 
+// ── Toast notification system ──────────────────────────────────────────────
+
+function showToast(message, type = 'info') {
+  const host = document.getElementById('mm-toast-host');
+  if (!host) { console.warn('[MockMode] Toast host not found'); return;}
+
+  const toast = document.createElement('div');
+  toast.className = `mm-toast ${type}`;
+  toast.setAttribute('role', 'alert');
+
+  const content = document.createElement('div');
+  content.className = 'mm-toast__content';
+  content.textContent = message;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'mm-toast__close';
+  closeBtn.innerHTML = '×';
+  closeBtn.setAttribute('aria-label', 'Close notification');
+  closeBtn.addEventListener('click', () => closeToast(toast));
+
+  toast.appendChild(content);
+  toast.appendChild(closeBtn);
+  host.appendChild(toast);
+
+  const timeoutId = setTimeout(() => closeToast(toast), 5000);
+  toast._closeTimeout = timeoutId;
+  toast.addEventListener('click', (e) => {
+    if (e.target !== closeBtn && !closeBtn.contains(e.target)) {
+      closeToast(toast);
+    }
+  });
+}
+
+function closeToast(toast) {
+  if (!toast || toast.classList.contains('closing')) return;
+
+  // Clear auto-close timeout
+  if (toast._closeTimeout) {
+    clearTimeout(toast._closeTimeout);
+  }
+
+  toast.classList.add('closing');
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.parentNode.removeChild(toast);
+    }
+  }, 200);
+}
+
+// Make showToast globally available
+window.showToast = showToast;
+
 // ── Init ───────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -213,19 +265,22 @@ function handleTimerTimeout() {
 
 async function askCurrentQuestion() {
   if (!dialogueBox) return;
-
   clearReactionBox();
   isBossQuestion = (currentIndex === 4);  // flag Q5 as boss question
-
+  
   if (answerInput) {
     answerInput.value = '';
     answerInput.disabled = false;
     answerInput.focus();
   }
+  
+  // ── ADD THIS LINE ──
+  if (typeof startMicCapture === 'function') startMicCapture();
+  // ───────────────────
+  
   if (submitBtn) submitBtn.disabled = false;
-
   if (typeof hideThinkingIndicator === 'function') hideThinkingIndicator();
-
+  
   const question = questions[currentIndex];
 
   // Build a context-aware prompt so the interviewer reacts to the previous answer

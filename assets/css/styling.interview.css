@@ -191,47 +191,55 @@
 }
 
 #mm-toast-host {
-  position: fixed;
-  top: 18px;
-  right: 18px;
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  pointer-events: none;
+position: fixed;
+top: 18px;
+right: 18px;
+z-index: 9999;
+display: flex;
+flex-direction: column;
+gap: 10px;
+pointer-events: none;
 }
 
 .mm-toast {
-  max-width: 340px;
-  padding: 12px 14px;
-  background: #190a08;
-  border: 2px solid #a0cfcf;
-  color: #fcdbd6;
-  box-shadow: 4px 4px 0 0 #000;
-  font-family: "Be Vietnam Pro", sans-serif;
-  font-size: 13px;
-  line-height: 1.4;
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+max-width: 340px;
+padding: 12px 14px;
+background: #190a08;
+border: 2px solid #a0cfcf;
+color: #fcdbd6;
+box-shadow: 4px 4px 0 0 #000;
+font-family: "Be Vietnam Pro", sans-serif;
+font-size: 13px;
+line-height: 1.4;
+opacity: 1;
+transform: translateY(0);
+transition: opacity 0.2s ease, transform 0.2s ease;
+pointer-events: auto; /* Enable clicks on toast itself */
+display: flex;
+align-items: flex-start;
+gap: 10px;
+position: relative;
 }
 
-.mm-toast.success {
-  border-color: #1aff7a;
+.mm-toast__content { flex: 1; }
+.mm-toast__close {
+flex-shrink: 0;
+background: transparent;
+border: none;
+color: #9d8d8b;
+cursor: pointer;
+padding: 2px 6px;
+font-size: 16px;
+line-height: 1;
+opacity: 0.7;
+transition: opacity 0.2s, color 0.2s;
 }
 
-.mm-toast.warning {
-  border-color: #ffcc00;
-}
-
-.mm-toast.error {
-  border-color: #ff4444;
-}
-
-.mm-toast.closing {
-  opacity: 0;
-  transform: translateY(-6px);
-}
+.mm-toast__close:hover { opacity: 1; color: #fcdbd6; }
+.mm-toast.success { border-color: #1aff7a; }
+.mm-toast.warning { border-color: #ffcc00; }
+.mm-toast.error { border-color: #ff4444;}
+.mm-toast.closing { opacity: 0; transform: translateY(-6px); }
 
 /* 
   DO NOT MODIFY THIS PART OF THE CODE.
