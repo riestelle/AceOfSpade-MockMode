@@ -28,7 +28,12 @@ function unlockSpeech() {
   if (!ttsSupported) return;
   const unlock = new SpeechSynthesisUtterance('');
   unlock.volume = 0;
-  try { window.speechSynthesis.speak(unlock); }
+  try { 
+    window.speechSynthesis.speak(unlock);
+    // FIX: Mark audio as unlocked immediately so TTS doesn't queue with 1.5s delay
+    // The speak() call unlocks the audio context for this gesture/context
+    _audioUnlockedByGesture = true;
+  }
   catch (err) { console.warn('[MockMode] TTS unlock failed:', err); }
 }
 window.unlockSpeech = unlockSpeech;
@@ -74,15 +79,13 @@ function speakText(text, onDone) {
   // very first question doesn't sit silently waiting.
   if (!_audioUnlockedByGesture) {
     _pendingSpeechQueue = [{ text, onDone }]; // keep only latest
-    // Try a speculative unlock. This succeeds on most browsers once the
-    // page has loaded, even before an explicit user gesture on the mic/submit.
     unlockSpeech();
-    // Give user 1.5s to make a gesture (click/keydown); unlockOnInteraction flushes earlier if so.
+    // Much shorter delay (200ms) now that unlockSpeech() sets the flag immediately
     setTimeout(() => {
       _audioUnlockedByGesture = true;
       _flushSpeechQueue();
-    }, 1500);
-    console.info('[MockMode] TTS: queued — waiting for gesture/unlock (1.5s timeout).');
+    }, 200);
+    console.info('[MockMode] TTS: queued — waiting for unlock (200ms).');
     return;
   }
 
@@ -143,9 +146,10 @@ function _speakNow(text, onDone) {
     if (preferredVoice) utter.voice = preferredVoice;
 
     // FIX: Calculate a realistic timeout — not too short, not too long.
-    // Base: 500 ms per word + 2 s buffer, minimum 6 s.
+    // Base: 600 ms per word + 3 s buffer, minimum 8 s.
+    // More generous to prevent timer from starting during speech.
     const wordCount = text.trim().split(/\s+/).length;
-    const estimatedDuration = Math.max(6000, wordCount * 500 + 2000);
+    const estimatedDuration = Math.max(8000, wordCount * 600 + 3000);
 
     const safetyTimeout = setTimeout(() => {
       console.warn('[MockMode] TTS safety timeout fired — forcing UI unlock.');
