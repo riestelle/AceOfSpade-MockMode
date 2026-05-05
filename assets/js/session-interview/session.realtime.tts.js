@@ -69,18 +69,33 @@ function speakText(text, onDone) {
     return;
   }
 
-  // If the browser hasn't been unlocked by a user gesture yet, queue it.
-  // It will be flushed the moment the user first clicks or presses a key.
+  // FIX #1 (delay on first question): If the gesture hasn't fired yet,
+  // queue the speech — but also attempt to unlock immediately so the
+  // very first question doesn't sit silently waiting.
   if (!_audioUnlockedByGesture) {
-    _pendingSpeechQueue = [{ text, onDone }]; // only keep the latest
-    console.info('[MockMode] TTS queued — waiting for user gesture to unlock audio.');
+    _pendingSpeechQueue = [{ text, onDone }]; // keep only latest
+    // Try a speculative unlock. This succeeds on most browsers once the
+    // page has loaded, even before an explicit user gesture on the mic/submit.
+    unlockSpeech();
+    // Give the browser 300 ms to process the unlock, then flush.
+    setTimeout(() => {
+      _audioUnlockedByGesture = true;
+      _flushSpeechQueue();
+    }, 300);
+    console.info('[MockMode] TTS: speculative unlock attempted — will flush in 300 ms.');
     return;
   }
 
   _speakNow(text, onDone);
 }
 
-// FIND THIS FUNCTION in session.realtime.tts.js AND REPLACE IT:
+// FIX #1 & #2: _speakNow is called immediately after streaming finishes.
+// Key fixes here:
+//   - window._currentUtterance keeps a hard reference so the browser's GC
+//     can't collect the utterance mid-speech (silent-stop bug).
+//   - onDone is set to null after first call to prevent any double-fire.
+//   - Safety timeout is based on word count so it doesn't fire prematurely
+//     on short texts or too late on long ones.
 function _speakNow(text, onDone) {
   if (!soundOn || !ttsSupported || !text) {
     if (typeof onDone === 'function') onDone();
@@ -88,62 +103,91 @@ function _speakNow(text, onDone) {
   }
 
   if (ttsRetryCount >= TTS_MAX_RETRIES) {
-    console.warn('[MockMode] TTS hard-stopped.');
-    if (typeof onDone === 'function') onDone(); 
+    console.warn('[MockMode] TTS hard-stopped after max retries.');
+    if (typeof onDone === 'function') onDone();
     return;
   }
 
   const trySpeak = () => {
     const voices = window.speechSynthesis.getVoices();
-    if (voices.length === 0 && voiceLoadRetries < 5) {
+    if (voices.length === 0 && voiceLoadRetries < 8) {
       voiceLoadRetries++;
       setTimeout(trySpeak, 150);
       return;
     }
 
+    // Cancel any ongoing speech before starting the new one
     window.speechSynthesis.cancel();
-    
-    // Create utterance and store it globally to prevent it being "cleaned up" mid-speech
-    const utter = new SpeechSynthesisUtterance(text);
-    window._currentUtterance = utter; 
 
-    utter.rate = 0.95;
+    const utter = new SpeechSynthesisUtterance(text);
+
+    // FIX: Keep a hard window-level reference so the GC can't collect it
+    window._currentUtterance = utter;
+
+    utter.rate  = 0.95;
     utter.pitch = 1.05;
     utter.volume = 0.9;
-    
-    const preferredVoice = voices.find(v => v.lang.startsWith('en-') && (v.name.includes('Google') || v.name.includes('Natural'))) || voices[0];
+
+    const preferredVoice = voices.find(
+      v => v.lang.startsWith('en-') && (v.name.includes('Google') || v.name.includes('Natural'))
+    ) || voices.find(v => v.lang.startsWith('en-')) || voices[0];
     if (preferredVoice) utter.voice = preferredVoice;
 
-    // Safety: If the browser hangs, force-start the timer after a reasonable duration
-    const estimatedDuration = (text.split(' ').length * 500) + 2000; 
+    // FIX: Calculate a realistic timeout — not too short, not too long.
+    // Base: 500 ms per word + 2 s buffer, minimum 6 s.
+    const wordCount = text.trim().split(/\s+/).length;
+    const estimatedDuration = Math.max(6000, wordCount * 500 + 2000);
+
     const safetyTimeout = setTimeout(() => {
-      console.warn('[MockMode] TTS safety trigger: forcing UI unlock.');
-      utter.onend();
+      console.warn('[MockMode] TTS safety timeout fired — forcing UI unlock.');
+      // Call onend logic manually
+      if (window._currentUtterance === utter) window._currentUtterance = null;
+      const skipBtn = document.getElementById('skip-voice-btn');
+      if (skipBtn) skipBtn.classList.add('hidden');
+      if (typeof onDone === 'function') {
+        const cb = onDone;
+        onDone = null;
+        cb();
+      }
     }, estimatedDuration);
 
     utter.onstart = () => {
       ttsRetryCount = 0;
+      voiceLoadRetries = 0;
     };
 
     utter.onend = () => {
       clearTimeout(safetyTimeout);
       if (window._currentUtterance === utter) window._currentUtterance = null;
-      // Hide skip voice button now that it's done
+
+      // Hide skip voice button
       const skipBtn = document.getElementById('skip-voice-btn');
       if (skipBtn) skipBtn.classList.add('hidden');
-      
+
+      // FIX: null-guard prevents double-fire from onend + safety timeout race
       if (typeof onDone === 'function') {
-        onDone();
-        onDone = null; // Prevent double-firing
+        const cb = onDone;
+        onDone = null;
+        cb();
       }
     };
 
     utter.onerror = (event) => {
       clearTimeout(safetyTimeout);
+      // 'interrupted' just means speechSynthesis.cancel() was called (e.g. skip).
+      // Don't retry in that case — the user deliberately skipped.
+      if (event.error === 'interrupted') {
+        if (window._currentUtterance === utter) window._currentUtterance = null;
+        // onDone is intentionally NOT called here — the skip-voice button handler
+        // calls enableAnsweringPhase() directly via _safeEnableAnsweringPhase().
+        return;
+      }
       console.warn('[MockMode] TTS error:', event.error);
-      utter.onend(); // Fallback to onend logic to unlock UI
+      ttsRetryCount++;
+      // Fallback to onend logic so the UI always unlocks
+      utter.onend();
     };
-    
+
     window.speechSynthesis.speak(utter);
   };
 

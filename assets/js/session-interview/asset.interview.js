@@ -236,6 +236,10 @@ async function loadQuestions() {
 // ── Interview flow ─────────────────────────────────────────────────────────
 
 function startInterview() {
+  // FIX #4: Ensure any loader/thinking state is cleared before first question
+  if (typeof hideLoader === 'function') hideLoader();
+  if (typeof hideThinkingIndicator === 'function') hideThinkingIndicator();
+
   if (typeof unlockSpeech === 'function') {
     unlockSpeech();
   }
@@ -300,13 +304,15 @@ function handleTimerTimeout() {
 
 
 
-// Helper to enable the UI once audio is done or skipped
+// Helper to enable the UI once audio is done or skipped.
+// IMPORTANT: This must only be called once per question — callers use
+// _safeEnableAnsweringPhase() inside askCurrentQuestion() to enforce that.
 function enableAnsweringPhase() {
-  // Hide voice-skip since speaking is done[cite: 2]
+  // FIX #5: Hide the skip-voice button — audio is now done or skipped
   const skipVoiceBtn = document.getElementById('skip-voice-btn');
   if (skipVoiceBtn) skipVoiceBtn.classList.add('hidden');
 
-  // Unlock input[cite: 2]
+  // Unlock answer input
   if (answerInput) {
     answerInput.disabled = false;
     answerInput.placeholder = "Type your answer here...";
@@ -314,11 +320,13 @@ function enableAnsweringPhase() {
   }
   if (submitBtn) submitBtn.disabled = false;
 
-  // Start mic and timer[cite: 2]
+  // Prepare mic (user must still press the mic button to start recording)
   if (typeof startMicCapture === 'function') {
-    try { startMicCapture(); } catch (e) { console.error(e); }
+    try { startMicCapture(); } catch (e) { console.error('[MockMode] startMicCapture error:', e); }
   }
 
+  // FIX #3: Start timer — stopTimer() is called first inside startTimer()
+  // so any stale interval from a previous question is always cleared.
   startTimer();
 }
 
@@ -326,6 +334,9 @@ async function askCurrentQuestion() {
   if (!dialogueBox) return;
 
   clearReactionBox();
+
+  // Hide the thinking indicator now that we're starting a new question
+  if (typeof hideThinkingIndicator === 'function') hideThinkingIndicator();
 
   if (answerInput) {
     answerInput.value = '';
@@ -337,18 +348,31 @@ async function askCurrentQuestion() {
   const question = questions[currentIndex];
   const skipVoiceBtn = document.getElementById('skip-voice-btn');
 
+  // Ensure skip-voice is hidden at the start of each question
+  if (skipVoiceBtn) skipVoiceBtn.classList.add('hidden');
+
   let questionPrompt = currentIndex > 0 && lastAnswerContext
     ? `React to: "${lastAnswerContext.answer}". Then ask: "${question}"`
     : `Ask: "${question}"`;
 
+  // Guard: only the first call to enableAnsweringPhase per question does anything.
+  // This prevents competing timeouts (stream-timeout, TTS-fallback, TTS-onDone)
+  // from double-firing the timer / double-disabling the input.
+  let _answeringPhaseStarted = false;
+  function _safeEnableAnsweringPhase() {
+    if (_answeringPhaseStarted) return;
+    _answeringPhaseStarted = true;
+    enableAnsweringPhase();
+  }
+
   let streamFinished = false;
 
-  // 🔥 HARD FALLBACK if stream hangs
+  // Hard fallback: if the stream hangs for 10 s, show question text and unblock UI
   const streamTimeout = setTimeout(() => {
     if (!streamFinished) {
-      console.warn("Stream failed → forcing UI");
+      console.warn('[MockMode] Stream timeout → forcing UI unlock');
       dialogueBox.textContent = question;
-      enableAnsweringPhase();
+      _safeEnableAnsweringPhase();
     }
   }, 10000);
 
@@ -358,40 +382,44 @@ async function askCurrentQuestion() {
       personality,
       dialogueBox,
       (fullText) => {
+        // Stream is complete — clear the stream-hang timeout
         streamFinished = true;
         clearTimeout(streamTimeout);
 
+        // FIX #5: Show the skip-voice button NOW, before TTS starts,
+        // so the user can skip even if TTS takes a moment to initialise.
         if (skipVoiceBtn) skipVoiceBtn.classList.remove('hidden');
 
         if (typeof speakText === 'function') {
-          let called = false;
+          // FIX #8: TTS fallback — if TTS never calls back (browser bug),
+          // unblock the UI after an estimated safe window.
+          const textWordCount = (fullText || question).split(' ').length;
+          const estimatedMs = Math.max(8000, textWordCount * 600 + 3000);
 
-          const fallback = setTimeout(() => {
-            if (!called) {
-              console.warn("TTS failed → forcing timer start");
-              enableAnsweringPhase();
-            }
-          }, 8000);
+          const ttsFallback = setTimeout(() => {
+            console.warn('[MockMode] TTS fallback timeout → forcing UI unlock');
+            _safeEnableAnsweringPhase();
+          }, estimatedMs);
 
+          // FIX #1 & #2: speakText is called immediately after stream ends.
+          // The onDone callback is the ONLY normal path to enableAnsweringPhase.
           speakText(fullText || question, () => {
-            if (!called) {
-              called = true;
-              clearTimeout(fallback);
-              enableAnsweringPhase();
-            }
+            clearTimeout(ttsFallback);
+            _safeEnableAnsweringPhase();
           });
 
         } else {
-          enableAnsweringPhase();
+          // TTS not available — unlock immediately
+          _safeEnableAnsweringPhase();
         }
       }
     );
 
   } catch (err) {
-    console.error(err);
+    console.error('[MockMode] streamInterviewerMessage error:', err);
     clearTimeout(streamTimeout);
     dialogueBox.textContent = question;
-    enableAnsweringPhase();
+    _safeEnableAnsweringPhase();
   }
 }
 
