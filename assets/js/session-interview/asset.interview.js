@@ -273,56 +273,86 @@ function handleTimerTimeout() {
   submitAnswer();
 }
 
-async function askCurrentQuestion() {
-  if (!dialogueBox) return;
-  clearReactionBox();
-  isBossQuestion = (currentIndex === 4);  // flag Q5 as boss question
-  
-  if (answerInput) {
-    answerInput.value = '';
-    answerInput.disabled = false;
-    answerInput.focus();
-  }
-  
-  // ── ADD THIS LINE ──
-  if (typeof startMicCapture === 'function') startMicCapture();
-  // ───────────────────
-  
-  if (submitBtn) submitBtn.disabled = false;
-  if (typeof hideThinkingIndicator === 'function') hideThinkingIndicator();
-  
-  const question = questions[currentIndex];
-
-  // Build a context-aware prompt so the interviewer reacts to the previous answer
-  let questionPrompt;
-  if (lastAnswerContext && currentIndex > 0) {
-    const { answer, score } = lastAnswerContext;
-    const quality = score >= 70 ? 'strong' : score >= 50 ? 'mediocre' : 'weak or nonsensical';
-    questionPrompt = `The candidate just gave a ${quality} answer to the previous question. Their answer was: "${answer}". Briefly acknowledge it in one short clause (e.g. react naturally in character), then transition into asking this next question: "${question}". Keep the whole thing to 1-2 sentences.`;
-  } else {
-    questionPrompt = `Ask this interview question naturally, in character: "${question}"`;
-  }
-
-  try {
-    await streamInterviewerMessage(
-      questionPrompt,
-      personality,
-      dialogueBox,
-      (fullText) => {
-        if (typeof speakText === 'function') {
-          speakText(fullText || question);
-        }
-        if (answerInput) answerInput.disabled = false;
-        startTimer();  // start countdown after question is spoken
-      }
-    );
-  } catch (err) {
-    console.warn('[MockMode] Stream failed, using direct text:', err);
-    if (dialogueBox) dialogueBox.textContent = question;
-    if (typeof speakText === 'function') speakText(question);
-    startTimer();
-  }
+// Helper to enable the UI once audio is done or skipped
+function enableAnsweringPhase() {
+    stopVoiceAudio(); // Stop any actual playing audio
+    document.getElementById('skip-voice-btn').classList.add('hidden');
+    
+    if (answerInput) {
+        answerInput.disabled = false;
+        answerInput.placeholder = "Type your answer here...";
+        answerInput.focus();
+    }
+    
+    // Enable microphone capture
+    if (typeof startMicCapture === 'function') startMicCapture();
+    
+    startTimer(); // Now the timer starts[cite: 1, 15]
 }
+
+async function askCurrentQuestion() {
+    if (!dialogueBox) return;
+    clearReactionBox();
+    
+    // 1. Keep everything LOCKED initially
+    if (answerInput) {
+        answerInput.value = '';
+        answerInput.disabled = true;
+        answerInput.placeholder = "Interviewer is speaking...";
+    }
+    if (submitBtn) submitBtn.disabled = true;
+    
+    const question = questions[currentIndex];
+    const skipBtn = document.getElementById('skip-voice-btn');
+
+    // 2. Prepare the prompt
+    let questionPrompt = currentIndex > 0 && lastAnswerContext 
+        ? `React to: "${lastAnswerContext.answer}". Then ask: "${question}"`
+        : `Ask: "${question}"`;
+
+    try {
+        await streamInterviewerMessage(questionPrompt, personality, dialogueBox, (fullText) => {
+            // Show skip button once text is ready
+            skipBtn.classList.remove('hidden');
+            
+            // 3. Play voice with a callback
+            if (typeof speakText === 'function') {
+                speakText(fullText || question, () => {
+                    // This callback fires ONLY when voice is finished
+                    enableAnsweringPhase();
+                });
+            } else {
+                // Fallback if voice is missing
+                enableAnsweringPhase();
+            }
+        });
+    } catch (err) {
+        dialogueBox.textContent = question;
+        enableAnsweringPhase();
+    }
+}
+
+// Global voice stopper
+function stopVoiceAudio() {
+    if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+    }
+}
+
+// Wire the Skip Voice button
+document.getElementById('skip-voice-btn').addEventListener('click', (e) => {
+    spawnBurst(e); //[cite: 13]
+    enableAnsweringPhase();
+});
+
+// Shortcut: Allow Spacebar to skip voice
+document.addEventListener('keydown', (e) => {
+    const skipBtn = document.getElementById('skip-voice-btn');
+    if (e.code === 'Space' && !skipBtn.classList.contains('hidden')) {
+        e.preventDefault();
+        enableAnsweringPhase();
+    }
+});
 
 // ── Answer submission ──────────────────────────────────────────────────────
 
