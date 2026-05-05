@@ -34,19 +34,29 @@ function setMicUI(active) {
 }
 
 async function ensureTranscriber() {
-  if (!transcriberPromise) {
-    // Smallest practical English model. Cached by the browser once downloaded.
-    transcriberPromise = pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en')
-      .then(p => {
-        info('model loaded');
-        return p;
-      })
-      .catch(err => {
-        transcriberPromise = null;
-        throw err;
-      });
+if (!transcriberPromise) {
+  // Show loading toast for first-time model download
+  if (typeof showToast === 'function') {
+    showToast('Loading speech model... (first time only)', 'info');
   }
-  return transcriberPromise;
+  
+  // Smallest practical English model. Cached by the browser once downloaded.
+  transcriberPromise = pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en')
+    .then(p => {
+      info('model loaded');
+      // Optional: show success toast
+      // if (typeof showToast === 'function') showToast('Speech model ready!', 'success');
+      return p;
+    })
+    .catch(err => {
+      transcriberPromise = null;
+      if (typeof showToast === 'function') {
+        showToast('Failed to load speech model. Check your connection.', 'error');
+      }
+      throw err;
+    });
+}
+return transcriberPromise;
 }
 
 async function requestMic() {
