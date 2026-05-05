@@ -2,7 +2,11 @@
 // Whisper STT via Transformers.js in-browser pipeline. No background recording. No infinite loops.
 // Toggle mic with button or [M]. Records a short clip, then transcribes into #answer-input.
 
-import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+let pipeline;
+(async () => {
+  const Transformers = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2');
+  pipeline = Transformers.pipeline;
+})();
 
 const MIC_MAX_ERRORS = 3;
 const TARGET_SR = 16000;
@@ -34,29 +38,23 @@ function setMicUI(active) {
 }
 
 async function ensureTranscriber() {
-if (!transcriberPromise) {
-  // Show loading toast for first-time model download
-  if (typeof showToast === 'function') {
-    showToast('Loading speech model... (first time only)', 'info');
+  // Wait for pipeline to be available
+  while (!pipeline) {
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
   
-  // Smallest practical English model. Cached by the browser once downloaded.
-  transcriberPromise = pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en')
-    .then(p => {
-      info('model loaded');
-      // Optional: show success toast
-      // if (typeof showToast === 'function') showToast('Speech model ready!', 'success');
-      return p;
-    })
-    .catch(err => {
-      transcriberPromise = null;
-      if (typeof showToast === 'function') {
-        showToast('Failed to load speech model. Check your connection.', 'error');
-      }
-      throw err;
-    });
-}
-return transcriberPromise;
+  if (!transcriberPromise) {
+    transcriberPromise = pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en')
+      .then(p => {
+        info('model loaded');
+        return p;
+      })
+      .catch(err => {
+        transcriberPromise = null;
+        throw err;
+      });
+  }
+  return transcriberPromise;
 }
 
 async function requestMic() {
