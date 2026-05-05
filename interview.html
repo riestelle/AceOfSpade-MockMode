@@ -19,34 +19,13 @@
       display: flex;
       align-items: flex-end;
       justify-content: center;
-      /* Prevent stage from overflowing on small screens */
-      overflow: visible;
     }
     #lottie-interviewer {
-      /* Fluid scaling: fills available width, capped at 560px, never smaller than 180px */
-      width: clamp(180px, 38vw, 560px);
-      height: clamp(220px, 52vh, 720px);
-      flex-shrink: 0;
-      position: relative;
+      width: clamp(260px, 42vw, 560px);
+      height: clamp(300px, 60vh, 75vh);
+      /* pixel-art feel: crisp scaling, no blur */
+      image-rendering: pixelated;
     }
-    /* Inner lottie wrapper must fill the container */
-    #lottie-interviewer > div {
-      width: 100% !important;
-      height: 100% !important;
-    }
-    /* The rendered SVG itself must scale to fill */
-    #lottie-interviewer svg {
-      width: 100% !important;
-      height: 100% !important;
-      display: block;
-    }
-    /* ── Hide the background/box layers by title ── */
-    /* These are the "Group 7" and "Background" layers present in all 3 JSONs */
-    /* The JS also hides them; this is a belt-and-suspenders CSS fallback */
-    #lottie-interviewer svg [data-layer-hide="true"] {
-      display: none !important;
-    }
-
     /* Subtle glow ring while speaking */
     #lottie-interviewer.is-talking {
       filter: drop-shadow(0 0 18px rgba(160, 207, 207, 0.35));
@@ -69,7 +48,7 @@
       opacity: 1;
       transition: opacity 0.4s ease;
     }
-    #lottie-interviewer-skeleton.hidden { opacity: 0; pointer-events: none; }
+    #lottie-interviewer-skeleton.hidden { opacity: 0; }
     .lottie-skeleton-dot {
       width: 8px; height: 8px;
       border-radius: 50%;
@@ -78,51 +57,6 @@
     }
     .lottie-skeleton-dot:nth-child(2) { animation-delay: 0.2s; }
     .lottie-skeleton-dot:nth-child(3) { animation-delay: 0.4s; }
-
-    /* ── Responsive: shrink stress thermometer on small screens ── */
-    @media (max-width: 640px) {
-      #lottie-interviewer {
-        width: clamp(140px, 52vw, 320px);
-        height: clamp(160px, 40vh, 400px);
-      }
-      /* Compress stress thermometer height on mobile */
-      .stress-thermo-bar {
-        height: 45vh !important;
-      }
-      /* Shrink top-left/right controls */
-      #stress-label { font-size: 9px !important; padding: 2px 6px !important; }
-      #timer-container { min-width: 70px !important; padding: 4px 8px !important; }
-      #question-progress { font-size: 9px !important; padding: 4px 8px !important; }
-      .top-controls-btn { width: 32px !important; height: 32px !important; }
-      /* Stack dialogue box content vertically, no horizontal scrolling */
-      .dialogue-flex { flex-direction: column !important; }
-      /* Answer input area */
-      #answer-input { font-size: 14px !important; }
-      /* Submit / skip buttons full width */
-      #submit-answer-btn, #skip-btn { width: 100% !important; }
-      /* Webcam consent banner */
-      #webcam-consent { flex-direction: column !important; gap: 8px !important; }
-    }
-
-    @media (max-width: 480px) {
-      /* Hide keyboard hint labels on very small phones */
-      .kbd-hint { display: none !important; }
-      /* Smaller lottie on tiny screens */
-      #lottie-interviewer {
-        width: clamp(110px, 60vw, 260px);
-        height: clamp(130px, 34vh, 300px);
-      }
-      /* Bottom dialogue box: tighter padding */
-      .dialogue-root { padding-left: 8px !important; padding-right: 8px !important; padding-bottom: 8px !important; }
-    }
-
-    /* ── Tablet (641px – 1023px) ── */
-    @media (min-width: 641px) and (max-width: 1023px) {
-      #lottie-interviewer {
-        width: clamp(200px, 34vw, 400px);
-        height: clamp(240px, 48vh, 560px);
-      }
-    }
   </style>
 </head>
 <body class="bg-background text-on-surface font-body-md overflow-hidden h-screen w-screen selection:bg-tertiary selection:text-on-tertiary">
@@ -165,7 +99,7 @@
       Stress: 0%
     </div>
     <!-- Thermometer: stress-fill uses style.height (fixed from style.width bug) -->
-    <div class="stress-thermo-bar w-10 sm:w-14 h-[45vh] sm:h-[60vh] lg:h-[72vh] bg-surface-container-lowest border-4 border-on-surface rounded-full relative p-1">
+    <div class="w-14 h-[72vh] bg-surface-container-lowest border-4 border-on-surface rounded-full relative p-1">
       <div
         id="stress-fill"
         class="absolute bottom-1 left-1 right-1 rounded-full border-t-2 border-white/30 transition-all duration-700"
@@ -186,13 +120,13 @@
   <div class="absolute top-6 right-6 flex flex-col items-end gap-3 z-50">
     <div class="flex gap-2">
       <div class="flex flex-col items-center gap-0.5">
-        <button id="sound-btn" class="top-controls-btn w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step hover:bg-surface-container-high transition-all">
+        <button id="sound-btn" class="w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step hover:bg-surface-container-high transition-all">
           <span id="sound-icon" class="material-symbols-outlined text-[#669BBC]">volume_up</span>
         </button>
         <span class="kbd-hint">[S]</span>
       </div>
       <div class="flex flex-col items-center gap-0.5">
-        <button onclick="openHistoryDrawer()" class="top-controls-btn w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step hover:bg-surface-container-high transition-all">
+        <button onclick="openHistoryDrawer()" class="w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step hover:bg-surface-container-high transition-all">
           <span class="material-symbols-outlined text-[#669BBC]">history</span>
         </button>
         <span class="kbd-hint">[H]</span>
@@ -214,11 +148,11 @@
   </div>
 
   <!-- Interviewer Lottie Stage -->
-  <div id="interviewer-lottie-stage" class="relative z-10 mb-[-20px] sm:mb-[-40px] md:mb-[-80px] w-full flex justify-center">
+  <div id="interviewer-lottie-stage" class="relative z-10 mb-[-40px] md:mb-[-80px] w-full flex justify-center">
     <!-- Lottie mounts here — JS picks the right animation based on personality -->
     <div id="lottie-interviewer" class="is-idle">
       <!-- Loading skeleton shown until animation is ready -->
-      <div id="lottie-interviewer-skeleton">
+      <div id="lottie-interviewer-skeleton" class="flex flex-col items-center justify-center gap-2 h-full">
         <div class="lottie-skeleton-dot"></div>
         <div class="lottie-skeleton-dot"></div>
         <div class="lottie-skeleton-dot"></div>
@@ -227,8 +161,8 @@
   </div>
 
   <!-- RPG Dialogue Box (Bottom) -->
-  <div class="dialogue-root relative z-50 w-full max-w-6xl px-2 sm:px-margin pb-2 sm:pb-margin">
-    <div class="dialogue-flex bg-surface-container border-4 border-on-surface p-sm md:p-md shadow-step flex flex-col md:flex-row gap-sm md:gap-md items-stretch">
+  <div class="relative z-50 w-full max-w-6xl px-margin pb-margin">
+    <div class="bg-surface-container border-4 border-on-surface p-sm md:p-md shadow-step flex flex-col md:flex-row gap-md items-stretch">
 
 <!-- 
       Face Cam
