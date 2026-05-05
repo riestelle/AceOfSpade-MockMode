@@ -251,17 +251,6 @@ function toggleMic() {
     return;
   }
   if (micActive) { stopMicCapture(); return; }
-
-  // FIX: If the answer input or mic button is currently disabled, it means
-  // submission or TTS is in progress — don't restart the mic in this state.
-  // This prevents the bug where clicking "Stop Mic" then quickly clicking
-  // the mic again would restart recording mid-submit.
-  const inputEl = document.getElementById('answer-input');
-  const micBtnEl = document.getElementById('mic-btn');
-  if ((inputEl && inputEl.disabled) || (micBtnEl && micBtnEl.disabled)) {
-    return;
-  }
-
   micHardStopped = false;
   micRetryCount = 0;
   startRecognition();
