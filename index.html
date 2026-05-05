@@ -191,17 +191,20 @@
         animation: icon-spin-ccw 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
     }
 
-    /* ── Pixel burst on click ── */
-    @keyframes pixel-burst {
-        0%   { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 1; }
-        100% { transform: translate(calc(var(--dx) * 3.5), calc(var(--dy) * 3.5)) scale(0); opacity: 0; }
+    /* ── Single circle ripple on click ── */
+    @keyframes circle-ripple {
+        0%   { transform: translate(-50%,-50%) scale(0); opacity: 1; }
+        100% { transform: translate(-50%,-50%) scale(4); opacity: 0; }
     }
-    .burst-particle {
+    .click-ripple {
         position: fixed;
-        width: 6px; height: 6px;
         pointer-events: none;
         z-index: 9999;
-        animation: pixel-burst 0.5s cubic-bezier(0.25,0.46,0.45,0.94) forwards;
+        width: 40px; height: 40px;
+        border-radius: 50%;
+        border: 2px solid var(--rc, #a0cfcf);
+        box-shadow: 0 0 6px 1px var(--rc, #a0cfcf);
+        animation: circle-ripple 0.5s ease-out forwards;
     }
 
     /* ── White dot ripple on non-button clicks ── */
@@ -280,14 +283,21 @@
     .corner-tick.bl { bottom:-3px; left:-3px; border-right:2px solid #190a08; border-top:2px solid #190a08; }
     .corner-tick.br { bottom:-3px; right:-3px; border-left:2px solid #190a08; border-top:2px solid #190a08; }
 
-    @keyframes float-up {
-        0%   { transform:translateY(0) rotate(0deg); opacity:0.7; }
-        100% { transform:translateY(-130px) rotate(180deg); opacity:0; }
+    @keyframes glyph-float {
+        0%   { transform: translateY(0)    scale(1);    opacity: 0; }
+        10%  { opacity: var(--glyph-op, 0.45); }
+        80%  { opacity: var(--glyph-op, 0.45); }
+        100% { transform: translateY(-140px) scale(0.7); opacity: 0; }
     }
     .pixel-particle {
-        position:absolute; width:4px; height:4px;
-        animation: float-up linear infinite;
-        pointer-events:none;
+        position: absolute;
+        font-family: 'Courier New', monospace;
+        font-size: var(--glyph-size, 11px);
+        color: var(--glyph-color, #a0cfcf);
+        pointer-events: none;
+        animation: glyph-float linear infinite;
+        user-select: none;
+        letter-spacing: 0;
     }
 
     @keyframes led-pulse {
@@ -402,6 +412,10 @@
     <source src="sounds/index button click.wav" type="audio/wav">
 </audio>
 
+<audio id="start-sound" preload="auto">
+    <source src="sounds/game start.mp3" type="audio/mpeg">
+</audio>
+
 <!-- Loading Screen -->
 <div id="loading-screen" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#0c0b09] text-[#a0cfcf] cursor-pointer" onclick="unlockAudio()">
     <div class="loader mb-6"></div>
@@ -498,7 +512,7 @@
 </main>
 
 <!-- How To Play Modal -->
-<div id="how-to-play-modal" class="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 items-center justify-center p-gutter">
+<div id="how-to-play-modal" class="fixed inset-0 bg-background/80 backdrop-blur-sm z-[150] items-center justify-center p-gutter">
     <div class="relative w-full max-w-2xl bg-surface-container border-4 border-[#1A0F0D] shadow-[8px_8px_0_0_#190a08] flex flex-col overflow-hidden">
         <div class="absolute inset-0 pixel-dither pointer-events-none opacity-10"></div>
         <div class="bg-[#2D1B18] border-b-4 border-[#1A0F0D] px-6 py-4 flex justify-between items-center relative z-10">
@@ -603,29 +617,18 @@
         clickSfx.play().catch(() => {});
     }
 
-    /* ── Pixel Burst on Click ── */
-    const BURST_COLORS = ['#a0cfcf','#e7bdb6','#669BBC','#cfc6ae','#bbeceb','#ffffff'];
+    /* ── Single Circle Ripple on Click ── */
+    const RIPPLE_COLORS = ['#a0cfcf','#bbeceb','#e7bdb6','#669BBC','#cfc6ae','#ffffff'];
     function spawnBurst(e) {
-        const count = 10;
-        const cx = e.clientX, cy = e.clientY;
-        for (let i = 0; i < count; i++) {
-            const el = document.createElement('div');
-            el.className = 'burst-particle';
-            const angle = (360 / count) * i + (Math.random() * 20 - 10);
-            const dist  = 18 + Math.random() * 22;
-            const rad   = angle * Math.PI / 180;
-            const dx    = Math.round(Math.cos(rad) * dist);
-            const dy    = Math.round(Math.sin(rad) * dist);
-            el.style.cssText = `
-                left: ${cx - 3}px;
-                top:  ${cy - 3}px;
-                background: ${BURST_COLORS[i % BURST_COLORS.length]};
-                --dx: ${dx}px;
-                --dy: ${dy}px;
-            `;
-            document.body.appendChild(el);
-            el.addEventListener('animationend', () => el.remove());
-        }
+        const el = document.createElement('div');
+        el.className = 'click-ripple';
+        el.style.cssText = `
+            left: ${e.clientX}px;
+            top:  ${e.clientY}px;
+            --rc: ${RIPPLE_COLORS[Math.floor(Math.random() * RIPPLE_COLORS.length)]};
+        `;
+        document.body.appendChild(el);
+        el.addEventListener('animationend', () => el.remove());
     }
 
     // ── White dot on any non-button click ──
@@ -821,23 +824,36 @@
         });
     }
 
-    document.getElementById('btn-start').addEventListener('click', (e) => { playClick(); spawnBurst(e); navigateTo('upload.html'); });
+    const startSfx = document.getElementById('start-sound');
+    function playStart(e) {
+        spawnBurst(e);
+        startSfx.currentTime = 0;
+        startSfx.volume = 0.8;
+        startSfx.play().catch(() => {});
+        // Wait for the sound to finish (~2s) then navigate
+        const duration = (startSfx.duration && isFinite(startSfx.duration))
+            ? startSfx.duration * 1000
+            : 2000;
+        setTimeout(() => navigateTo('upload.html'), duration);
+    }
+    document.getElementById('btn-start').addEventListener('click', playStart);
 
-    /* ── Floating pixel particles ── */
+    /* ── Floating glyph particles ── */
     (function spawnParticles() {
         const c = document.getElementById('particles-container');
-        const colors = ['#a0cfcf','#e7bdb6','#669BBC','#cfc6ae','#bbeceb'];
-        for (let i = 0; i < 20; i++) {
-            const p = document.createElement('div');
-            p.className = 'pixel-particle';
+        const glyphs  = ['{', '}', '//', '()', '=>', '#', '%', '[]', '&&', '01', '>>','_', '/*', '*/','fn','if'];
+        const colors  = ['#a0cfcf','#bbeceb','#e7bdb6','#669BBC','#cfc6ae'];
+        for (let i = 0; i < 22; i++) {
+            const p       = document.createElement('div');
+            p.className   = 'pixel-particle';
+            p.textContent = glyphs[Math.floor(Math.random() * glyphs.length)];
             p.style.left              = Math.random() * 100 + '%';
-            p.style.bottom            = Math.random() * 40 + '%';
-            p.style.background        = colors[i % colors.length];
-            p.style.animationDuration = (4 + Math.random() * 7) + 's';
-            p.style.animationDelay    = (Math.random() * 7) + 's';
-            p.style.opacity           = 0.3 + Math.random() * 0.4;
-            p.style.width             = (Math.random() > 0.5 ? 4 : 6) + 'px';
-            p.style.height            = p.style.width;
+            p.style.bottom            = Math.random() * 35 + '%';
+            p.style.animationDuration = (5 + Math.random() * 8) + 's';
+            p.style.animationDelay    = (Math.random() * 9) + 's';
+            p.style.setProperty('--glyph-color', colors[i % colors.length]);
+            p.style.setProperty('--glyph-op',    (0.2 + Math.random() * 0.3).toFixed(2));
+            p.style.setProperty('--glyph-size',  (9 + Math.floor(Math.random() * 5)) + 'px');
             c.appendChild(p);
         }
     })();
