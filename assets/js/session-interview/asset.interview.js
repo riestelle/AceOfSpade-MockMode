@@ -134,16 +134,33 @@ class CharacterController {
 
     return new Promise(resolve => {
       this.anim.addEventListener('DOMLoaded', () => {
+        // --- NEW OPTION B LOGIC START ---
+        const svgEl = this._lottieWrap?.querySelector('svg');
+        if (svgEl) {
+          // Hide the background rect layer that shows as a square on the head
+          const groups = svgEl.querySelectorAll('g');
+          for (const g of groups) {
+            const title = g.querySelector(':scope > title');
+            if (title && (
+              title.textContent === 'Group 7' ||
+              title.textContent === 'Background'
+            )) {
+              g.style.display = 'none';
+            }
+          }
+        }
+        // --- NEW OPTION B LOGIC END ---
+
         // Hide the skeleton once animation is rendered
         const skeleton = document.getElementById('lottie-interviewer-skeleton');
         if (skeleton) skeleton.classList.add('hidden');
         resolve();
       });
+      
       // Fallback in case DOMLoaded never fires (network issues etc.)
       setTimeout(resolve, 3000);
     });
   }
-
   // ── Idle: pause at frame 0
   goIdle() {
     this.state = 'idle';
