@@ -1,11 +1,19 @@
-// TTS / STT support for the interview session.
-// This file provides speakText(), toggleSound(), setupSTT(), and toggleMic().
+// TTS support for the interview session.
+// This file provides speakText() and toggleSound().
 
 let soundOn = false;
 let currentUtterance = null;
-let recognition = null;
-let isRecording = false;
 const speechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+
+function logTtsDiagnostics() {
+  if (!speechSupported) {
+    console.warn('[MockMode] TTS is not supported in this browser.');
+    return;
+  }
+
+  const voices = window.speechSynthesis.getVoices();
+  console.info(`[MockMode] TTS voices available: ${voices.length}`);
+}
 
 function unlockSpeech() {
   if (!speechSupported) return;
@@ -59,74 +67,13 @@ function speakText(text) {
   window.speechSynthesis.speak(utter);
 }
 
-function setupSTT() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) return;
-
-  recognition = new SpeechRecognition();
-  recognition.continuous = false;
-  recognition.interimResults = true;
-  recognition.lang = 'en-US';
-
-  const answerInput = document.getElementById('answer-input');
-  const micBtn = document.getElementById('mic-btn');
-
-  recognition.onstart = () => {
-    isRecording = true;
-    if (micBtn) micBtn.classList.add('recording');
-    if (answerInput) answerInput.placeholder = 'LISTENING...';
-  };
-
-  recognition.onresult = (event) => {
-    let transcript = '';
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      transcript += event.results[i][0].transcript;
-    }
-    if (answerInput) answerInput.value = transcript;
-  };
-
-  recognition.onend = () => {
-    isRecording = false;
-    if (micBtn) micBtn.classList.remove('recording');
-    if (answerInput) answerInput.placeholder = 'TYPE YOUR DEFENSE...';
-  };
-
-  recognition.onerror = () => {
-    isRecording = false;
-    if (micBtn) micBtn.classList.remove('recording');
-    if (answerInput) answerInput.placeholder = 'TYPE YOUR DEFENSE...';
-  };
-}
-
-function toggleMic() {
-  if (!recognition) {
-    if (typeof showToast === 'function') {
-      showToast('Speech recognition not supported in this browser.', 'warning');
-    }
-    return;
-  }
-
-  if (isRecording) {
-    recognition.stop();
-  } else {
-    recognition.start();
-  }
-}
-
 window.addEventListener('DOMContentLoaded', () => {
-  setupSTT();
+  logTtsDiagnostics();
 
   const soundIcon = document.getElementById('sound-icon');
   if (soundIcon) {
     soundIcon.textContent = soundOn ? 'volume_up' : 'volume_off';
   }
-
-  const micBtn = document.getElementById('mic-btn');
-  if (micBtn) micBtn.addEventListener('click', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    toggleMic();
-  });
 
   const soundBtn = document.getElementById('sound-btn');
   if (soundBtn) soundBtn.addEventListener('click', (event) => {
@@ -137,13 +84,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
   document.addEventListener('keydown', (event) => {
     if (document.activeElement === document.getElementById('answer-input')) return;
-    switch (event.key.toLowerCase()) {
-      case 's':
-        toggleSound();
-        break;
-      case 'm':
-        toggleMic();
-        break;
-    }
+    if (event.key.toLowerCase() === 's') toggleSound();
   });
 });

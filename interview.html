@@ -70,9 +70,9 @@
     <div class="flex gap-2">
       <!-- Sound toggle (TTS) — now functional via Web Speech API -->
       <div class="flex flex-col items-center gap-0.5">
-        <button id="sound-btn" type="button"
-          class="w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step active-shadow-step hover:bg-surface-container-high transition-all"
-          title="Toggle voice output">
+        <button id="mic-btn" type="button"
+          class="flex items-center justify-center p-sm hover:bg-surface-variant text-on-surface-variant transition-colors"
+          title="Toggle mic [M]">
           <span id="sound-icon" class="material-symbols-outlined text-[#669BBC]">volume_up</span>
         </button>
         <span class="kbd-hint">[S]</span>
@@ -305,7 +305,7 @@
       document.getElementById('webcam-consent').classList.remove('visible');
     }
 
-    // Keyboard shortcuts for history drawer only; speech shortcuts are handled by session.realtime.tts.js.
+    // Keyboard shortcuts for history drawer only; speech shortcuts are handled by session.realtime.speech.js.
     document.addEventListener('keydown', (e) => {
       if (document.activeElement === document.getElementById('answer-input')) return;
       switch (e.key.toLowerCase()) {
@@ -331,6 +331,7 @@
 <!-- <script src="assets/js/session-interview/vendor/face-api.min.js"></script> -->
 <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 <script src="assets/js/session-interview/asset.webcam.js"></script>
+<script src="assets/js/session-interview/vendor/session.realtime.speech.js"></script>
 <script src="assets/js/session-interview/session.realtime.tts.js"></script>
 <script src="assets/js/session-interview/asset.interview.js"></script>
 

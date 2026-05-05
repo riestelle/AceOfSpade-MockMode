@@ -238,6 +238,10 @@ async function askCurrentQuestion() {
     questionPrompt = `Ask this interview question naturally, in character: "${question}"`;
   }
 
+  if (typeof startMicCapture === 'function') {
+    startMicCapture();
+  }
+
   try {
     await streamInterviewerMessage(
       questionPrompt,
@@ -269,6 +273,10 @@ async function submitAnswer() {
     showToast('Type your answer before submitting!', 'warning');
     if (answerInput) answerInput.focus();
     return;
+  }
+
+  if (typeof stopMicCapture === 'function') {
+    stopMicCapture();
   }
 
   isProcessing = true;
@@ -376,6 +384,10 @@ async function submitAnswer() {
 
 function skipQuestion() {
   if (isProcessing || skipUsed) return;
+
+  if (typeof stopMicCapture === 'function') {
+    stopMicCapture();
+  }
 
   skipUsed = true;
   if (skipBtn) {
