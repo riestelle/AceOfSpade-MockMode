@@ -11,6 +11,7 @@ let soundOn          = true;   // auto-enabled on load — user can toggle off
 let currentUtterance = null;
 let ttsRetryCount    = 0;   // error counter — resets on success
 let voiceLoadRetries = 0;   // separate counter just for voice-load polling
+let cachedVoices     = null;  // FIX: Cache voices to avoid repeated getVoices() calls
 const TTS_MAX_RETRIES = 3;
 
 const ttsSupported =
@@ -80,12 +81,12 @@ function speakText(text, onDone) {
   if (!_audioUnlockedByGesture) {
     _pendingSpeechQueue = [{ text, onDone }]; // keep only latest
     unlockSpeech();
-    // Much shorter delay (200ms) now that unlockSpeech() sets the flag immediately
+    // Minimal delay (100ms) since unlockSpeech() sets flag immediately
     setTimeout(() => {
       _audioUnlockedByGesture = true;
       _flushSpeechQueue();
-    }, 200);
-    console.info('[MockMode] TTS: queued — waiting for unlock (200ms).');
+    }, 100);
+    console.info('[MockMode] TTS: queued — will flush in 100ms.');
     return;
   }
 
@@ -111,20 +112,24 @@ function _speakNow(text, onDone) {
     return;
   }
 
-  // FIX: Reset voiceLoadRetries for THIS call — don't let it accumulate
-  let localVoiceRetries = 0;
-
   const trySpeak = () => {
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length === 0 && localVoiceRetries < 8) {
-      localVoiceRetries++;
-      setTimeout(trySpeak, 150);
-      return;
+    // FIX: Use cached voices if available (loaded during DOMContentLoaded)
+    if (!cachedVoices) {
+      cachedVoices = window.speechSynthesis.getVoices();
     }
     
-    if (voices.length === 0) {
-      console.warn('[MockMode] No TTS voices available after retries.');
-      if (typeof onDone === 'function') onDone();
+    // If still no voices, retry only ONCE more (most browsers have them by now)
+    if (cachedVoices.length === 0) {
+      // Single attempt: voices will have loaded by the time first question plays
+      setTimeout(() => {
+        cachedVoices = window.speechSynthesis.getVoices();
+        if (cachedVoices.length > 0) {
+          trySpeak(); // Retry once with fresh voices
+        } else {
+          console.warn('[MockMode] No TTS voices available.');
+          if (typeof onDone === 'function') onDone();
+        }
+      }, 100);
       return;
     }
 
@@ -136,20 +141,19 @@ function _speakNow(text, onDone) {
     // FIX: Keep a hard window-level reference so the GC can't collect it
     window._currentUtterance = utter;
 
-    utter.rate  = 0.95;
+    utter.rate  = 1.0;   // FIX: Normal speed (0.95 was too slow)
     utter.pitch = 1.05;
     utter.volume = 0.9;
 
-    const preferredVoice = voices.find(
+    const preferredVoice = cachedVoices.find(
       v => v.lang.startsWith('en-') && (v.name.includes('Google') || v.name.includes('Natural'))
-    ) || voices.find(v => v.lang.startsWith('en-')) || voices[0];
+    ) || cachedVoices.find(v => v.lang.startsWith('en-')) || cachedVoices[0];
     if (preferredVoice) utter.voice = preferredVoice;
 
     // FIX: Calculate a realistic timeout — not too short, not too long.
-    // Base: 600 ms per word + 3 s buffer, minimum 8 s.
-    // More generous to prevent timer from starting during speech.
+    // Now that voices are cached and speak() is fast: 350 ms per word + 2s buffer.
     const wordCount = text.trim().split(/\s+/).length;
-    const estimatedDuration = Math.max(8000, wordCount * 600 + 3000);
+    const estimatedDuration = Math.max(5000, wordCount * 350 + 2000);
 
     const safetyTimeout = setTimeout(() => {
       console.warn('[MockMode] TTS safety timeout fired — forcing UI unlock.');
@@ -311,12 +315,13 @@ function startRecognition() {
   };
 
   recognition.onend = () => {
-    // AUTO-RESTART: If we didn't manually stop it, kick it back on
-    if (micActive && !micHardStopped) {
-      setTimeout(startRecognition, 200); 
-    } else {
-      setMicUI(false);
+    // KEEP MIC OPEN: If the user has not explicitly stopped the mic,
+    // immediately restart recognition so it does not stop on its own.
+    if (!micHardStopped) {
+      startRecognition();
+      return;
     }
+    setMicUI(false);
   };
 
   recognition.onerror = (event) => {
@@ -359,7 +364,8 @@ if (typeof window !== 'undefined') {
         const v = window.speechSynthesis.getVoices();
         if (v.length > 0 && !voicesLoaded) {
           voicesLoaded = true;
-          console.info(`[MockMode] ✅ TTS voices loaded: ${v.length}`);
+          cachedVoices = v;  // FIX: Populate the cache so TTS is instantly ready
+          console.info(`[MockMode] ✅ TTS voices loaded and cached: ${v.length}`);
           // Optional: log first few voices for debugging
           // v.slice(0, 3).forEach(v => console.log(`  - ${v.name} (${v.lang})`));
           return true;
