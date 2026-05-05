@@ -3,14 +3,19 @@
 
 let soundOn = false;
 let currentUtterance = null;
-const speechSupported = typeof window !== 'undefined' && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+let ttsRetryCount = 0;
+const TTS_MAX_RETRIES = 3;
+
+const speechSupported =
+  typeof window !== 'undefined' &&
+  'speechSynthesis' in window &&
+  'SpeechSynthesisUtterance' in window;
 
 function logTtsDiagnostics() {
   if (!speechSupported) {
     console.warn('[MockMode] TTS is not supported in this browser.');
     return;
   }
-
   const voices = window.speechSynthesis.getVoices();
   console.info(`[MockMode] TTS voices available: ${voices.length}`);
 }
@@ -39,7 +44,9 @@ function toggleSound() {
   soundOn = !soundOn;
   const icon = document.getElementById('sound-icon');
   if (icon) icon.textContent = soundOn ? 'volume_up' : 'volume_off';
+
   if (soundOn) {
+    ttsRetryCount = 0; // reset retry counter when user re-enables sound
     unlockSpeech();
   } else {
     window.speechSynthesis.cancel();
@@ -48,13 +55,21 @@ function toggleSound() {
 
 function speakText(text) {
   if (!soundOn || !speechSupported || !text) return;
+
+  if (ttsRetryCount >= TTS_MAX_RETRIES) {
+    console.warn(`[MockMode] TTS disabled after ${TTS_MAX_RETRIES} failed attempts.`);
+    return;
+  }
+
   window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(text);
   utter.rate = 0.95;
   utter.pitch = 1.05;
   utter.volume = 0.9;
+
   utter.onstart = () => {
     currentUtterance = utter;
+    ttsRetryCount = 0; // successful start resets the counter
   };
   utter.onend = () => {
     if (currentUtterance === utter) currentUtterance = null;
@@ -62,28 +77,43 @@ function speakText(text) {
   utter.onerror = (event) => {
     console.warn('[MockMode] TTS error:', event.error);
     if (currentUtterance === utter) currentUtterance = null;
+    ttsRetryCount++;
+    if (ttsRetryCount >= TTS_MAX_RETRIES) {
+      console.warn(`[MockMode] TTS giving up after ${TTS_MAX_RETRIES} errors. Toggle sound off/on to retry.`);
+      if (typeof showToast === 'function') {
+        showToast('Speech failed to start. Toggle sound off and on to retry.', 'warning');
+      }
+    }
   };
+
   currentUtterance = utter;
   window.speechSynthesis.speak(utter);
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  logTtsDiagnostics();
+// Guard: only register DOM listeners in a browser context.
+// Without this check, importing this module in Node.js (e.g. during
+// bundling or tests) throws "ReferenceError: window is not defined".
+if (typeof window !== 'undefined') {
+  window.addEventListener('DOMContentLoaded', () => {
+    logTtsDiagnostics();
 
-  const soundIcon = document.getElementById('sound-icon');
-  if (soundIcon) {
-    soundIcon.textContent = soundOn ? 'volume_up' : 'volume_off';
-  }
+    const soundIcon = document.getElementById('sound-icon');
+    if (soundIcon) {
+      soundIcon.textContent = soundOn ? 'volume_up' : 'volume_off';
+    }
 
-  const soundBtn = document.getElementById('sound-btn');
-  if (soundBtn) soundBtn.addEventListener('click', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    toggleSound();
+    const soundBtn = document.getElementById('sound-btn');
+    if (soundBtn) {
+      soundBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleSound();
+      });
+    }
+
+    document.addEventListener('keydown', (event) => {
+      if (document.activeElement === document.getElementById('answer-input')) return;
+      if (event.key.toLowerCase() === 's') toggleSound();
+    });
   });
-
-  document.addEventListener('keydown', (event) => {
-    if (document.activeElement === document.getElementById('answer-input')) return;
-    if (event.key.toLowerCase() === 's') toggleSound();
-  });
-});
+}
