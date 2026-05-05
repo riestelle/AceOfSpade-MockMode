@@ -238,10 +238,6 @@ async function askCurrentQuestion() {
     questionPrompt = `Ask this interview question naturally, in character: "${question}"`;
   }
 
-  if (typeof startMicCapture === 'function') {
-    startMicCapture();
-  }
-
   try {
     await streamInterviewerMessage(
       questionPrompt,
