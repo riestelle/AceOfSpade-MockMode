@@ -315,9 +315,8 @@ function startRecognition() {
   };
 
   recognition.onend = () => {
-    // KEEP MIC OPEN: If the user has not explicitly stopped the mic,
-    // immediately restart recognition so it does not stop on its own.
     if (!micHardStopped) {
+      console.info('[MockMode] STT ended; restarting immediately.');
       startRecognition();
       return;
     }
@@ -342,7 +341,7 @@ function startRecognition() {
       micHardStopped = true;
       if (typeof showToast === 'function') showToast('Mic disabled after failures.', 'error');
     } else {
-      retryTimeout = setTimeout(startRecognition, 800);
+      retryTimeout = setTimeout(startRecognition, 200);
     }
   };
 
