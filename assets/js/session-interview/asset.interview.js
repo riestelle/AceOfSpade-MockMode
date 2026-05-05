@@ -380,15 +380,19 @@ async function askCurrentQuestion() {
             skipBtn.classList.remove('hidden');
             
             // 3. Play voice with a callback
-            if (typeof speakText === 'function') {
-                speakText(fullText || question, () => {
-                    // This callback fires ONLY when voice is finished
-                    enableAnsweringPhase();
-                });
-            } else {
-                // Fallback if voice is missing
-                enableAnsweringPhase();
-            }
+            // FIND THIS BLOCK inside askCurrentQuestion()
+              if (typeof speakText === 'function') {
+                  // Add a safety timeout in case speakText hangs
+                  const safetyTimer = setTimeout(() => {
+                      console.warn("TTS timed out - force unlocking Submit button");
+                      enableAnsweringPhase();
+                  }, 10000); // Force unlock after 10 seconds
+
+                  speakText(fullText || question, () => {
+                      clearTimeout(safetyTimer); // Clear safety if it worked normally
+                      enableAnsweringPhase();
+                  });
+              }
         });
     } catch (err) {
         dialogueBox.textContent = question;
