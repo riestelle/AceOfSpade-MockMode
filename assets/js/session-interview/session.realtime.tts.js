@@ -168,7 +168,9 @@ function startRecognition() {
   const input = document.getElementById('answer-input');
 
   recognition.onstart = () => {
-    micRetryCount = 0; // clean start resets the counter
+    // Do NOT reset micRetryCount here — onstart fires before any network
+    // error, so resetting here causes the counter to stay at 1 and loop forever.
+    // Counter only resets when the user deliberately clicks mic again.
     setMicUI(true);
   };
 
@@ -230,9 +232,15 @@ if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', () => {
 
     // ── TTS diagnostics ──
+    // getVoices() returns [] on first call — voices load async.
+    // Listen for voiceschanged, then also log immediately for Firefox.
     if (ttsSupported) {
-      const voices = window.speechSynthesis.getVoices();
-      console.info(`[MockMode] TTS voices available: ${voices.length}`);
+      const logVoices = () => {
+        const v = window.speechSynthesis.getVoices();
+        console.info(`[MockMode] TTS voices available: ${v.length}`);
+      };
+      window.speechSynthesis.addEventListener('voiceschanged', logVoices, { once: true });
+      logVoices(); // immediate call in case already loaded
     } else {
       console.warn('[MockMode] TTS is not supported in this browser.');
     }
