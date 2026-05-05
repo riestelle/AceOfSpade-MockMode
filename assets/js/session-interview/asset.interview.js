@@ -295,9 +295,12 @@ function startInterview() {
 // startTimer() / stopTimer() are called around each question.
 // Frontend dev wires updateTimerDisplay() to a DOM element.
 
-// FIND AND REPLACE THESE THREE FUNCTIONS in asset.interview.js:
-
-// FIND AND REPLACE THESE FUNCTIONS in asset.interview.js:
+function stopTimer() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+}
 
 function startTimer() {
   stopTimer(); // Always clear previous intervals first
