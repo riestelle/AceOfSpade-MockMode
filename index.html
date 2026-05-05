@@ -382,10 +382,11 @@
 </audio>
 
 <!-- Loading Screen -->
-<div id="loading-screen" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#0c0b09] text-[#a0cfcf]">
+<div id="loading-screen" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#0c0b09] text-[#a0cfcf] cursor-pointer" onclick="unlockAudio()">
     <div class="loader mb-6"></div>
     <div class="text-[14px] uppercase tracking-[0.35em] font-label-caps">LOADING MOCKMODE</div>
     <div id="loading-progress" class="mt-4 text-[13px] uppercase tracking-[0.25em] text-[#cfc6ae]">LOADING 0%</div>
+    <div id="tap-prompt" class="mt-8 text-[11px] uppercase tracking-[0.3em] text-[#3d5a6e] animate-pulse">[ TAP ANYWHERE TO ENABLE SOUND ]</div>
 </div>
 
 <!-- Background -->
@@ -409,7 +410,7 @@
     </div>
     <div class="flex items-center gap-3">
         <button id="volume-btn" onclick="playClick(); spawnBurst(event); toggleMusic()" onmouseenter="playHover()" class="arcade-button w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
-            <span id="volume-icon" class="material-symbols-outlined text-[#669BBC]">volume_off</span>
+            <span id="volume-icon" class="material-symbols-outlined text-[#669BBC]">volume_up</span>
         </button>
         <button id="theme-toggle" onclick="playClick(); spawnBurst(event); toggleTheme()" onmouseenter="playHover()" class="arcade-button w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
             <span id="theme-icon" class="material-symbols-outlined text-[#669BBC]">light_mode</span>
@@ -563,7 +564,7 @@
     /* ── Music ── */
     const music = document.getElementById('lobby-music');
     music.volume = 0.2;
-    let musicPlaying = false;
+    let musicPlaying = true;
 
     /* ── Hover Sound ── */
     const hoverSfx = document.getElementById('hover-sound');
@@ -613,10 +614,7 @@
             icon.textContent = 'volume_off';
             musicPlaying = false;
         } else {
-            music.volume = 0.2;
-            music.play();
-            icon.textContent = 'volume_up';
-            musicPlaying = true;
+            startMusic();
         }
     }
 
@@ -666,38 +664,81 @@
         }, holdDelay);
     }
 
-    function finishLoading() {
-        if (finishStarted) return;
-        finishStarted = true;
-        if (!loadingScreen) return;
-        document.body.classList.add('loaded');
-        loadingScreen.classList.add('opacity-0');
-        setTimeout(() => loadingScreen.remove(), 450);
-        // Play music immediately after loading, at 20% volume
+    // ── Audio unlock ──
+    // Browsers block audio until a user gesture. We unlock on the FIRST interaction
+    // with the loading screen itself, so music fires immediately when loading ends.
+    let audioUnlocked = false;
+    let pendingMusicStart = false;
+
+    function startMusic() {
         music.volume = 0.2;
         music.play().then(() => {
             musicPlaying = true;
             document.getElementById('volume-icon').textContent = 'volume_up';
+            // Hide the tap prompt once sound is enabled
+            const prompt = document.getElementById('tap-prompt');
+            if (prompt) prompt.style.display = 'none';
         }).catch(() => {
-            // Browser blocked autoplay — will play on first click instead
+            pendingMusicStart = true;
         });
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-        updateProgress(0);
-        animateProgress(60, 2500, () => {
-            animateProgress(69, 2000, () => {
-                startHoldTimer();
-                if (pageLoaded && holdReady) {
-                    animateProgress(100, 1200, finishLoading);
-                }
-            });
-        });
-    });
+    function unlockAudio() {
+        if (audioUnlocked) return;
+        audioUnlocked = true;
+        // Hide tap prompt
+        const prompt = document.getElementById('tap-prompt');
+        if (prompt) {
+            prompt.textContent = '[ SOUND ENABLED ✓ ]';
+            prompt.style.color = '#4ecf8a';
+            setTimeout(() => { if (prompt) prompt.style.display = 'none'; }, 800);
+        }
+        // Resume suspended AudioContext (Safari fix)
+        try {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (AC) new AC().resume();
+        } catch(e) {}
+        if (pendingMusicStart) {
+            pendingMusicStart = false;
+            startMusic();
+        }
+        // Remove global listeners — no longer needed
+        ['click','keydown','touchstart'].forEach(ev =>
+            document.removeEventListener(ev, unlockAudio));
+    }
 
-    window.addEventListener('load', () => {
+    // Also listen globally so any key/touch on the loading screen counts
+    ['click','keydown','touchstart'].forEach(ev =>
+        document.addEventListener(ev, unlockAudio, { once: true }));
+
+    function finishLoading() {
+        if (finishStarted) return;
+        finishStarted = true;
+        if (!loadingScreen) return;
+        sessionStorage.setItem('mm_loaded', '1');
+        document.body.classList.add('loaded');
+        loadingScreen.classList.add('opacity-0');
+        setTimeout(() => loadingScreen.remove(), 450);
+        // If user already interacted during loading — play instantly
+        // Otherwise set flag so unlockAudio() fires it on first interaction
+        if (audioUnlocked) {
+            startMusic();
+        } else {
+            pendingMusicStart = true;
+        }
+    }
+
+    // ── Session check: skip loader if already seen this session ──
+    if (sessionStorage.getItem('mm_loaded') === '1') {
+        document.body.classList.add('loaded');
+        if (loadingScreen) loadingScreen.remove();
+        finishStarted = true;
         pageLoaded = true;
-        if (loadingProgress < 60) {
+        pendingMusicStart = true;
+    } else {
+        // First visit this session — run the full loading sequence
+        window.addEventListener('DOMContentLoaded', () => {
+            updateProgress(0);
             animateProgress(60, 2500, () => {
                 animateProgress(69, 2000, () => {
                     startHoldTimer();
@@ -706,22 +747,36 @@
                     }
                 });
             });
-        } else if (loadingProgress < 69) {
-            animateProgress(69, 2000, () => {
+        });
+
+        window.addEventListener('load', () => {
+            pageLoaded = true;
+            if (loadingProgress < 60) {
+                animateProgress(60, 2500, () => {
+                    animateProgress(69, 2000, () => {
+                        startHoldTimer();
+                        if (pageLoaded && holdReady) {
+                            animateProgress(100, 1200, finishLoading);
+                        }
+                    });
+                });
+            } else if (loadingProgress < 69) {
+                animateProgress(69, 2000, () => {
+                    startHoldTimer();
+                    if (pageLoaded && holdReady) {
+                        animateProgress(100, 1200, finishLoading);
+                    }
+                });
+            } else if (loadingProgress < 100) {
                 startHoldTimer();
-                if (pageLoaded && holdReady) {
+                if (holdReady) {
                     animateProgress(100, 1200, finishLoading);
                 }
-            });
-        } else if (loadingProgress < 100) {
-            startHoldTimer();
-            if (holdReady) {
-                animateProgress(100, 1200, finishLoading);
+            } else {
+                finishLoading();
             }
-        } else {
-            finishLoading();
-        }
-    });
+        });
+    }
 
     document.getElementById('btn-start').addEventListener('click', (e) => { playClick(); spawnBurst(e); navigateTo('upload.html'); });
 
