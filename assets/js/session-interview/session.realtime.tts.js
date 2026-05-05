@@ -341,7 +341,7 @@ function startRecognition() {
       micHardStopped = true;
       if (typeof showToast === 'function') showToast('Mic disabled after failures.', 'error');
     } else {
-      retryTimeout = setTimeout(startRecognition, 200);
+      retryTimeout = setTimeout(startRecognition, 100);
     }
   };
 
