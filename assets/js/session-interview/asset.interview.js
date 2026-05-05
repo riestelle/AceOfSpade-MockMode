@@ -142,7 +142,7 @@ class CharacterController {
               const layerName = titleEl.textContent.trim().toLowerCase();
               
               // DEBUG: Uncomment the line below to see all layer names in your console
-              // console.log('Lottie Layer Found:', layerName);
+              console.log('Lottie Layer Found:', layerName);
 
               // Improved matching: checks if the name INCLUDES these keywords
               if (
