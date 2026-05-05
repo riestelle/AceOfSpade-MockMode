@@ -122,10 +122,18 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   const micBtn = document.getElementById('mic-btn');
-  if (micBtn) micBtn.addEventListener('click', toggleMic);
+  if (micBtn) micBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleMic();
+  });
 
   const soundBtn = document.getElementById('sound-btn');
-  if (soundBtn) soundBtn.addEventListener('click', toggleSound);
+  if (soundBtn) soundBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleSound();
+  });
 
   document.addEventListener('keydown', (event) => {
     if (document.activeElement === document.getElementById('answer-input')) return;
