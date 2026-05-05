@@ -70,9 +70,9 @@
     <div class="flex gap-2">
       <!-- Sound toggle (TTS) — now functional via Web Speech API -->
       <div class="flex flex-col items-center gap-0.5">
-        <button id="mic-btn" type="button"
-          class="flex items-center justify-center p-sm hover:bg-surface-variant text-on-surface-variant transition-colors"
-          title="Toggle mic [M]">
+        <button id="sound-btn" type="button"
+          class="w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step active-shadow-step hover:bg-surface-container-high transition-all"
+          title="Toggle voice output">
           <span id="sound-icon" class="material-symbols-outlined text-[#669BBC]">volume_up</span>
         </button>
         <span class="kbd-hint">[S]</span>
