@@ -47,22 +47,27 @@ function toggleSound() {
 function speakText(text) {
   if (!soundOn || !ttsSupported || !text) return;
   
-  // Hard stop — user must toggle sound off/on to reset
   if (ttsRetryCount >= TTS_MAX_RETRIES) {
     console.warn('[MockMode] TTS hard-stopped. Toggle sound off/on to reset.');
     return;
   }
 
-  // Ensure voices are loaded before speaking
+  // ── NEW: Wait for voices to load before speaking ──
   const trySpeak = () => {
     const voices = window.speechSynthesis.getVoices();
+    
     if (voices.length === 0) {
-      // Voices not ready yet — retry once after 100ms
-      setTimeout(trySpeak, 100);
+      // Voices not ready — retry once after 100ms (max 3 retries)
+      if (ttsRetryCount < 3) {
+        ttsRetryCount++;
+        setTimeout(trySpeak, 100);
+        return;
+      }
+      console.warn('[MockMode] TTS: No voices available after waiting.');
       return;
     }
 
-    // Optional: pick a preferred voice (English)
+    // ✅ Voices ready — proceed with speech
     const preferredVoice = voices.find(v => 
       v.lang.startsWith('en-') && (v.name.includes('Google') || v.name.includes('Natural'))
     ) || voices[0];
@@ -76,7 +81,7 @@ function speakText(text) {
     
     utter.onstart = () => {
       currentUtterance = utter;
-      ttsRetryCount = 0;
+      ttsRetryCount = 0; // reset on successful start
     };
     utter.onend = () => {
       if (currentUtterance === utter) currentUtterance = null;
@@ -86,16 +91,16 @@ function speakText(text) {
       if (currentUtterance === utter) currentUtterance = null;
       ttsRetryCount++;
       if (ttsRetryCount >= TTS_MAX_RETRIES) {
-        console.warn('[MockMode] TTS giving up. Toggle sound off/on to retry.');
         if (typeof showToast === 'function')
-          showToast('Voice output failed. Toggle sound off and on to retry.', 'warning');
+          showToast('Voice output failed. Toggle sound to retry.', 'warning');
       }
     };
+    
     currentUtterance = utter;
     window.speechSynthesis.speak(utter);
   };
 
-  trySpeak();
+  trySpeak(); // Start the attempt
 }
 
 // ────────────────────────────────────────────────────────────────────────────
