@@ -79,6 +79,7 @@ function speakText(text, onDone) {
   _speakNow(text, onDone);
 }
 
+// FIND THIS FUNCTION in session.realtime.tts.js AND REPLACE IT:
 function _speakNow(text, onDone) {
   if (!soundOn || !ttsSupported || !text) {
     if (typeof onDone === 'function') onDone();
@@ -86,69 +87,67 @@ function _speakNow(text, onDone) {
   }
 
   if (ttsRetryCount >= TTS_MAX_RETRIES) {
-    console.warn('[MockMode] TTS hard-stopped. Toggle sound off/on to reset.');
-    if (typeof onDone === 'function') onDone(); // still unlock the UI
+    console.warn('[MockMode] TTS hard-stopped.');
+    if (typeof onDone === 'function') onDone(); 
     return;
   }
 
-  // ── Wait for voices to load before speaking ──
   const trySpeak = () => {
     const voices = window.speechSynthesis.getVoices();
-    
-    if (voices.length === 0) {
-      // Voices not ready — use separate counter so error quota isn't burned
-      if (voiceLoadRetries < 5) {
-        voiceLoadRetries++;
-        setTimeout(trySpeak, 150);
-        return;
-      }
-      console.warn('[MockMode] TTS: No voices available after waiting.');
-      if (typeof onDone === 'function') onDone(); // unlock UI even if voices missing
+    if (voices.length === 0 && voiceLoadRetries < 5) {
+      voiceLoadRetries++;
+      setTimeout(trySpeak, 150);
       return;
     }
-    voiceLoadRetries = 0; // reset once voices are found
-
-    // ✅ Voices ready — proceed with speech
-    const preferredVoice = voices.find(v => 
-      v.lang.startsWith('en-') && (v.name.includes('Google') || v.name.includes('Natural'))
-    ) || voices[0];
 
     window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.rate   = 0.95;
-    utter.pitch  = 1.05;
-    utter.volume = 0.9;
-    if (preferredVoice) utter.voice = preferredVoice;
     
+    // Create utterance and store it globally to prevent it being "cleaned up" mid-speech
+    const utter = new SpeechSynthesisUtterance(text);
+    window._currentUtterance = utter; 
+
+    utter.rate = 0.95;
+    utter.pitch = 1.05;
+    utter.volume = 0.9;
+    
+    const preferredVoice = voices.find(v => v.lang.startsWith('en-') && (v.name.includes('Google') || v.name.includes('Natural'))) || voices[0];
+    if (preferredVoice) utter.voice = preferredVoice;
+
+    // Safety: If the browser hangs, force-start the timer after a reasonable duration
+    const estimatedDuration = (text.split(' ').length * 500) + 2000; 
+    const safetyTimeout = setTimeout(() => {
+      console.warn('[MockMode] TTS safety trigger: forcing UI unlock.');
+      utter.onend();
+    }, estimatedDuration);
+
     utter.onstart = () => {
-      currentUtterance = utter;
-      ttsRetryCount = 0; // reset on successful start
+      ttsRetryCount = 0;
     };
+
     utter.onend = () => {
-      if (currentUtterance === utter) currentUtterance = null;
-      // Hide skip button as soon as voice is done
-      const btn = document.getElementById('skip-voice-btn');
-      if (btn) btn.classList.add('hidden');
+      clearTimeout(safetyTimeout);
+      if (window._currentUtterance === utter) window._currentUtterance = null;
+      // Hide skip voice button now that it's done
+      const skipBtn = document.getElementById('skip-voice-btn');
+      if (skipBtn) skipBtn.classList.add('hidden');
       
-      if (typeof onDone === 'function') onDone(); 
+      if (typeof onDone === 'function') {
+        onDone();
+        onDone = null; // Prevent double-firing
+      }
     };
 
     utter.onerror = (event) => {
+      clearTimeout(safetyTimeout);
       console.warn('[MockMode] TTS error:', event.error);
-      const btn = document.getElementById('skip-voice-btn');
-      if (btn) btn.classList.add('hidden');
-      
-      if (currentUtterance === utter) currentUtterance = null;
-      if (typeof onDone === 'function') onDone(); // Safety unlock
+      utter.onend(); // Fallback to onend logic to unlock UI
     };
     
-    currentUtterance = utter;
     window.speechSynthesis.speak(utter);
   };
 
-  trySpeak(); // Start the attempt
-} // end _speakNow
-
+  trySpeak();
+}
 // ────────────────────────────────────────────────────────────────────────────
 // STT — Speech-to-Text (REPLACED SECTION)
 // ─────────────────────────────────────────────────────────────────────────────

@@ -239,21 +239,34 @@ function startInterview() {
 
 // FIND AND REPLACE THESE THREE FUNCTIONS in asset.interview.js:
 
+// FIND AND REPLACE THESE FUNCTIONS in asset.interview.js:
+
 function startTimer() {
-  stopTimer();
-  timeRemaining = TIMER_DURATION; // Ensure reset to 45 every time
-  if (typeof updateTimerDisplay === 'function') updateTimerDisplay(timeRemaining);
+  stopTimer(); // Always clear previous intervals first
+  timeRemaining = TIMER_DURATION; // Reset to 45[cite: 2]
+  
+  // Force immediate UI update to 00:45
+  if (typeof updateTimerDisplay === 'function') {
+    updateTimerDisplay(timeRemaining);[cite: 3]
+  }
+
+  console.log("Timer started at:", timeRemaining);
 
   timerInterval = setInterval(() => {
     timeRemaining--;
-    if (typeof updateTimerDisplay === 'function') updateTimerDisplay(timeRemaining);
+    
+    if (typeof updateTimerDisplay === 'function') {
+      updateTimerDisplay(timeRemaining);[cite: 3]
+    }
 
     if (timeRemaining <= 0) {
       stopTimer();
-      handleTimerTimeout();
+      handleTimerTimeout();[cite: 2]
     }
   }, 1000);
 }
+
+
 
 function handleTimerTimeout() {
   if (isProcessing) return;
@@ -321,8 +334,11 @@ async function askCurrentQuestion() {
 
 // Helper to enable the UI once audio is done or skipped
 function enableAnsweringPhase() {
-    document.getElementById('skip-voice-btn').classList.add('hidden');
+    // Hide voice-skip since speaking is done[cite: 2]
+    const skipVoiceBtn = document.getElementById('skip-voice-btn');
+    if (skipVoiceBtn) skipVoiceBtn.classList.add('hidden');
     
+    // Unlock input[cite: 2]
     if (answerInput) {
         answerInput.disabled = false;
         answerInput.placeholder = "Type your answer here...";
@@ -330,10 +346,12 @@ function enableAnsweringPhase() {
     }
     if (submitBtn) submitBtn.disabled = false;
     
-    // Enable microphone capture
-    if (typeof startMicCapture === 'function') startMicCapture();
+    // Start mic and timer[cite: 2]
+    if (typeof startMicCapture === 'function') {
+        try { startMicCapture(); } catch(e) { console.error(e); }
+    }
     
-    startTimer(); // Now the timer starts
+    startTimer(); 
 }
 
 async function askCurrentQuestion() {
