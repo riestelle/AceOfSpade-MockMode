@@ -186,7 +186,7 @@ class CharacterController {
       this.anim.setSpeed(1.0);
       this.anim.play();
     }
-    this._startMouthAnim();
+    //this._startMouthAnim();
     if (this.container) {
       this.container.classList.remove('is-idle');
       this.container.classList.add('is-talking');
