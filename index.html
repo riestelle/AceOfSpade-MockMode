@@ -84,6 +84,10 @@
     }
 </script>
 <style>
+    /* Allow text selection everywhere, disable only on interactive elements */
+    * { user-select: text; -webkit-user-select: text; }
+    button, a, [role="button"] { user-select: none; -webkit-user-select: none; }
+
     .material-symbols-outlined {
         font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
     }
@@ -200,7 +204,24 @@
         animation: pixel-burst 0.5s cubic-bezier(0.25,0.46,0.45,0.94) forwards;
     }
 
-    /* ── Modal buttons: pop on hover ── */
+    /* ── White dot ripple on non-button clicks ── */
+    @keyframes dot-ripple {
+        0%   { transform: translate(-50%, -50%) scale(0); opacity: 0.8; }
+        60%  { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
+        100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+    }
+    .click-dot {
+        position: fixed;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.85);
+        pointer-events: none;
+        z-index: 99998;
+        animation: dot-ripple 0.45s ease-out forwards;
+    }
+
+
     @keyframes modal-btn-pop {
         0%   { transform: scale(1); }
         50%  { transform: scale(1.08); }
@@ -364,7 +385,7 @@
     html.light #bg-img { opacity:0.6 !important; }
 </style>
 </head>
-<body class="bg-background text-on-background font-body-md overflow-hidden selection:bg-tertiary selection:text-on-tertiary">
+<body class="bg-background text-on-background font-body-md overflow-hidden selection:bg-tertiary selection:text-on-tertiary" style="user-select:text;">
 
 <!-- Lobby Music -->
 <audio id="lobby-music" loop>
@@ -386,7 +407,7 @@
     <div class="loader mb-6"></div>
     <div class="text-[14px] uppercase tracking-[0.35em] font-label-caps">LOADING MOCKMODE</div>
     <div id="loading-progress" class="mt-4 text-[13px] uppercase tracking-[0.25em] text-[#cfc6ae]">LOADING 0%</div>
-    <div id="tap-prompt" class="mt-8 text-[11px] uppercase tracking-[0.3em] text-[#3d5a6e] animate-pulse">[ TAP ANYWHERE TO ENABLE SOUND ]</div>
+    <div id="skip-hint" class="mt-8 text-[11px] uppercase tracking-[0.3em] text-[#3d5a6e] animate-pulse">[ CLICK ANYWHERE TO SKIP ]</div>
 </div>
 
 <!-- Background -->
@@ -410,7 +431,7 @@
     </div>
     <div class="flex items-center gap-3">
         <button id="volume-btn" onclick="playClick(); spawnBurst(event); toggleMusic()" onmouseenter="playHover()" class="arcade-button w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
-            <span id="volume-icon" class="material-symbols-outlined text-[#669BBC]">volume_up</span>
+            <span id="volume-icon" class="material-symbols-outlined text-[#669BBC]">volume_off</span>
         </button>
         <button id="theme-toggle" onclick="playClick(); spawnBurst(event); toggleTheme()" onmouseenter="playHover()" class="arcade-button w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
             <span id="theme-icon" class="material-symbols-outlined text-[#669BBC]">light_mode</span>
@@ -564,7 +585,7 @@
     /* ── Music ── */
     const music = document.getElementById('lobby-music');
     music.volume = 0.2;
-    let musicPlaying = true;
+    let musicPlaying = false;
 
     /* ── Hover Sound ── */
     const hoverSfx = document.getElementById('hover-sound');
@@ -606,6 +627,19 @@
             el.addEventListener('animationend', () => el.remove());
         }
     }
+
+    // ── White dot on any non-button click ──
+    document.addEventListener('click', (e) => {
+        const tag = e.target.tagName;
+        const isInteractive = e.target.closest('button, a, input, select, textarea, [role="button"]');
+        if (isInteractive) return;
+        const dot = document.createElement('div');
+        dot.className = 'click-dot';
+        dot.style.left = e.clientX + 'px';
+        dot.style.top  = e.clientY + 'px';
+        document.body.appendChild(dot);
+        dot.addEventListener('animationend', () => dot.remove());
+    });
 
     function toggleMusic() {
         const icon = document.getElementById('volume-icon');
@@ -665,51 +699,44 @@
     }
 
     // ── Audio unlock ──
-    // Browsers block audio until a user gesture. We unlock on the FIRST interaction
-    // with the loading screen itself, so music fires immediately when loading ends.
+    // ── Audio ──
+    // Browsers require a user gesture before playing audio. There is no workaround.
+    // Best UX: attach listeners immediately so the VERY FIRST click/tap/key anywhere
+    // on the page (loading screen or main page) starts music instantly.
     let audioUnlocked = false;
-    let pendingMusicStart = false;
 
     function startMusic() {
+        if (musicPlaying) return;
+        music.muted = false;
         music.volume = 0.2;
+        try { const AC = window.AudioContext || window.webkitAudioContext; if (AC) new AC().resume(); } catch(e) {}
         music.play().then(() => {
             musicPlaying = true;
+            audioUnlocked = true;
             document.getElementById('volume-icon').textContent = 'volume_up';
-            // Hide the tap prompt once sound is enabled
-            const prompt = document.getElementById('tap-prompt');
-            if (prompt) prompt.style.display = 'none';
-        }).catch(() => {
-            pendingMusicStart = true;
-        });
+        }).catch(() => {});
     }
 
-    function unlockAudio() {
+    function onFirstGesture() {
         if (audioUnlocked) return;
         audioUnlocked = true;
-        // Hide tap prompt
-        const prompt = document.getElementById('tap-prompt');
-        if (prompt) {
-            prompt.textContent = '[ SOUND ENABLED ✓ ]';
-            prompt.style.color = '#4ecf8a';
-            setTimeout(() => { if (prompt) prompt.style.display = 'none'; }, 800);
-        }
-        // Resume suspended AudioContext (Safari fix)
-        try {
-            const AC = window.AudioContext || window.webkitAudioContext;
-            if (AC) new AC().resume();
-        } catch(e) {}
-        if (pendingMusicStart) {
-            pendingMusicStart = false;
-            startMusic();
-        }
-        // Remove global listeners — no longer needed
-        ['click','keydown','touchstart'].forEach(ev =>
-            document.removeEventListener(ev, unlockAudio));
+        startMusic();
     }
 
-    // Also listen globally so any key/touch on the loading screen counts
-    ['click','keydown','touchstart'].forEach(ev =>
-        document.addEventListener(ev, unlockAudio, { once: true }));
+    // Attach immediately — so loading screen click, keypress, or any touch counts
+    document.addEventListener('click',      onFirstGesture, { capture: true, once: true });
+    document.addEventListener('keydown',    onFirstGesture, { capture: true, once: true });
+    document.addEventListener('touchstart', onFirstGesture, { capture: true, once: true });
+    document.addEventListener('pointerdown',onFirstGesture, { capture: true, once: true });
+
+    function unlockAudio() {
+        onFirstGesture();
+        // Hide the skip hint
+        const hint = document.getElementById('skip-hint');
+        if (hint) hint.style.display = 'none';
+        // Skip loading animation straight to finish
+        if (!finishStarted) animateProgress(100, 300, finishLoading);
+    }
 
     function finishLoading() {
         if (finishStarted) return;
@@ -719,24 +746,40 @@
         document.body.classList.add('loaded');
         loadingScreen.classList.add('opacity-0');
         setTimeout(() => loadingScreen.remove(), 450);
-        // If user already interacted during loading — play instantly
-        // Otherwise set flag so unlockAudio() fires it on first interaction
-        if (audioUnlocked) {
-            startMusic();
-        } else {
-            pendingMusicStart = true;
-        }
+        startMusic();
     }
 
-    // ── Session check: skip loader if already seen this session ──
+    // ── Session / refresh check ──
+    // Skip the loader only if already seen this session (not on refresh).
+    // On refresh, always show the loading screen so the click-to-enable prompt
+    // handles the audio gesture requirement naturally.
+    const isReload = performance.getEntriesByType('navigation')?.[0]?.type === 'reload';
+
     if (sessionStorage.getItem('mm_loaded') === '1') {
         document.body.classList.add('loaded');
         if (loadingScreen) loadingScreen.remove();
         finishStarted = true;
         pageLoaded = true;
-        pendingMusicStart = true;
+        // No loading screen — inject an invisible fullscreen overlay that captures
+        // the very first click, starts music, then removes itself silently.
+        // pointer-events: none so it never blocks text selection or interaction.
+        const audioGate = document.createElement('div');
+        audioGate.style.cssText = 'position:fixed;inset:0;z-index:9999;pointer-events:none;';
+        document.body.appendChild(audioGate);
+        function removeGate() {
+            startMusic();
+            audioGate.remove();
+            document.removeEventListener('click',       removeGate, { capture: true });
+            document.removeEventListener('keydown',     removeGate, { capture: true });
+            document.removeEventListener('touchstart',  removeGate, { capture: true });
+            document.removeEventListener('pointerdown', removeGate, { capture: true });
+        }
+        document.addEventListener('click',       removeGate, { capture: true, once: true });
+        document.addEventListener('keydown',     removeGate, { capture: true, once: true });
+        document.addEventListener('touchstart',  removeGate, { capture: true, once: true });
+        document.addEventListener('pointerdown', removeGate, { capture: true, once: true });
     } else {
-        // First visit this session — run the full loading sequence
+        // First visit or refresh — run the loading sequence
         window.addEventListener('DOMContentLoaded', () => {
             updateProgress(0);
             animateProgress(60, 2500, () => {
