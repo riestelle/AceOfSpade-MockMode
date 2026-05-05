@@ -164,8 +164,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const cached = getFromStorage('questions');
   if (Array.isArray(cached) && cached.length === 5) {
     questions = cached;
-    // FIX: Even for cached questions, wait for TTS voices before starting
-    // so the loading screen persists until everything is truly ready.
+    // FIX: Show loader BEFORE waiting for voices — without this, the cached
+    // path had no loading screen at all, so the UI flashed in unready state.
+    showLoader('Getting ready...');
     waitForVoicesThenStart();
   } else {
     await loadQuestions();
@@ -203,13 +204,16 @@ function waitForVoicesThenStart() {
 
   const voices = window.speechSynthesis.getVoices();
   if (voices.length > 0) {
-    // Voices already available
+    // Voices already available — hide loader and go
     hideLoader();
     startInterview();
     return;
   }
 
-  // Voices not yet loaded — wait for them (max 3 s)
+  // Voices not yet loaded — update loader message so it's clear we're still waiting,
+  // then wait (max 3 s) before giving up and starting anyway.
+  showLoader('Loading voice engine...');
+
   let resolved = false;
   const resolve = () => {
     if (resolved) return;
@@ -354,6 +358,10 @@ function enableAnsweringPhase() {
   const skipVoiceBtn = document.getElementById('skip-voice-btn');
   if (skipVoiceBtn) skipVoiceBtn.classList.add('hidden');
 
+  // FIX: Start timer FIRST — mic permission dialogs on first use can block
+  // JS briefly and delay the timer. Timer must start before anything async.
+  startTimer();
+
   // Unlock answer input
   if (answerInput) {
     answerInput.disabled = false;
@@ -362,14 +370,15 @@ function enableAnsweringPhase() {
   }
   if (submitBtn) submitBtn.disabled = false;
 
-  // Prepare mic (user must still press the mic button to start recording)
+  // FIX: Re-enable mic button (was disabled during submission to prevent
+  // the bug where clicking it would restart the mic mid-submit).
+  const micBtn = document.getElementById('mic-btn');
+  if (micBtn) micBtn.disabled = false;
+
+  // Prepare mic state for next recording (does NOT auto-start — user presses mic btn)
   if (typeof startMicCapture === 'function') {
     try { startMicCapture(); } catch (e) { console.error('[MockMode] startMicCapture error:', e); }
   }
-
-  // FIX #3: Start timer — stopTimer() is called first inside startTimer()
-  // so any stale interval from a previous question is always cleared.
-  startTimer();
 }
 
 async function askCurrentQuestion() {
@@ -525,6 +534,11 @@ async function submitAnswer() {
     stopMicCapture();
   }
 
+  // FIX: Disable mic button immediately so it can't restart the mic
+  // while submission is in progress (was causing the "re-activates mic" bug).
+  const micBtn = document.getElementById('mic-btn');
+  if (micBtn) micBtn.disabled = true;
+
   isProcessing = true;
   stopTimer();  // stop countdown the moment they submit
   if (submitBtn) submitBtn.disabled = true;
@@ -622,6 +636,9 @@ async function submitAnswer() {
     if (submitBtn) submitBtn.disabled = false;
     if (skipBtn && !skipUsed) skipBtn.disabled = false;
     if (answerInput) answerInput.disabled = false;
+    // Re-enable mic button so user can retry with voice
+    const micBtnErr = document.getElementById('mic-btn');
+    if (micBtnErr) micBtnErr.disabled = false;
   }
 }
 
