@@ -237,9 +237,11 @@ function startInterview() {
 // startTimer() / stopTimer() are called around each question.
 // Frontend dev wires updateTimerDisplay() to a DOM element.
 
+// FIND AND REPLACE THESE THREE FUNCTIONS in asset.interview.js:
+
 function startTimer() {
   stopTimer();
-  timeRemaining = TIMER_DURATION;
+  timeRemaining = TIMER_DURATION; // Ensure reset to 45 every time
   if (typeof updateTimerDisplay === 'function') updateTimerDisplay(timeRemaining);
 
   timerInterval = setInterval(() => {
@@ -253,24 +255,68 @@ function startTimer() {
   }, 1000);
 }
 
-function stopTimer() {
-  if (timerInterval) {
-    clearInterval(timerInterval);
-    timerInterval = null;
-  }
-}
-
-// Called when timer hits 0: auto-submits a blank answer with stress penalty
 function handleTimerTimeout() {
   if (isProcessing) return;
+  
+  // Apply penalty
   stressLevel = Math.min(100, stressLevel + 15);
   if (stressLevel > peakStressLevel) peakStressLevel = stressLevel;
   updateStressMeter(stressLevel);
-  checkLoseCondition();
+  
+  if (checkLoseCondition()) return;
 
-  // Force-submit a weak answer so the game loop continues
+  // Reset display immediately so it doesn't stay at 0:00
+  timeRemaining = TIMER_DURATION; 
+  if (typeof updateTimerDisplay === 'function') updateTimerDisplay(timeRemaining);
+
   if (answerInput) answerInput.value = '[No answer — time ran out]';
   submitAnswer();
+}
+
+async function askCurrentQuestion() {
+    if (!dialogueBox) return;
+    clearReactionBox();
+    
+    // Lock UI and show thinking state
+    if (typeof showThinkingIndicator === 'function') showThinkingIndicator();
+    
+    if (answerInput) {
+        answerInput.value = '';
+        answerInput.disabled = true;
+        answerInput.placeholder = "Interviewer is thinking...";
+    }
+    if (submitBtn) submitBtn.disabled = true;
+    
+    const question = questions[currentIndex];
+    const skipVoiceBtn = document.getElementById('skip-voice-btn');
+
+    let questionPrompt = currentIndex > 0 && lastAnswerContext 
+        ? `React to the candidate's last answer: "${lastAnswerContext.answer}". Then ask this specific question: "${question}"`
+        : `Begin the interview by asking: "${question}"`;
+
+    try {
+        await streamInterviewerMessage(questionPrompt, personality, dialogueBox, (fullText) => {
+            // AI finished generating text:
+            // 1. Hide thinking indicator so text is visible
+            if (typeof hideThinkingIndicator === 'function') hideThinkingIndicator();
+            
+            // 2. Show skip button
+            if (skipVoiceBtn) skipVoiceBtn.classList.remove('hidden');
+            
+            // 3. Start voice. Timer starts ONLY when voice finishes (via the callback).
+            if (typeof speakText === 'function') {
+                speakText(fullText || question, () => {
+                    enableAnsweringPhase();
+                });
+            } else {
+                enableAnsweringPhase();
+            }
+        });
+    } catch (err) {
+        if (typeof hideThinkingIndicator === 'function') hideThinkingIndicator();
+        dialogueBox.textContent = question;
+        enableAnsweringPhase();
+    }
 }
 
 // Helper to enable the UI once audio is done or skipped

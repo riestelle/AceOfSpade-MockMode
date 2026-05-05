@@ -126,17 +126,20 @@ function _speakNow(text, onDone) {
     };
     utter.onend = () => {
       if (currentUtterance === utter) currentUtterance = null;
-      if (typeof onDone === 'function') onDone(); // ✅ unlock UI after speech ends
+      // Hide skip button as soon as voice is done
+      const btn = document.getElementById('skip-voice-btn');
+      if (btn) btn.classList.add('hidden');
+      
+      if (typeof onDone === 'function') onDone(); 
     };
+
     utter.onerror = (event) => {
       console.warn('[MockMode] TTS error:', event.error);
+      const btn = document.getElementById('skip-voice-btn');
+      if (btn) btn.classList.add('hidden');
+      
       if (currentUtterance === utter) currentUtterance = null;
-      ttsRetryCount++;
-      if (ttsRetryCount >= TTS_MAX_RETRIES) {
-        if (typeof showToast === 'function')
-          showToast('Voice output failed. Toggle sound to retry.', 'warning');
-      }
-      if (typeof onDone === 'function') onDone(); // ✅ unlock UI even on error
+      if (typeof onDone === 'function') onDone(); // Safety unlock
     };
     
     currentUtterance = utter;
