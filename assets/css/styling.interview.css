@@ -261,6 +261,26 @@ transition: opacity 0.2s, color 0.2s;
 }
 
 /* Hide the background rect layer inside the interviewer Lottie */
-#lottie-interviewer svg > g:first-child {
-  display: none;
+/* Belt-and-suspenders: JS hides by title; this catches any layer tagged data-layer-hide */
+#lottie-interviewer svg [data-layer-hide="true"] {
+  display: none !important;
+}
+
+/* ── Responsive layout helpers ── */
+
+/* On phones: collapse dialogue box to full-width column */
+@media (max-width: 640px) {
+  /* Webcam panel hidden on mobile (already hidden md:block, but reinforce) */
+  #history-drawer {
+    width: 90vw;
+    right: -90vw;
+  }
+  #history-drawer.open {
+    right: 0;
+  }
+}
+
+/* Ensure the main layout never overflows horizontally */
+body {
+  overflow-x: hidden;
 }
