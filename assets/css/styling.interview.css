@@ -314,38 +314,46 @@ transition: opacity 0.2s, color 0.2s;
 
 /* ── Interviewer Lottie frame ── */
 #interviewer-lottie-stage {
+  /* Anchored above dialogue panel via JS-set CSS var */
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  bottom: var(--dialogue-height, 220px);
+  left: 0;
+  right: 0;
+  top: auto;
+  transform: none;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  width: min(100%, 700px);
-  min-height: 560px;
-  padding: 26px;
-  background: rgba(31, 15, 12, 0.92);
-  border: 2px solid rgba(160, 207, 207, 0.18);
-  border-radius: 34px;
-  box-shadow: 0 0 0 4px rgba(25, 10, 8, 0.75);
-  overflow: hidden;
+  width: 100%;
+  /* No background panel — character sits naturally above the box */
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
   z-index: 20;
   pointer-events: none;
 }
 #interviewer-lottie-stage::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(circle at center, rgba(160, 207, 207, 0.14), transparent 42%);
-  filter: blur(18px);
+  display: none;
 }
 #lottie-interviewer {
   position: relative;
-  width: clamp(340px, 44vw, 620px);
-  height: clamp(340px, 44vw, 620px);
+  /* Responsive: large on mobile, capped on desktop */
+  width: clamp(240px, 55vw, 520px);
+  height: clamp(240px, 55vw, 520px);
   aspect-ratio: 1 / 1;
   image-rendering: pixelated;
+  /* Slight bottom overlap so character looks like they're standing behind the desk */
+  margin-bottom: -24px;
+}
+
+@media (min-width: 768px) {
+  #lottie-interviewer {
+    width: clamp(300px, 38vw, 520px);
+    height: clamp(300px, 38vw, 520px);
+  }
 }
 #lottie-interviewer.is-talking {
   filter: drop-shadow(0 0 18px rgba(160, 207, 207, 0.35));

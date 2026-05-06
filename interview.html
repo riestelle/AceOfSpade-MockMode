@@ -46,14 +46,14 @@
   <!-- CRT Overlay -->
   <div class="crt-overlay absolute inset-0 z-40"></div>
 
-  <!-- TOP-LEFT: Stress Thermometer (BUG FIX: use height not width) -->
-  <div class="absolute left-6 top-1/2 -translate-y-1/2 flex flex-col items-center gap-3 z-50">
+  <!-- TOP-LEFT: Stress Thermometer -->
+  <div class="absolute left-6 flex flex-col items-center gap-3 z-50" style="bottom: calc(var(--dialogue-height, 220px) + 12px); top: auto; transform: none;">
     <div id="stress-label"
       class="font-label-caps text-on-surface uppercase tracking-widest bg-surface-container border-4 border-on-surface px-3 py-1 shadow-step text-xs">
       Stress: 0%
     </div>
     <!-- Thermometer: stress-fill uses style.height (fixed from style.width bug) -->
-    <div class="w-14 h-[52vh] bg-surface-container-lowest border-4 border-on-surface rounded-full relative p-1">
+    <div class="w-10 h-[28vh] bg-surface-container-lowest border-4 border-on-surface rounded-full relative p-1">
       <div
         id="stress-fill"
         class="absolute bottom-1 left-1 right-1 rounded-full border-t-2 border-white/30 transition-all duration-700"
@@ -99,7 +99,7 @@
   </div>
 
   <!-- Interviewer Lottie Stage -->
-  <div id="interviewer-lottie-stage" class="absolute z-20 w-full flex justify-center">
+  <div id="interviewer-lottie-stage" class="absolute z-20 w-full flex justify-center" style="bottom: var(--dialogue-height, 220px); left: 0; right: 0; top: auto; transform: none;">
     <!-- Lottie mounts here — JS picks the right animation based on personality -->
     <div id="lottie-interviewer" class="is-idle">
       <!-- Loading skeleton shown until animation is ready -->
@@ -112,7 +112,7 @@
   </div>
 
   <!-- RPG Dialogue Box (Bottom) -->
-  <div class="relative z-50 w-full max-w-6xl px-margin pb-margin">
+  <div id="dialogue-panel" class="relative z-50 w-full px-margin pb-margin" style="max-width: 100%;">
     <div class="bg-surface-container border-4 border-on-surface p-sm md:p-md shadow-step flex flex-col md:flex-row gap-md items-stretch">
 
 <!-- 
@@ -317,6 +317,17 @@
     if (consent) {
       document.getElementById('webcam-consent').classList.remove('visible');
     }
+
+    // ── Lottie stage: anchor above dialogue panel via CSS var ──
+    function updateLottieAnchor() {
+      const panel = document.getElementById('dialogue-panel');
+      if (!panel) return;
+      const h = panel.getBoundingClientRect().height;
+      document.documentElement.style.setProperty('--dialogue-height', h + 'px');
+    }
+    updateLottieAnchor();
+    window.addEventListener('resize', updateLottieAnchor);
+    setTimeout(updateLottieAnchor, 300);
 
     // Keyboard shortcuts for history drawer only; speech shortcuts are handled by session.realtime.speech.js and session.realtime.tts.js.
     document.addEventListener('keydown', (e) => {
