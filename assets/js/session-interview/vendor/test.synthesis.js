@@ -83,7 +83,7 @@
 
     const utter = new SpeechSynthesisUtterance(String(text));
     if (chosenVoice) utter.voice = chosenVoice;
-    utter.rate = 1.0;
+    utter.rate = 1.0;   // normal speed for clear interview question delivery
     utter.pitch = 1.05;
     utter.volume = 0.9;
 
@@ -114,7 +114,8 @@
 
       // 'interrupted' means cancel() was called intentionally (skip-voice button).
       // Do not count as error; onDone is intentionally NOT called here so the skip
-      // handler fires _safeEnableAnsweringPhase() directly via window._skipVoiceBridge.
+      // handler fires _safeEnableAnsweringPhase() directly via window._skipVoiceBridge
+      // (defined in asset.interview.js).
       if (ev && ev.error === 'interrupted') return;
 
       errorCount++;
