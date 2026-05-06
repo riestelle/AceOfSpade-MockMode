@@ -481,11 +481,15 @@ function runEntranceAnimations(verdictKey) {
 
   const tl = gsap.timeline();
 
+  // Tell GPU to prep these layers — cleared after animation to prevent edge artifacts
+  gsap.set(['#portrait-card', '.stat-card', '#verdict-stamp'], { willChange: 'opacity, transform' });
+
   // 1. Portrait card fades in
   tl.to('#portrait-card', {
     opacity: 1,
     duration: 0.5,
     ease: 'power2.out',
+    onComplete: () => gsap.set('#portrait-card', { willChange: 'auto' }),
   });
 
   // 2. Stat cards stagger up
@@ -495,35 +499,37 @@ function runEntranceAnimations(verdictKey) {
     duration: 0.4,
     stagger: 0.1,
     ease: 'power2.out',
+    onComplete: () => gsap.set('.stat-card', { willChange: 'auto' }),
   }, '-=0.2');
 
-  // 3. Verdict stamp: fast drop-in slam, one-shot, done
+  // 3. Verdict stamp: slam down from above like a rubber stamp
+  //    Starts high up, drops fast, hits with a squash + tiny bounce, done.
   tl.fromTo('#verdict-stamp', {
     opacity: 0,
-    scale: 2.8,
-    rotation: -22,
-    filter: 'blur(3px)',
+    y: -120,
+    scaleY: 0.6,
+    scaleX: 1.1,
+    rotation: -8,
   }, {
-    opacity: 0.93,
-    scale: 1,
-    rotation: -12,
-    filter: 'blur(0px)',
-    duration: 0.28,
+    opacity: 1,
+    y: 0,
+    scaleY: 1,
+    scaleX: 1,
+    rotation: -6,
+    duration: 0.22,
     ease: 'power4.out',
     onComplete: () => {
-      // Brief overshoot bounce — rubber stamp thud feel
-      gsap.to('#verdict-stamp', {
-        scale: 1.06,
-        duration: 0.06,
-        ease: 'power1.out',
-        yoyo: true,
-        repeat: 1,
-        onComplete: () => {
-          gsap.set('#verdict-stamp', { scale: 1 });
-          // Reveal static ink state
+      // Impact squash: flatten briefly then settle
+      gsap.timeline()
+        .to('#verdict-stamp', { scaleY: 0.88, scaleX: 1.08, duration: 0.07, ease: 'power2.out' })
+        .to('#verdict-stamp', { scaleY: 1.04, scaleX: 0.98, duration: 0.08, ease: 'power2.out' })
+        .to('#verdict-stamp', { scaleY: 1,    scaleX: 1,    duration: 0.06, ease: 'power1.inOut' })
+        .call(() => {
+          gsap.set('#verdict-stamp', { willChange: 'auto' });
+          // Reveal static ink state — no loop
           const verdictEl = document.getElementById('verdict-text');
           if (verdictEl) verdictEl.classList.add('verdict--revealed');
-          // One-shot ink ring burst, then done
+          // One-shot ink ring burst
           const ring = document.getElementById('stamp-ink-ring');
           if (ring) {
             const isHired = verdictKey.startsWith('hired');
@@ -533,10 +539,9 @@ function runEntranceAnimations(verdictKey) {
             else if (isFired) ring.classList.add('ink-fired');
             else ring.classList.add('ink-wait');
             ring.classList.add('stamp-ink-ring--active');
-            setTimeout(() => ring.classList.remove('stamp-ink-ring--active'), 600);
+            setTimeout(() => ring.classList.remove('stamp-ink-ring--active'), 500);
           }
-        },
-      });
+        });
     },
   }, '-=0.05');
 
