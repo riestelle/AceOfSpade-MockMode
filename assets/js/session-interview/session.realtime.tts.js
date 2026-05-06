@@ -11,6 +11,7 @@ let soundOn          = true;   // auto-enabled on load — user can toggle off
 let currentUtterance = null;
 let ttsRetryCount    = 0;   // error counter — resets on success
 let voiceLoadRetries = 0;   // separate counter just for voice-load polling
+let cachedVoices     = null;  // FIX: Cache voices to avoid repeated getVoices() calls
 const TTS_MAX_RETRIES = 3;
 
 const ttsSupported =
@@ -24,18 +25,28 @@ let _audioUnlockedByGesture = false;
 let _pendingSpeechQueue = []; // texts queued before the first user gesture
 
 function unlockSpeech() {
+  
   if (!ttsSupported) return;
   const unlock = new SpeechSynthesisUtterance('');
   unlock.volume = 0;
-  try { window.speechSynthesis.speak(unlock); }
+  try { 
+    window.speechSynthesis.speak(unlock);
+    // FIX: Mark audio as unlocked immediately so TTS doesn't queue with 1.5s delay
+    // The speak() call unlocks the audio context for this gesture/context
+    _audioUnlockedByGesture = true;
+  }
   catch (err) { console.warn('[MockMode] TTS unlock failed:', err); }
 }
-
+window.unlockSpeech = unlockSpeech;
 function _flushSpeechQueue() {
   if (_pendingSpeechQueue.length === 0) return;
-  const text = _pendingSpeechQueue.shift();
+  const item = _pendingSpeechQueue.shift();
   _pendingSpeechQueue = []; // discard older queued items — only speak latest
-  _speakNow(text);
+  if (item && typeof item === 'object') {
+    _speakNow(item.text, item.onDone);
+  } else {
+    _speakNow(item); // legacy plain-string fallback
+  }
 }
 
 function toggleSound() {
@@ -57,122 +68,183 @@ function toggleSound() {
   }
 }
 
-function speakText(text) {
-  if (!soundOn || !ttsSupported || !text) return;
-
-  // If the browser hasn't been unlocked by a user gesture yet, queue it.
-  // It will be flushed the moment the user first clicks or presses a key.
-  if (!_audioUnlockedByGesture) {
-    _pendingSpeechQueue = [text]; // only keep the latest
-    console.info('[MockMode] TTS queued — waiting for user gesture to unlock audio.');
+function speakText(text, onDone) {
+  if (!soundOn || !ttsSupported || !text) {
+    // Even if TTS is off/unsupported, fire the callback so the UI unlocks
+    if (typeof onDone === 'function') onDone();
     return;
   }
 
-  _speakNow(text);
+  // FIX #1 (delay on first question): If the gesture hasn't fired yet,
+  // queue the speech — but also attempt to unlock immediately so the
+  // very first question doesn't sit silently waiting.
+  if (!_audioUnlockedByGesture) {
+    _pendingSpeechQueue = [{ text, onDone }]; // keep only latest
+    unlockSpeech();
+    // Minimal delay (100ms) since unlockSpeech() sets flag immediately
+    setTimeout(() => {
+      _audioUnlockedByGesture = true;
+      _flushSpeechQueue();
+    }, 100);
+    console.info('[MockMode] TTS: queued — will flush in 100ms.');
+    return;
+  }
+
+  _speakNow(text, onDone);
 }
 
-function _speakNow(text) {
-  if (!soundOn || !ttsSupported || !text) return;
-
-  if (ttsRetryCount >= TTS_MAX_RETRIES) {
-    console.warn('[MockMode] TTS hard-stopped. Toggle sound off/on to reset.');
+// FIX #1 & #2: _speakNow is called immediately after streaming finishes.
+// Key fixes here:
+//   - window._currentUtterance keeps a hard reference so the browser's GC
+//     can't collect the utterance mid-speech (silent-stop bug).
+//   - onDone is set to null after first call to prevent any double-fire.
+//   - Safety timeout is based on word count so it doesn't fire prematurely
+//     on short texts or too late on long ones.
+function _speakNow(text, onDone) {
+  if (!soundOn || !ttsSupported || !text) {
+    if (typeof onDone === 'function') onDone();
     return;
   }
 
-  // ── Wait for voices to load before speaking ──
+  if (ttsRetryCount >= TTS_MAX_RETRIES) {
+    console.warn('[MockMode] TTS hard-stopped after max retries.');
+    if (typeof onDone === 'function') onDone();
+    return;
+  }
+
   const trySpeak = () => {
-    const voices = window.speechSynthesis.getVoices();
+    // FIX: Use cached voices if available (loaded during DOMContentLoaded)
+    if (!cachedVoices) {
+      cachedVoices = window.speechSynthesis.getVoices();
+    }
     
-    if (voices.length === 0) {
-      // Voices not ready — use separate counter so error quota isn't burned
-      if (voiceLoadRetries < 5) {
-        voiceLoadRetries++;
-        setTimeout(trySpeak, 150);
-        return;
-      }
-      console.warn('[MockMode] TTS: No voices available after waiting.');
+    // If still no voices, retry only ONCE more (most browsers have them by now)
+    if (cachedVoices.length === 0) {
+      // Single attempt: voices will have loaded by the time first question plays
+      setTimeout(() => {
+        cachedVoices = window.speechSynthesis.getVoices();
+        if (cachedVoices.length > 0) {
+          trySpeak(); // Retry once with fresh voices
+        } else {
+          console.warn('[MockMode] No TTS voices available.');
+          if (typeof onDone === 'function') onDone();
+        }
+      }, 100);
       return;
     }
-    voiceLoadRetries = 0; // reset once voices are found
 
-    // ✅ Voices ready — proceed with speech
-    const preferredVoice = voices.find(v => 
-      v.lang.startsWith('en-') && (v.name.includes('Google') || v.name.includes('Natural'))
-    ) || voices[0];
-
+    // Cancel any ongoing speech before starting the new one
     window.speechSynthesis.cancel();
+
     const utter = new SpeechSynthesisUtterance(text);
-    utter.rate   = 0.95;
-    utter.pitch  = 1.05;
+
+    // FIX: Keep a hard window-level reference so the GC can't collect it
+    window._currentUtterance = utter;
+
+    utter.rate  = 1.0;   // FIX: Normal speed (0.95 was too slow)
+    utter.pitch = 1.05;
     utter.volume = 0.9;
+
+    const preferredVoice = cachedVoices.find(
+      v => v.lang.startsWith('en-') && (v.name.includes('Google') || v.name.includes('Natural'))
+    ) || cachedVoices.find(v => v.lang.startsWith('en-')) || cachedVoices[0];
     if (preferredVoice) utter.voice = preferredVoice;
-    
+
+    // FIX: Calculate a realistic timeout — not too short, not too long.
+    // Now that voices are cached and speak() is fast: 350 ms per word + 2s buffer.
+    const wordCount = text.trim().split(/\s+/).length;
+    const estimatedDuration = Math.max(5000, wordCount * 350 + 2000);
+
+    const safetyTimeout = setTimeout(() => {
+      console.warn('[MockMode] TTS safety timeout fired — forcing UI unlock.');
+      // Call onend logic manually
+      if (window._currentUtterance === utter) window._currentUtterance = null;
+      const skipBtn = document.getElementById('skip-voice-btn');
+      if (skipBtn) skipBtn.classList.add('hidden');
+      if (typeof onDone === 'function') {
+        const cb = onDone;
+        onDone = null;
+        cb();
+      }
+    }, estimatedDuration);
+
     utter.onstart = () => {
-      currentUtterance = utter;
-      ttsRetryCount = 0; // reset on successful start
+      ttsRetryCount = 0;
+      voiceLoadRetries = 0;
     };
+
     utter.onend = () => {
-      if (currentUtterance === utter) currentUtterance = null;
-    };
-    utter.onerror = (event) => {
-      console.warn('[MockMode] TTS error:', event.error);
-      if (currentUtterance === utter) currentUtterance = null;
-      ttsRetryCount++;
-      if (ttsRetryCount >= TTS_MAX_RETRIES) {
-        if (typeof showToast === 'function')
-          showToast('Voice output failed. Toggle sound to retry.', 'warning');
+      clearTimeout(safetyTimeout);
+      if (window._currentUtterance === utter) window._currentUtterance = null;
+
+      // Hide skip voice button
+      const skipBtn = document.getElementById('skip-voice-btn');
+      if (skipBtn) skipBtn.classList.add('hidden');
+
+      // FIX: null-guard prevents double-fire from onend + safety timeout race
+      if (typeof onDone === 'function') {
+        const cb = onDone;
+        onDone = null;
+        cb();
       }
     };
-    
-    currentUtterance = utter;
+
+    utter.onerror = (event) => {
+      clearTimeout(safetyTimeout);
+      // 'interrupted' just means speechSynthesis.cancel() was called (e.g. skip).
+      // Don't retry in that case — the user deliberately skipped.
+      if (event.error === 'interrupted') {
+        if (window._currentUtterance === utter) window._currentUtterance = null;
+        // onDone is intentionally NOT called here — the skip-voice button handler
+        // calls enableAnsweringPhase() directly via _safeEnableAnsweringPhase().
+        return;
+      }
+      console.warn('[MockMode] TTS error:', event.error);
+      ttsRetryCount++;
+      // Fallback to onend logic so the UI always unlocks
+      utter.onend();
+    };
+
     window.speechSynthesis.speak(utter);
   };
 
-  trySpeak(); // Start the attempt
-} // end _speakNow
-
+  trySpeak();
+}
 // ────────────────────────────────────────────────────────────────────────────
-// STT — Speech-to-Text (mic → answer input)
+// STT — Speech-to-Text (REPLACED SECTION)
 // ─────────────────────────────────────────────────────────────────────────────
-const sttSupported =
-  typeof window !== 'undefined' &&
-  ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+const sttSupported = typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 const STT_MAX_RETRIES = 3;
 let micRetryCount  = 0;
 let micHardStopped = false;
 let micActive      = false;
 let recognition    = null;
-let retryTimeout   = null; // NEW: Tracks pending retry to prevent stacking
+let retryTimeout   = null;
 
-// Called by asset_interview.js when a new question is displayed.
-// Resets per-question state so the mic button is ready — does NOT auto-start.
 function startMicCapture() {
-  if (micHardStopped) return;
-  
-  // Clear any pending retries from previous questions/errors
-  if (retryTimeout) {
-    clearTimeout(retryTimeout);
-    retryTimeout = null;
-  }
-  
-  // Only reset counter when explicitly starting a fresh question
+  // Called by enableAnsweringPhase() to prepare mic (but don't auto-start —
+  // leave that to the user pressing the mic button to avoid permission errors
+  // on page load and the "network" error from starting before user interaction)
+  if (retryTimeout) { clearTimeout(retryTimeout); retryTimeout = null; }
   micRetryCount = 0;
+  // FIX: Reset micHardStopped so the mic button works again on the next question
+  // (stopMicCapture sets this to true to break the auto-restart loop).
+  micHardStopped = false;
+  micActive = false;
+  // Note: we do NOT auto-call startRecognition() here — user must press mic btn.
 }
 
-// Called by asset_interview.js on submit and skip.
 function stopMicCapture() {
-  // Kill any pending retry timeouts immediately
-  if (retryTimeout) {
-    clearTimeout(retryTimeout);
-    retryTimeout = null;
-  }
-  
-  if (recognition && micActive) {
+  if (retryTimeout) { clearTimeout(retryTimeout); retryTimeout = null; }
+  // FIX: Clear micActive BEFORE stopping recognition so the onend handler
+  // doesn't see micActive=true and auto-restart the mic.
+  micHardStopped = true;
+  micActive = false;
+  if (recognition) {
+    recognition.onend = null; // Belt-and-suspenders: also null the handler
     try { recognition.stop(); } catch (_) {}
   }
-  
   setMicUI(false);
-  // Reset retry counter when user explicitly stops/submits
   micRetryCount = 0;
 }
 
@@ -191,151 +263,89 @@ function setMicUI(active) {
 }
 
 function toggleMic() {
-if (!sttSupported) {
-  if (typeof showToast === 'function')
-    showToast('Speech recognition is not available in this browser. Try Chrome or Edge.', 'warning');
+  if (!sttSupported) {
+    if (typeof showToast === 'function') showToast('Speech recognition not supported.', 'warning');
     return;
   }
-
-  if (micActive) {
-    stopMicCapture();
-  if (typeof showToast === 'function')
-    showToast('Microphone disabled', 'info');
-    return;
-  }
-
-  // User clicked again after a hard stop — give them a fresh attempt
-  if (micHardStopped) {
-    micHardStopped = false;
-    micRetryCount  = 0;
-  }
-
+  if (micActive) { stopMicCapture(); return; }
+  micHardStopped = false;
+  micRetryCount = 0;
   startRecognition();
 }
 
 function startRecognition() {
-  // Add this debug check
-  if (!window.isSecureContext) {
-    showToast('Speech recognition requires HTTPS or localhost. Use http://localhost instead.', 'error');
-    console.error('[MockMode] Not a secure context! SpeechRecognition will fail.');
-    micHardStopped = true;
-    return;
-  }
-
-  // ── Hard-stop gate — nothing gets past this after 3 real errors ──────────
-  if (micHardStopped || !sttSupported) return;
-  if (micRetryCount >= STT_MAX_RETRIES) {
-    micHardStopped = true;
-    console.warn(`[MockMode] Mic hard-stopped after ${STT_MAX_RETRIES} errors. Click mic to retry.`);
-    
-    if (typeof showToast === 'function')
-      showToast('Mic failed repeatedly. Click the mic button to try again.', 'error');
-      setMicUI(false);
-      return;
-  }
-
+  if (!window.isSecureContext || micHardStopped || !sttSupported) return;
+  
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SR();
-  recognition.continuous     = true;   // keep listening until user stops
+  recognition.continuous = true;
   recognition.interimResults = true;
-  recognition.lang           = 'en-US';
+  recognition.lang = 'en-US';
+  recognition.maxAlternatives = 1;  // FIX: Reduce alternatives for faster processing
+  
   const input = document.getElementById('answer-input');
-  let finalTranscript = ''; // accumulate finals across multiple result events
+  let finalTranscript = (input && input.value.trim()) ? input.value.trim() + ' ' : '';
+  let lastDisplayValue = '';  // Cache to avoid excessive DOM updates
 
   recognition.onstart = () => {
     setMicUI(true);
-    finalTranscript = (input && input.value.trim()) ? input.value.trim() + ' ' : '';
-    if (typeof showToast === 'function')
-      showToast('Microphone enabled — speaking...', 'success');
+    console.info('[MockMode] STT: microphone listening...');
   };
-
+  
   recognition.onresult = (event) => {
     let interim = '';
-    // Walk only new results from resultIndex onward
     for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
       if (event.results[i].isFinal) {
-        finalTranscript += event.results[i][0].transcript;
+        finalTranscript += transcript + ' ';
+        console.info('[MockMode] STT final:', transcript);
       } else {
-        interim += event.results[i][0].transcript;
+        interim += transcript;
       }
     }
-    if (input) input.value = finalTranscript + interim;
+    
+    // FIX: Only update DOM if the display value actually changed (reduce reflows)
+    const displayValue = finalTranscript + interim;
+    if (input && displayValue !== lastDisplayValue) {
+      input.value = displayValue;
+      lastDisplayValue = displayValue;
+      // Dispatch input event so form listeners update
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
   };
 
-    recognition.onend = () => {
+  recognition.onend = () => {
+    if (!micHardStopped) {
+      console.info('[MockMode] STT ended; restarting immediately.');
+      startRecognition();
+      return;
+    }
     setMicUI(false);
   };
 
   recognition.onerror = (event) => {
-    console.warn('[MockMode] Mic error:', event.error);
+    if (event.error === 'no-speech') return; // Ignore silence timeouts, let onend restart it
+    if (event.error === 'aborted') return;
+    
     setMicUI(false);
-
-    if (event.error === 'aborted' || event.error === 'no-speech') return;
-
-    // Network errors are transient (service blip, ad-blocker, proxy).
-    // Give user a helpful message but retry with backoff instead of quitting fast.
-    if (event.error === 'network') {
-      if (/Brave/i.test(navigator.userAgent)) {
-        if (typeof showToast === 'function')
-          showToast('Brave ad-shield may be blocking speech recognition. Disable shields for this page.', 'error');
-      } else {
-        if (typeof showToast === 'function')
-          showToast('Speech service unreachable (network). Retrying…', 'warning');
-      }
-      micRetryCount++;
-      if (micRetryCount >= STT_MAX_RETRIES) {
-        micHardStopped = true;
-        if (typeof showToast === 'function')
-          showToast('Mic disabled after repeated network failures. Click mic to try again.', 'error');
-        return;
-      }
-      // Exponential backoff: 1s, 2s, 4s
-      const delay = Math.pow(2, micRetryCount - 1) * 1000;
-      console.info(`[MockMode] Mic network retry ${micRetryCount}/${STT_MAX_RETRIES} in ${delay}ms…`);
-      retryTimeout = setTimeout(startRecognition, delay);
-      return;
-    }
-
+    console.warn('[MockMode] Mic error:', event.error);
+    
     if (event.error === 'not-allowed') {
-      if (typeof showToast === 'function')
-        showToast('Microphone access denied. Enable permissions in browser settings.', 'error');
       micHardStopped = true;
+      if (typeof showToast === 'function') showToast('Mic access denied.', 'error');
       return;
     }
-
-    if (typeof showToast === 'function')
-      showToast(`Mic error: ${event.error}`, 'error');
 
     micRetryCount++;
     if (micRetryCount >= STT_MAX_RETRIES) {
       micHardStopped = true;
-      if (typeof showToast === 'function')
-        showToast('Mic disabled after 3 failures. Click mic button to retry.', 'error');
-      return;
+      if (typeof showToast === 'function') showToast('Mic disabled after failures.', 'error');
+    } else {
+      retryTimeout = setTimeout(startRecognition, 150);
     }
-
-    console.info(`[MockMode] Mic retry ${micRetryCount}/${STT_MAX_RETRIES}...`);
-    retryTimeout = setTimeout(startRecognition, 800);
   };
 
-  try {
-    recognition.start();
-  } catch (err) {
-    console.warn('[MockMode] Mic start threw:', err);
-    micRetryCount++;
-    setMicUI(false);
-
-    if (typeof showToast === 'function')
-      showToast('Failed to start microphone. Check permissions.', 'error');
-
-    if (micRetryCount >= STT_MAX_RETRIES) {
-      micHardStopped = true;
-      if (typeof showToast === 'function')
-        showToast('Mic disabled. Click to retry.', 'error');
-    } else {
-      setTimeout(startRecognition, 800);
-    }
-  }
+  try { recognition.start(); } catch (err) { console.warn(err); }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -353,7 +363,8 @@ if (typeof window !== 'undefined') {
         const v = window.speechSynthesis.getVoices();
         if (v.length > 0 && !voicesLoaded) {
           voicesLoaded = true;
-          console.info(`[MockMode] ✅ TTS voices loaded: ${v.length}`);
+          cachedVoices = v;  // FIX: Populate the cache so TTS is instantly ready
+          console.info(`[MockMode] ✅ TTS voices loaded and cached: ${v.length}`);
           // Optional: log first few voices for debugging
           // v.slice(0, 3).forEach(v => console.log(`  - ${v.name} (${v.lang})`));
           return true;

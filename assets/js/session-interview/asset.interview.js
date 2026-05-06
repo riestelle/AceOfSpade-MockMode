@@ -13,33 +13,33 @@
 
 // ── Session state ──────────────────────────────────────────────────────────
 
-let resumeText      = null;
-let personality     = null;
-let role            = null;
-let questions       = [];
-let scores          = [];
-let currentIndex    = 0;
-let stressLevel     = 30;     // SPEC: starts at 30, not 0
+let resumeText = null;
+let personality = null;
+let role = null;
+let questions = [];
+let scores = [];
+let currentIndex = 0;
+let stressLevel = 30;     // SPEC: starts at 30, not 0
 let peakStressLevel = 30;
-let moodScore       = 0;      // hidden: -100 to +100, affects AI tone only
-let comboCount      = 0;      // live combo counter, resets on score < 70
-let isProcessing    = false;
-let skipUsed        = false;
-let isBossQuestion  = false;  // true when currentIndex === 4 (Q5)
+let moodScore = 0;      // hidden: -100 to +100, affects AI tone only
+let comboCount = 0;      // live combo counter, resets on score < 70
+let isProcessing = false;
+let skipUsed = false;
+let isBossQuestion = false;  // true when currentIndex === 4 (Q5)
 let lastAnswerContext = null; // { answer, score } from previous question — used to connect questions
-let verdictAttempts   = 0;    // counts finishInterview retries — hard-stops at 3
+let verdictAttempts = 0;    // counts finishInterview retries — hard-stops at 3
 
 // ── Timer state ────────────────────────────────────────────────────────────
 // Logic is wired — UI hookup (display element) is frontend's job.
-let timerInterval   = null;
-let timeRemaining   = 45;
+let timerInterval = null;
+let timeRemaining = 45;
 const TIMER_DURATION = 45;
 
 // ── Personality score multipliers (SPEC) ──────────────────────────────────
 const PERSONALITY_MULTIPLIER = {
-  corporate:  0.9,   // strict  → penalises score
-  startup:    1.1,   // chill   → boosts score
-  technical:  1.0,   // neutral
+  corporate: 0.9,   // strict  → penalises score
+  startup: 1.1,   // chill   → boosts score
+  technical: 1.0,   // neutral
 };
 
 // ── Boss question multiplier (SPEC) ───────────────────────────────────────
@@ -66,23 +66,209 @@ const INTERVIEWER_PERSONAS = {
   },
 };
 
+// ── Interviewer Lottie animation map ──────────────────────────────────────
+// Maps each personality to its Lottie JSON path and eye definitions.
+// Paths are relative to the project root — adjust if your asset folder differs.
+const INTERVIEWER_ANIMATIONS = {
+  startup: {
+    // Kai — Co-founder & Culture Lead
+    path: 'assets/animations/kai.json',
+    eyes: [
+      { left: '28%', top: '30%', w: '14%', h: '8%', color: '#c8b89a' },
+      { left: '57%', top: '30%', w: '14%', h: '8%', color: '#c8b89a' },
+    ],
+  },
+  technical: {
+    // Dr. Matsuda — Principal Engineer
+    path: 'assets/animations/matsuda.json',
+    eyes: [
+      { left: '27%', top: '28%', w: '14%', h: '8%', color: '#c8b89a' },
+      { left: '57%', top: '28%', w: '14%', h: '8%', color: '#c8b89a' },
+    ],
+  },
+  corporate: {
+    // Ms. Reyes — VP of Operations
+    path: 'assets/animations/reyes.json',
+    eyes: [
+      { left: '28%', top: '30%', w: '14%', h: '8%', color: '#c8b89a' },
+      { left: '57%', top: '30%', w: '14%', h: '8%', color: '#c8b89a' },
+    ],
+  },
+};
+
+// ── CharacterController ────────────────────────────────────────────────────
+// Manages the Lottie animation for the active interviewer character.
+// startTalking() → play animation
+// stopTalking()  → pause at frame 0 (idle)
+// destroy()      → cleanup
+
+class CharacterController {
+  constructor(containerId, animPath, eyeDefs = []) {
+    this.container   = document.getElementById(containerId);
+    this.animPath    = animPath;
+    this.eyeDefs     = eyeDefs;
+    this.anim        = null;
+    this.state       = 'stopped';
+    this._mouthTimer = null;
+    this._lottieWrap = null;
+  }
+
+  async init() {
+    if (!this.container) throw new Error('[MockMode Lottie] Container not found: ' + this.container);
+
+    this.container.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'width:100%;height:100%;position:relative;';
+    this.container.appendChild(wrap);
+    this._lottieWrap = wrap;
+
+    this.anim = lottie.loadAnimation({
+      container: wrap,
+      renderer:  'svg',
+      loop:      true,
+      autoplay:  false,
+      path:      this.animPath,
+    });
+
+    return new Promise(resolve => {
+      this.anim.addEventListener('DOMLoaded', () => {
+        const svgEl = this._lottieWrap?.querySelector('svg');
+        if (svgEl) {
+          const groups = svgEl.querySelectorAll('g');
+          
+          groups.forEach(g => {
+            const titleEl = g.querySelector(':scope > title');
+            if (titleEl) {
+              const layerName = titleEl.textContent.trim().toLowerCase();
+              
+              // DEBUG: Uncomment the line below to see all layer names in your console
+              console.log('Lottie Layer Found:', layerName);
+
+              // Improved matching: checks if the name INCLUDES these keywords
+              // Look for this block in CharacterController.init()[cite: 2]
+              if (
+                layerName.includes('group 7') || 
+                layerName.includes('background') || 
+                layerName.includes('bg') ||
+                layerName.includes('solid') ||
+                layerName.includes('layer') // Add more keywords if the box persists
+              ) {
+                g.style.display = 'none';
+              }
+            }
+          });
+        }
+
+        const skeleton = document.getElementById('lottie-interviewer-skeleton');
+        if (skeleton) skeleton.classList.add('hidden');
+        resolve();
+      });
+      
+      setTimeout(resolve, 3000);
+    });
+  }
+  // ── Idle: pause at frame 0
+  goIdle() {
+    this.state = 'idle';
+    if (this.anim) this.anim.goToAndStop(0, true);
+    this._stopMouthAnim();
+    if (this.container) {
+      this.container.classList.remove('is-talking');
+      this.container.classList.add('is-idle');
+    }
+  }
+
+  // ── Talking: play animation + mouth wobble
+  startTalking() {
+    if (this.state === 'talking') return;
+    this.state = 'talking';
+    if (this.anim) {
+      this.anim.setSpeed(1.0);
+      this.anim.play();
+    }
+    //this._startMouthAnim();
+    if (this.container) {
+      this.container.classList.remove('is-idle');
+      this.container.classList.add('is-talking');
+    }
+  }
+
+  stopTalking() {
+    if (this.state !== 'talking') return;
+    this._stopMouthAnim();
+    this.goIdle();
+  }
+
+  // ── Mouth animation — animates the 'mouth' layer rect in the Lottie SVG
+  _startMouthAnim() {
+    this._stopMouthAnim();
+    const svgEl = this._lottieWrap?.querySelector('svg');
+    if (!svgEl) return;
+
+    const mouthEl = this._findLayerEl(svgEl, 'mouth');
+    if (!mouthEl) return; // Graceful fallback — animation still plays
+
+    let t = 0;
+    const origH = parseFloat(
+      mouthEl.getAttribute('height') || mouthEl.style.height || 14
+    );
+
+    this._mouthTimer = setInterval(() => {
+      const newH = origH + Math.abs(Math.sin(t++ * 0.45)) * (origH * 0.8);
+      try {
+        mouthEl.setAttribute('height', newH);
+        mouthEl.setAttribute(
+          'y',
+          parseFloat(mouthEl.getAttribute('y') || 0) - (newH - origH) * 0.5
+        );
+      } catch (_) { /* SVG element may be mid-update */ }
+    }, 30);
+  }
+
+  _stopMouthAnim() {
+    clearInterval(this._mouthTimer);
+    this._mouthTimer = null;
+  }
+
+  // Traverse Lottie SVG <g> tree to find a group whose title matches layerName
+  _findLayerEl(svgEl, layerName) {
+    const groups = svgEl.querySelectorAll('g');
+    for (const g of groups) {
+      const title = g.querySelector(':scope > title');
+      if (title && title.textContent.toLowerCase().includes(layerName.toLowerCase())) {
+        return g.querySelector('rect, path, ellipse') || g;
+      }
+    }
+    return null;
+  }
+
+  destroy() {
+    this._stopMouthAnim();
+    if (this.anim) { this.anim.destroy(); this.anim = null; }
+    if (this.container) this.container.innerHTML = '';
+  }
+}
+
+// Module-level reference to the active controller — exposed for speakText bridge
+let _interviewerCtrl = null;
+
 // ── DOM references ─────────────────────────────────────────────────────────
 
-let dialogueBox     = null;
-let answerInput     = null;
-let submitBtn       = null;
-let skipBtn         = null;    // NEW
-let stressFill      = null;
-let stressLabel     = null;
-let reactionBox     = null;
-let qCurrentSpan    = null;    // FIX: was progressLabel (full element)
-let qTotalSpan      = null;
+let dialogueBox = null;
+let answerInput = null;
+let submitBtn = null;
+let skipBtn = null;    // NEW
+let stressFill = null;
+let stressLabel = null;
+let reactionBox = null;
+let qCurrentSpan = null;    // FIX: was progressLabel (full element)
+let qTotalSpan = null;
 
 // ── Toast notification system ──────────────────────────────────────────────
 
 function showToast(message, type = 'info') {
   const host = document.getElementById('mm-toast-host');
-  if (!host) { console.warn('[MockMode] Toast host not found'); return;}
+  if (!host) { console.warn('[MockMode] Toast host not found'); return; }
 
   const toast = document.createElement('div');
   toast.className = `mm-toast ${type}`;
@@ -133,19 +319,19 @@ window.showToast = showToast;
 // ── Init ───────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', async () => {
-  dialogueBox  = document.getElementById('dialogue-text');
-  answerInput  = document.getElementById('answer-input');
-  submitBtn    = document.getElementById('submit-answer-btn');
-  skipBtn      = document.getElementById('skip-btn');           // NEW
-  stressFill   = document.getElementById('stress-fill');
-  stressLabel  = document.getElementById('stress-label');
-  reactionBox  = document.getElementById('reaction-box');
+  dialogueBox = document.getElementById('dialogue-text');
+  answerInput = document.getElementById('answer-input');
+  submitBtn = document.getElementById('submit-answer-btn');
+  skipBtn = document.getElementById('skip-btn');           // NEW
+  stressFill = document.getElementById('stress-fill');
+  stressLabel = document.getElementById('stress-label');
+  reactionBox = document.getElementById('reaction-box');
   qCurrentSpan = document.getElementById('q-current');         // FIX
-  qTotalSpan   = document.getElementById('q-total');           // FIX
+  qTotalSpan = document.getElementById('q-total');           // FIX
 
-  resumeText  = getFromStorage('resume');
+  resumeText = getFromStorage('resume');
   personality = getFromStorage('personality');
-  role        = getFromStorage('role') ?? 'general';
+  role = getFromStorage('role') ?? 'general';
 
   if (!resumeText || !personality) {
     showToast('Session expired. Please start over.', 'warning');
@@ -153,18 +339,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // ── Set flavored interviewer name (NEW) ────────────────────────────────
+  // ── Set flavored interviewer name ──────────────────────────────────────
   const nameEl = document.getElementById('interviewer-name');
   if (nameEl) {
     const persona = INTERVIEWER_PERSONAS[personality];
     nameEl.textContent = persona ? `${persona.display}:` : `${formatPersonality(personality)}:`;
   }
 
+  // ── Boot the Lottie character animation ────────────────────────────────
+  // Resolves personality → animation JSON path, then loads CharacterController.
+  // The controller is stored at module scope (_interviewerCtrl) so speakText
+  // can call startTalking() / stopTalking() from session.realtime.tts.js.
+  (async () => {
+    const animDef = INTERVIEWER_ANIMATIONS[personality] ?? INTERVIEWER_ANIMATIONS['corporate'];
+    if (typeof lottie !== 'undefined') {
+      try {
+        _interviewerCtrl = new CharacterController('lottie-interviewer', animDef.path, animDef.eyes);
+        await _interviewerCtrl.init();
+        _interviewerCtrl.goIdle();
+        // Expose globally so session.realtime.tts.js can reach it
+        window._interviewerCtrl = _interviewerCtrl;
+      } catch (err) {
+        console.warn('[MockMode] Lottie init failed — running without character animation:', err);
+      }
+    } else {
+      console.warn('[MockMode] lottie-web not loaded — character animation skipped.');
+    }
+  })();
+
   // Load or generate questions
   const cached = getFromStorage('questions');
   if (Array.isArray(cached) && cached.length === 5) {
     questions = cached;
-    startInterview();
+    // FIX: Even for cached questions, wait for TTS voices before starting
+    // so the loading screen persists until everything is truly ready.
+    waitForVoicesThenStart();
   } else {
     await loadQuestions();
   }
@@ -185,6 +394,42 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
+// ── Voice readiness helper ─────────────────────────────────────────────────
+// Waits until the browser has loaded TTS voices (or times out after 3 s),
+// then hides the loader and kicks off the interview.
+// This ensures the loading screen stays up until everything is truly ready.
+
+function waitForVoicesThenStart() {
+  const ttsOk = typeof window !== 'undefined' && 'speechSynthesis' in window;
+  if (!ttsOk) {
+    // No TTS support — start immediately
+    hideLoader();
+    startInterview();
+    return;
+  }
+
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length > 0) {
+    // Voices already available
+    hideLoader();
+    startInterview();
+    return;
+  }
+
+  // Voices not yet loaded — wait for them (max 3 s)
+  let resolved = false;
+  const resolve = () => {
+    if (resolved) return;
+    resolved = true;
+    clearTimeout(timeout);
+    hideLoader();
+    startInterview();
+  };
+
+  const timeout = setTimeout(resolve, 3000); // Give up after 3 s and start anyway
+  window.speechSynthesis.addEventListener('voiceschanged', resolve, { once: true });
+}
+
 // ── Question generation ────────────────────────────────────────────────────
 
 let loadQuestionsAttempts = 0;
@@ -200,15 +445,27 @@ async function loadQuestions() {
 
   showLoader('Preparing your interview questions...');
   try {
-    const generated = await generateQuestions(resumeText, personality, role);
-    if (!Array.isArray(generated) || generated.length === 0) {
-      throw new Error('No questions returned from AI.');
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("AI timeout")), 15000)
+    );
+
+    const generated = await Promise.race([
+      generateQuestions(resumeText, personality, role),
+      timeout
+    ]);
+    if (!generated || !Array.isArray(generated) || generated.length !== 5) {
+      console.error("Invalid questions:", generated);
+      throw new Error('Invalid questions returned from AI.');
     }
     loadQuestionsAttempts = 0; // reset on success
     questions = generated;
     saveToStorage('questions', questions);
-    hideLoader();
-    startInterview();
+
+    // FIX: Don't hide the loader until TTS voices are actually ready.
+    // This prevents the "Preparing your interview..." screen from disappearing
+    // while the voice list is still loading, which caused the first question
+    // to play silently (or not at all) while the UI was already live.
+    waitForVoicesThenStart();
   } catch (err) {
     hideLoader();
     loadQuestionsAttempts++;
@@ -228,6 +485,14 @@ async function loadQuestions() {
 // ── Interview flow ─────────────────────────────────────────────────────────
 
 function startInterview() {
+  // FIX #4: Ensure any loader/thinking state is cleared before first question
+  if (typeof hideLoader === 'function') hideLoader();
+  if (typeof hideThinkingIndicator === 'function') hideThinkingIndicator();
+
+  if (typeof unlockSpeech === 'function') {
+    unlockSpeech();
+  }
+
   updateProgressLabel();
   updateStressMeter(30);
   askCurrentQuestion();
@@ -237,14 +502,30 @@ function startInterview() {
 // startTimer() / stopTimer() are called around each question.
 // Frontend dev wires updateTimerDisplay() to a DOM element.
 
+function stopTimer() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+}
+
 function startTimer() {
-  stopTimer();
-  timeRemaining = TIMER_DURATION;
-  if (typeof updateTimerDisplay === 'function') updateTimerDisplay(timeRemaining);
+  stopTimer(); // Always clear previous intervals first
+  timeRemaining = TIMER_DURATION; // Reset to 45[cite: 2]
+
+  // Force immediate UI update to 00:45
+  if (typeof updateTimerDisplay === 'function') {
+    updateTimerDisplay(timeRemaining);
+  }
+
+  console.log("Timer started at:", timeRemaining);
 
   timerInterval = setInterval(() => {
     timeRemaining--;
-    if (typeof updateTimerDisplay === 'function') updateTimerDisplay(timeRemaining);
+
+    if (typeof updateTimerDisplay === 'function') {
+      updateTimerDisplay(timeRemaining);
+    }
 
     if (timeRemaining <= 0) {
       stopTimer();
@@ -253,55 +534,103 @@ function startTimer() {
   }, 1000);
 }
 
-function stopTimer() {
-  if (timerInterval) {
-    clearInterval(timerInterval);
-    timerInterval = null;
-  }
-}
 
-// Called when timer hits 0: auto-submits a blank answer with stress penalty
+
 function handleTimerTimeout() {
   if (isProcessing) return;
+
+  // Apply penalty
   stressLevel = Math.min(100, stressLevel + 15);
   if (stressLevel > peakStressLevel) peakStressLevel = stressLevel;
   updateStressMeter(stressLevel);
-  checkLoseCondition();
 
-  // Force-submit a weak answer so the game loop continues
+  if (checkLoseCondition()) return;
+
+  // Reset display immediately so it doesn't stay at 0:00
+  timeRemaining = TIMER_DURATION;
+  if (typeof updateTimerDisplay === 'function') updateTimerDisplay(timeRemaining);
+
   if (answerInput) answerInput.value = '[No answer — time ran out]';
   submitAnswer();
 }
 
-async function askCurrentQuestion() {
-  if (!dialogueBox) return;
-  clearReactionBox();
-  isBossQuestion = (currentIndex === 4);  // flag Q5 as boss question
-  
+
+
+// Helper to enable the UI once audio is done or skipped.
+// IMPORTANT: This must only be called once per question — callers use
+// _safeEnableAnsweringPhase() inside askCurrentQuestion() to enforce that.
+function enableAnsweringPhase() {
+  // FIX #5: Hide the skip-voice button — audio is now done or skipped
+  const skipVoiceBtn = document.getElementById('skip-voice-btn');
+  if (skipVoiceBtn) skipVoiceBtn.classList.add('hidden');
+
+  // Unlock answer input
   if (answerInput) {
-    answerInput.value = '';
     answerInput.disabled = false;
+    answerInput.placeholder = "Type your answer here...";
     answerInput.focus();
   }
-  
-  // ── ADD THIS LINE ──
-  if (typeof startMicCapture === 'function') startMicCapture();
-  // ───────────────────
-  
   if (submitBtn) submitBtn.disabled = false;
-  if (typeof hideThinkingIndicator === 'function') hideThinkingIndicator();
-  
-  const question = questions[currentIndex];
 
-  // Build a context-aware prompt so the interviewer reacts to the previous answer
-  let questionPrompt;
-  if (lastAnswerContext && currentIndex > 0) {
-    const { answer, score } = lastAnswerContext;
-    const quality = score >= 70 ? 'strong' : score >= 50 ? 'mediocre' : 'weak or nonsensical';
-    questionPrompt = `The candidate just gave a ${quality} answer to the previous question. Their answer was: "${answer}". Briefly acknowledge it in one short clause (e.g. react naturally in character), then transition into asking this next question: "${question}". Keep the whole thing to 1-2 sentences.`;
-  } else {
-    questionPrompt = `Ask this interview question naturally, in character: "${question}"`;
+  // Prepare mic (user must still press the mic button to start recording)
+  if (typeof startMicCapture === 'function') {
+    try { startMicCapture(); } catch (e) { console.error('[MockMode] startMicCapture error:', e); }
   }
+
+  // FIX #3: Start timer — stopTimer() is called first inside startTimer()
+  // so any stale interval from a previous question is always cleared.
+  startTimer();
+}
+
+async function askCurrentQuestion() {
+  if (!dialogueBox) return;
+
+  clearReactionBox();
+
+  // Hide the thinking indicator now that we're starting a new question
+  if (typeof hideThinkingIndicator === 'function') hideThinkingIndicator();
+
+  if (answerInput) {
+    answerInput.value = '';
+    answerInput.disabled = true;
+    answerInput.placeholder = "Interviewer is speaking...";
+  }
+  if (submitBtn) submitBtn.disabled = true;
+
+  const question = questions[currentIndex];
+  const skipVoiceBtn = document.getElementById('skip-voice-btn');
+
+  // Ensure skip-voice is hidden at the start of each question
+  if (skipVoiceBtn) skipVoiceBtn.classList.add('hidden');
+
+  let questionPrompt = currentIndex > 0 && lastAnswerContext
+    ? `React to: "${lastAnswerContext.answer}". Then ask: "${question}"`
+    : `Ask: "${question}"`;
+
+  // Guard: only the first call to enableAnsweringPhase per question does anything.
+  // This prevents competing timeouts (stream-timeout, TTS-fallback, TTS-onDone)
+  // from double-firing the timer / double-disabling the input.
+  let _answeringPhaseStarted = false;
+  function _safeEnableAnsweringPhase() {
+    if (_answeringPhaseStarted) return;
+    _answeringPhaseStarted = true;
+    enableAnsweringPhase();
+  }
+
+  // FIX: Expose _safeEnableAnsweringPhase so the skip-voice button (wired in
+  // session.realtime.tts.js) can fire through the guard without double-enabling.
+  window._skipVoiceBridge = _safeEnableAnsweringPhase;
+
+  let streamFinished = false;
+
+  // Hard fallback: if the stream hangs for 10 s, show question text and unblock UI
+  const streamTimeout = setTimeout(() => {
+    if (!streamFinished) {
+      console.warn('[MockMode] Stream timeout → forcing UI unlock');
+      dialogueBox.textContent = question;
+      _safeEnableAnsweringPhase();
+    }
+  }, 10000);
 
   try {
     await streamInterviewerMessage(
@@ -309,20 +638,96 @@ async function askCurrentQuestion() {
       personality,
       dialogueBox,
       (fullText) => {
+        // Stream is complete — clear the stream-hang timeout
+        streamFinished = true;
+        clearTimeout(streamTimeout);
+
+        // FIX #5: Show the skip-voice button NOW, before TTS starts,
+        // so the user can skip even if TTS takes a moment to initialise.
+        if (skipVoiceBtn) skipVoiceBtn.classList.remove('hidden');
+
         if (typeof speakText === 'function') {
-          speakText(fullText || question);
+          // FIX #8: TTS fallback — if TTS never calls back (browser bug),
+          // unblock the UI after an estimated safe window.
+          const textWordCount = (fullText || question).split(' ').length;
+          const estimatedMs = Math.max(8000, textWordCount * 600 + 3000);
+
+          const ttsFallback = setTimeout(() => {
+            console.warn('[MockMode] TTS fallback timeout → forcing UI unlock');
+            // Stop the animation if TTS falls back silently
+            if (window._interviewerCtrl) window._interviewerCtrl.stopTalking();
+            _safeEnableAnsweringPhase();
+          }, estimatedMs);
+
+          // Start the character animation before TTS speaks
+          if (window._interviewerCtrl) window._interviewerCtrl.startTalking();
+
+          // FIX #1 & #2: speakText is called immediately after stream ends.
+          // The onDone callback is the ONLY normal path to enableAnsweringPhase.
+          speakText(fullText || question, () => {
+            clearTimeout(ttsFallback);
+            // Stop animation when the interviewer finishes speaking
+            if (window._interviewerCtrl) window._interviewerCtrl.stopTalking();
+            _safeEnableAnsweringPhase();
+          });
+
+        } else {
+          // TTS not available — unlock immediately
+          _safeEnableAnsweringPhase();
         }
-        if (answerInput) answerInput.disabled = false;
-        startTimer();  // start countdown after question is spoken
       }
     );
+
   } catch (err) {
-    console.warn('[MockMode] Stream failed, using direct text:', err);
-    if (dialogueBox) dialogueBox.textContent = question;
-    if (typeof speakText === 'function') speakText(question);
-    startTimer();
+    console.error('[MockMode] streamInterviewerMessage error:', err);
+    clearTimeout(streamTimeout);
+    dialogueBox.textContent = question;
+    _safeEnableAnsweringPhase();
   }
 }
+
+// Global voice stopper (called by skip button and when submitting)
+function stopVoiceAudio() {
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+}
+
+// Wire the Skip Voice button and spacebar shortcut — deferred until DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  const skipVoiceBtn = document.getElementById('skip-voice-btn');
+  if (skipVoiceBtn) {
+    skipVoiceBtn.addEventListener('click', (e) => {
+      if (typeof spawnBurst === 'function') spawnBurst(e);
+      // FIX: Cancel TTS — the 'interrupted' onerror handler intentionally
+      // does NOT call onDone (to avoid double-firing). We call the safe
+      // bridge instead so the guard in askCurrentQuestion() is respected.
+      window.speechSynthesis && window.speechSynthesis.cancel();
+      // Stop character animation immediately on voice skip
+      if (window._interviewerCtrl) window._interviewerCtrl.stopTalking();
+      if (typeof window._skipVoiceBridge === 'function') {
+        window._skipVoiceBridge();
+      } else {
+        // Fallback if bridge not yet set (shouldn't happen, but safe)
+        enableAnsweringPhase();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    const btn = document.getElementById('skip-voice-btn');
+    if (e.code === 'Space' && btn && !btn.classList.contains('hidden')) {
+      e.preventDefault();
+      window.speechSynthesis && window.speechSynthesis.cancel();
+      if (window._interviewerCtrl) window._interviewerCtrl.stopTalking();
+      if (typeof window._skipVoiceBridge === 'function') {
+        window._skipVoiceBridge();
+      } else {
+        enableAnsweringPhase();
+      }
+    }
+  });
+});
 
 // ── Answer submission ──────────────────────────────────────────────────────
 
@@ -343,7 +748,7 @@ async function submitAnswer() {
   isProcessing = true;
   stopTimer();  // stop countdown the moment they submit
   if (submitBtn) submitBtn.disabled = true;
-  if (skipBtn)   skipBtn.disabled   = true;
+  if (skipBtn) skipBtn.disabled = true;
   if (answerInput) answerInput.disabled = true;
 
   const question = questions[currentIndex];
@@ -543,7 +948,7 @@ function updateProgressLabel() {
   // FIX: the HTML has two <span> elements (q-current and q-total),
   // not a single element whose textContent is replaced.
   if (qCurrentSpan) qCurrentSpan.textContent = currentIndex + 1;
-  if (qTotalSpan)   qTotalSpan.textContent   = questions.length || 5;
+  if (qTotalSpan) qTotalSpan.textContent = questions.length || 5;
 }
 
 // ── Lose condition ─────────────────────────────────────────────────────────
@@ -642,3 +1047,28 @@ async function finishInterview() {
     }
   }
 }
+// ── Timer UI Bridge ──
+// asset.interview.js calls this every second[cite: 1]
+function updateTimerDisplay(seconds) {
+  const display = document.getElementById('timer-display');
+  const container = document.getElementById('timer-container');
+  if (!display || !container) return;
+
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  display.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+  // Visual warning when time is low (under 10s)
+  if (seconds <= 10) {
+    display.classList.replace('text-tertiary', 'text-error');
+    container.classList.add('animate-pulse-slow'); // Uses your CSS pulse[cite: 5]
+    container.style.borderColor = '#ff4444';
+  } else {
+    display.classList.replace('text-error', 'text-tertiary');
+    container.classList.remove('animate-pulse-slow');
+    container.style.borderColor = '';
+  }
+}
+
+// Ensure the main logic file can find this function[cite: 1]
+window.updateTimerDisplay = updateTimerDisplay;

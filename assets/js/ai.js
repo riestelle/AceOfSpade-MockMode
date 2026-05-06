@@ -183,11 +183,12 @@ async function evaluateAnswer(question, answer, personality, role = 'general') {
 // Tracks the last opening word per personality so the AI knows what to avoid
 const _lastOpener = {};
 
+// FIND THIS FUNCTION in ai.js AND REPLACE IT:
 async function streamInterviewerMessage(prompt, personality, targetElement, onDone) {
   const personalityPrompts = {
-    corporate: 'You are Ms. Reyes, a strict formal corporate hiring manager. You are direct, composed, and expect precision.',
-    startup: 'You are Kai, a chill startup co-founder who values passion and authenticity. You are conversational but thoughtful.',
-    technical: 'You are Dr. Matsuda, a tough principal engineer who values depth and specificity. You are measured and skeptical.'
+    corporate: 'You are Ms. Reyes, a strict formal corporate hiring manager. You are direct and expect precision.',
+    startup: 'You are Kai, a chill startup co-founder who values passion. You are conversational but thoughtful.',
+    technical: 'You are Dr. Matsuda, a tough principal engineer. You are measured and skeptical.'
   };
 
   const avoidHint = _lastOpener[personality]
@@ -197,7 +198,10 @@ async function streamInterviewerMessage(prompt, personality, targetElement, onDo
   const messages = [
     {
       role: 'system',
-      content: `${personalityPrompts[personality]} Respond in character in 1-2 sentences only.${avoidHint}`
+      content: `${personalityPrompts[personality]} 
+      IMPORTANT: You are the interviewer. Your goal is to react briefly to the candidate and then ASK the assigned question. 
+      Do NOT answer for them. Your response must end with a question mark.
+      Respond in 1-2 sentences only.${avoidHint}`
     },
     {
       role: 'user',
@@ -206,8 +210,6 @@ async function streamInterviewerMessage(prompt, personality, targetElement, onDo
   ];
 
   if (targetElement) targetElement.textContent = '';
-
-  // Accumulate full streamed text so onDone receives the complete string
   let fullText = '';
 
   await askAIStream(
@@ -217,11 +219,9 @@ async function streamInterviewerMessage(prompt, personality, targetElement, onDo
       if (targetElement) targetElement.textContent += token;
     },
     () => {
-      // Track the opening word so next question avoids repeating it
       const firstWord = fullText.trim().split(/\s+/)[0].replace(/[^a-zA-Z]/g, '');
       if (firstWord) _lastOpener[personality] = firstWord;
-      // Pass the fully-accumulated text to onDone so TTS speaks
-      // exactly what was shown in the dialogue box
+      // We pass the text to onDone so asset.interview.js can trigger the voice
       if (onDone) onDone(fullText);
     }
   );
