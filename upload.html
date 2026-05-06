@@ -118,9 +118,28 @@
         #doors-layer.zoomed { transform: scale(1.6) translateY(-6%); opacity: 1;}
         #doors-layer.interactive { pointer-events: all; }
 
-        @media (max-width: 1440px) and (min-width: 901px) {
+        @media (max-width: 1440px) and (min-width: 1367px) {
             #doors-layer.zoomed {
                 transform: scale(1.45) translateY(-6%);
+            }
+        }
+
+        @media (max-width: 1366px) and (min-width: 901px) {
+            #doors-layer.zoomed {
+                transform: none !important;
+                justify-content: center;
+                gap: 24px;
+            }
+            #door-pick-ui {
+                position: relative !important;
+                bottom: auto !important;
+                left: auto !important;
+                transform: none !important;
+                margin-top: 8px;
+            }
+
+            #office-bg.zoomed {
+                transform: none !important;
             }
         }
 
@@ -609,7 +628,7 @@
         }
 
         #desk-layer.hide {
-            transform: translateY(160px);
+            transform: translateY(600px);
             opacity: 0;
             pointer-events: none;
         }
@@ -707,11 +726,11 @@
             pointer-events: none;
             z-index: 7;
             bottom: 0;
-            left: 1%;
+            left: auto; right: 1%;
             width: 420px;
             height: 340px;
             background: radial-gradient(
-                ellipse 55% 38% at 38% 20%,
+                ellipse 55% 38% at 62% 20%,
                 rgba(255, 220, 100, 0.22) 0%,
                 rgba(255, 200, 60, 0.12) 30%,
                 rgba(255, 180, 40, 0.05) 60%,
@@ -719,6 +738,7 @@
             );
             animation: coneFlicker 2.8s ease-in-out infinite;
             animation-delay: 1.2s;
+            transition: opacity 0.5s ease;
             mix-blend-mode: screen;
         }
 
@@ -738,18 +758,26 @@
             pointer-events: none;
             z-index: 7;
             bottom: 0;
-            left: 0;
+            left: auto; right: 0;
             width: 28%;
             height: 90px;
             background: radial-gradient(
-                ellipse 70% 60% at 20% 40%,
+                ellipse 70% 60% at 80% 40%,
                 rgba(255, 200, 80, 0.18) 0%,
                 rgba(255, 160, 40, 0.08) 50%,
                 transparent 80%
             );
             animation: coneFlicker 2.8s ease-in-out infinite;
             animation-delay: 1.2s;
+            transition: opacity 0.5s ease;
             mix-blend-mode: screen;
+        }
+
+        #doors-layer.zoomed ~ .lamp-cone-overlay,
+        #doors-layer.zoomed ~ .lamp-desk-glow {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
         }
 
         /* ════════════════════════════════════════
@@ -766,8 +794,8 @@
 
             #monitor-bezel {
                 height: auto;
-                min-height: 460px;
-                max-height: 72vh;
+                min-height: 0;
+                max-height: calc(100vh - 160px);
                 padding: 10px;
                 width: auto;
             }
@@ -818,6 +846,10 @@
                 padding-bottom: 40px;
                 justify-content: center;
                 gap: 24px;
+            }
+
+            #office-bg.zoomed {
+                transform: none !important;
             }
 
             #doors-row {
@@ -1168,7 +1200,7 @@
         <audio id="bg-music" loop>
             <source src="sounds/uploadA.mp3" type="audio/mpeg">
         </audio>
-        <button id="music-btn" title="Toggle music" onclick="toggleMusic()" class="arcade-button flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors" style="position:fixed;top:12px;right:14px;z-index:4999;width:40px;height:40px;">
+        <button id="music-btn" title="Toggle music" onclick="playSound('click'); playSound('door'); toggleMusic()" onmouseenter="playSound('hover')" class="arcade-button flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors" style="position:fixed;top:12px;right:14px;z-index:4999;width:40px;height:40px;">
             <span id="music-icon-on"  class="material-symbols-outlined" style="color:#669BBC;font-size:20px;">volume_up</span>
             <span id="music-icon-off" class="material-symbols-outlined" style="color:#669BBC;font-size:20px;display:none;">volume_off</span>
         </button>
@@ -1191,7 +1223,7 @@
             <div id="doors-row">
 
                 <!-- FIRST DOOR -->
-                <div class="door-unit" onclick="pickDoorUI(this,'corporate')">
+                <div class="door-unit" onclick="playSound('door'); pickDoorUI(this,'corporate')" onmouseenter="playSound('hover')">
                     <div class="door-wrap" id="wrap-strict">
                         <svg viewBox="0 0 40 64" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" style="width:100%;height:100%;display:block;image-rendering:pixelated">
                             <!-- outer frame dark burgundy -->
@@ -1378,7 +1410,7 @@
                 </div>
                 
                 <!-- SECOND DOOR -->
-                <div class="door-unit" onclick="pickDoorUI(this,'startup')">
+                <div class="door-unit" onclick="playSound('door'); pickDoorUI(this,'startup')" onmouseenter="playSound('hover')">
                     <div class="door-wrap" id="wrap-chill" style="position: relative;">
                         <!-- 1. The SVG Background (Z-Index 1) -->
                         <svg viewBox="0 0 40 64" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" style="width:100%; height:100%; display:block; image-rendering:pixelated; position: absolute; top: 0; left: 0; z-index: 1;">
@@ -1423,7 +1455,7 @@
                 </div>
                 
                 <!-- THIRD DOOR -->
-                <div class="door-unit" onclick="pickDoorUI(this,'technical')">
+                <div class="door-unit" onclick="playSound('door'); pickDoorUI(this,'technical')" onmouseenter="playSound('hover')">
                     <div class="door-wrap" id="wrap-technical" style="position: relative;">
                         <!-- 1. The SVG Background (Z-Index 1) -->
                         <svg viewBox="0 0 40 64" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" style="width:100%; height:100%; display:block; image-rendering:pixelated; position: absolute; top: 0; left: 0; z-index: 1;">
@@ -1494,7 +1526,7 @@
             
             <!-- BUTTON now INSIDE doors-layer -->
             <div id="door-pick-ui">
-                <button class="enter-btn" id="enter-btn" onclick="enterRoom()"> Enter the Room →</button>
+                <button class="enter-btn" id="enter-btn" onclick="playSound('click'); enterRoom()"> Enter the Room →</button>
             </div>
         
         </div><!-- end #doors-layer -->
@@ -1542,11 +1574,11 @@
                         <div class="b-body">
                             <div class="pos-label">Position Applied For:</div>
                             <div id="role-chips">
-                                <div class="chip" onclick="pickJobChip(this,'Developer')" data-role="developer">Dev</div>
-                                <div class="chip" onclick="pickJobChip(this,'Designer')"  data-role="designer">Designer</div>
-                                <div class="chip" onclick="pickJobChip(this,'Analyst')"   data-role="analyst">Analyst</div>
-                                <div class="chip" onclick="pickJobChip(this,'Marketing')" data-role="marketing">Marketing</div>
-                                <div class="chip" onclick="pickJobChip(this,'General')"   data-role="general">General</div>
+                                <div class="chip" onclick="playSound('click'); pickJobChip(this,'Developer')" onmouseenter="playSound('hover')" data-role="developer">Dev</div>
+                                <div class="chip" onclick="playSound('click'); pickJobChip(this,'Designer')" onmouseenter="playSound('hover')" data-role="designer">Designer</div>
+                                <div class="chip" onclick="playSound('click'); pickJobChip(this,'Analyst')" onmouseenter="playSound('hover')" data-role="analyst">Analyst</div>
+                                <div class="chip" onclick="playSound('click'); pickJobChip(this,'Marketing')" onmouseenter="playSound('hover')" data-role="marketing">Marketing</div>
+                                <div class="chip" onclick="playSound('click'); pickJobChip(this,'General')" onmouseenter="playSound('hover')" data-role="general">General</div>
                             </div>
                             <div class="pos-field">
                                 <span class="typed-text" id="typed-text"></span>
@@ -1564,10 +1596,10 @@
                             
                             <div class="b-footer">
                                 <div class="footer-left">
-                                    <button class="ghost-btn" onclick="triggerFile()">📎 Upload File</button>
-                                    <button class="ghost-btn" onclick="clearForm()">✕ Clear</button>
+                                    <button class="ghost-btn" onclick="playSound('click'); triggerFile()" onmouseenter="playSound('hover')">📎 Upload File</button>
+                                    <button class="ghost-btn" onclick="playSound('click'); clearForm()" onmouseenter="playSound('hover')">✕ Clear</button>
                                 </div>
-                                <button id="start-interview-btn" onclick="submitForm()">Submit Resume ▲</button>
+                                <button id="start-interview-btn" onclick="playSound('click'); submitForm()" onmouseenter="playSound('hover')">Submit Resume ▲</button>
                             </div>
                         </div>
                     </div><!-- end #browser -->
@@ -1982,9 +2014,10 @@
             if (!await validatePhase1()) return;
 
             // Pure animation — nothing else
-            // Pure animation — nothing else
             document.getElementById('browser-layer').classList.add('exit');
             document.getElementById('desk-layer').classList.add('hide');
+            document.querySelector('.lamp-cone-overlay').style.display = 'none';
+            document.querySelector('.lamp-desk-glow').style.display = 'none'; 
             setTimeout(() => {
                 document.getElementById('office-bg').classList.add('zoomed');
                 document.getElementById('doors-layer').classList.add('zoomed');
@@ -2115,6 +2148,24 @@
                 iconOn.style.display  = musicMuted ? 'none'  : 'inline';
                 iconOff.style.display = musicMuted ? 'inline' : 'none';
                 btn.classList.toggle('muted', musicMuted);
+            }
+        </script>
+
+        <script>
+            /* ── UI SOUNDS ── */
+            const sfx = {
+                hover:  new Audio('sounds/index-button-hover.wav'),
+                click:  new Audio('sounds/index-button-click.wav'),
+                door:   new Audio('sounds/index-button-click.wav'),
+            };
+            // preload all
+            Object.values(sfx).forEach(a => { a.volume = 0.4; a.load(); });
+
+            function playSound(name) {
+                const s = sfx[name];
+                if (!s) return;
+                s.currentTime = 0; 
+                s.play().catch(() => {});
             }
         </script>
 

@@ -373,7 +373,7 @@ async function enterRoom() {
     return;
   }
 
-  showLoader('Analyzing your resume...');
+  showLoader('Opening documents...');
 
 try {
     const analysis = await analyzeResume(resumeText);
