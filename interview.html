@@ -370,17 +370,29 @@
     #lottie-interviewer {
       background: transparent !important;
     }
+    #lottie-interviewer {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-bottom: -8px;
+      /* Make it much taller to fill the stage */
+      width: clamp(260px, 70vw, 600px);
+      height: clamp(260px, 70vw, 600px);
+      max-height: calc(100% + 8px);
+    }
     #lottie-interviewer svg {
       background: transparent !important;
       overflow: visible;
     }
+
     /* Hide any background rect/group baked into the Lottie JSON */
     #lottie-interviewer svg > rect,
     #lottie-interviewer svg > g:first-child > rect,
     #lottie-interviewer svg > g:first-child { display: none; }
     #lottie-interviewer.is-talking { filter: drop-shadow(0 0 18px rgba(160,207,207,0.35)); transition: filter 0.25s ease; }
     #lottie-interviewer.is-idle   { filter: drop-shadow(0 0 4px rgba(160,207,207,0.10));  transition: filter 0.6s ease; }
-
+    
     /* ─── Face API ─── */
     #face-api-canvas {
       position: absolute; top: 0; left: 0;
