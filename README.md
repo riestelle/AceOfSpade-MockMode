@@ -27,12 +27,11 @@ The AI reads your resume and generates personalized interview questions based on
 There's actual game logic running underneath:
 
 - **Stress meter** starts at 30. Bad answers push it up. Hit 100 and you're done.
-- **Combo system** tracks consecutive good answers (70+). It resets on failure.
+- **Combo system** tracks consecutive good answers (60+). It resets on failure.
 - **45-second timer** per question. Let it run out and you take a stress penalty.
-- **Follow-up questions** trigger automatically if your answer scores below 60.
 - **One skip** allowed per session — but it costs +15 stress.
 - **Boss question** on the last round with a score multiplier.
-- **Final verdict**: Hired (avg ≥ 80), Waitlisted (middle ground), or Fired (stress ≥ 100 or low scores).
+- **Final verdict**: Hired, Waitlisted, or Fired — determined by the AI based on your scores and resume. Stress hitting 100 skips the AI and fires you instantly.
 
 ---
 
