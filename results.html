@@ -9,9 +9,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <style>
+    /* ── Fixed background image ── */
+    body {
+        background-image:
+            url("https://www.transparenttextures.com/patterns/dark-leather.png");
+        background-attachment: fixed;
+        background-repeat: repeat;
+        background-size: auto;
+    }
+
     .pixel-scanline {
-        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-        background-size: 100% 4px, 3px 100%;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+        background-size: 100% 4px;
         pointer-events: none;
     }
     .pixel-dither {
@@ -19,52 +28,123 @@
         background-size: 4px 4px;
     }
 
-    /* verdict stamp colors */
-    body[data-verdict="hired"]          #verdict-text { color: #1aff7a; border-color: #1aff7a; }
-    body[data-verdict="hired-lucky"]    #verdict-text { color: #1aff7a; border-color: #1aff7a; }
-    body[data-verdict="waitlisted"]     #verdict-text { color: #ffcc00; border-color: #ffcc00; }
-    body[data-verdict="fired-breakdown"] #verdict-text { color: #ff4444; border-color: #ff4444; }
-    body[data-verdict="fired-technical"] #verdict-text { color: #ff4444; border-color: #ff4444; }
-    body[data-verdict="fired-attitude"]  #verdict-text { color: #ff6a00; border-color: #ff6a00; }
+    /* ── Verdict stamp colors — ink tones, no neon ── */
+    body[data-verdict="hired"]           #verdict-text { color: #2e8b57; border-color: #2e8b57; }
+    body[data-verdict="hired-lucky"]     #verdict-text { color: #2e8b57; border-color: #2e8b57; }
+    body[data-verdict="waitlisted"]      #verdict-text { color: #b8860b; border-color: #b8860b; }
+    body[data-verdict="fired-breakdown"] #verdict-text { color: #8b1a1a; border-color: #8b1a1a; }
+    body[data-verdict="fired-technical"] #verdict-text { color: #8b1a1a; border-color: #8b1a1a; }
+    body[data-verdict="fired-attitude"]  #verdict-text { color: #8b3a1a; border-color: #8b3a1a; }
 
-    /* verdict glow pulse */
-    @keyframes verdictGlow {
-        0%, 100% { text-shadow: 0 0 16px currentColor; }
-        50%       { text-shadow: 0 0 40px currentColor, 0 0 80px currentColor; }
+    /* ── Stamp ink bleed pulse (replaces neon glow) ── */
+    @keyframes inkBleed {
+        0%, 100% {
+            text-shadow:
+                1px 1px 0 currentColor,
+                -1px -1px 0 currentColor,
+                0 0 8px rgba(0,0,0,0.4);
+            opacity: 0.92;
+        }
+        50% {
+            text-shadow:
+                2px 2px 1px currentColor,
+                -2px -2px 1px currentColor,
+                3px 0 2px currentColor,
+                0 0 12px rgba(0,0,0,0.5);
+            opacity: 1;
+        }
     }
-    .verdict--revealed { animation: verdictGlow 2.5s ease-in-out infinite; }
+    .verdict--revealed {
+        animation: inkBleed 3s ease-in-out infinite;
+    }
 
-    /* insight list items */
+    /* ── Stamp slam animation ── */
+    @keyframes stampSlam {
+        0%   { transform: scale(2.4) rotate(-10deg); opacity: 0; filter: blur(4px); }
+        55%  { transform: scale(0.92) rotate(-12.5deg); opacity: 1; filter: blur(0); }
+        70%  { transform: scale(1.06) rotate(-11deg); }
+        82%  { transform: scale(0.97) rotate(-12deg); }
+        100% { transform: scale(1) rotate(-12deg); opacity: 0.9; }
+    }
+    @keyframes inkSpread {
+        0%   { opacity: 0; transform: scale(0.7); }
+        40%  { opacity: 0.35; transform: scale(1.15); }
+        100% { opacity: 0; transform: scale(1.6); }
+    }
+    .stamp-ink-ring {
+        position: absolute;
+        inset: -8px;
+        border-radius: 4px;
+        border: 3px solid currentColor;
+        opacity: 0;
+        pointer-events: none;
+    }
+    .stamp-ink-ring.ink-fired   { color: #8b1a1a; }
+    .stamp-ink-ring.ink-hired   { color: #2e8b57; }
+    .stamp-ink-ring.ink-wait    { color: #b8860b; }
+    .stamp-ink-ring--active     { animation: inkSpread 0.6s ease-out forwards; }
+
+    /* ── Insight list items — muted earthy tones ── */
     .insight-item { padding: 0.35rem 0; font-size: 0.85rem; }
-    .insight-item--strength { color: #1aff7a; }
-    .insight-item--weakness  { color: #ff4444; }
+    .insight-item--strength { color: #4caf82; }
+    .insight-item--weakness  { color: #cf6679; }
 
-    /* scanline sweep */
+    /* ── Scanline sweep ── */
     @keyframes scanline {
         0%   { transform: translateY(-100%); }
         100% { transform: translateY(100vh); }
     }
     .animate-scanline { animation: scanline 8s linear infinite; }
 
-    /* compensation card states */
+    /* ── Compensation card states ── */
     .comp-card { transition: transform 0.15s ease; }
     .comp-card:hover { transform: translateY(-4px); }
     .comp-card.comp--void { opacity: 0.45; filter: grayscale(1); }
     .comp-card.comp--void:hover { transform: none; }
 
-    /* stat cards start hidden for GSAP */
+    /* ── Stat cards start hidden for GSAP ── */
     .stat-card { opacity: 0; transform: translateY(24px); transition: opacity 0.4s ease, transform 0.4s ease; }
 
-    /* portrait starts hidden */
+    /* ── Portrait starts hidden ── */
     #portrait-card { opacity: 0; transition: opacity 0.5s ease; }
 
-    /* verdict stamp starts hidden */
+    /* ── Verdict stamp starts hidden ── */
     #verdict-stamp { opacity: 0; transform: scale(0.4) rotate(-20deg); }
 
     /* Safety net: if JS never fires (e.g. network failure), reveal after 3s */
     @keyframes mm-reveal { to { opacity: 1; transform: none; } }
     .stat-card     { animation: mm-reveal 0s 3s forwards; }
     #portrait-card { animation: mm-reveal 0s 3s forwards; }
+
+    /* ── Download ledger overlay ── */
+    #download-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 7, 5, 0.82);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 16px;
+    }
+    #download-overlay.visible { display: flex; }
+    #download-overlay p {
+        color: #fcdbd6;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 14px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        opacity: 0.8;
+    }
+    .dl-spinner {
+        width: 36px; height: 36px;
+        border: 3px solid rgba(252,219,214,0.2);
+        border-top-color: #a0cfcf;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 <script id="tailwind-config">
     tailwind.config = {
@@ -183,10 +263,10 @@
             <!-- Verdict stamp box -->
             <div class="flex flex-col items-center justify-center py-lg border-4 border-surface-container-highest bg-surface-container-low">
                 <p class="font-label-caps text-outline text-[10px] uppercase tracking-widest mb-sm">FINAL VERDICT</p>
-                <div class="-rotate-6">
+                <div id="verdict-stamp-wrapper" class="relative -rotate-6 inline-block">
+                    <div class="stamp-ink-ring" id="stamp-ink-ring"></div>
                     <span id="verdict-text"
-                        class="text-6xl font-black text-tertiary tracking-tighter leading-none block uppercase font-headline-md"
-                        style="text-shadow: 0 0 16px rgba(160,207,207,0.5)">
+                        class="text-6xl font-black text-tertiary tracking-tighter leading-none block uppercase font-headline-md border-4 border-current px-3 py-1">
                         ...
                     </span>
                 </div>
@@ -354,7 +434,15 @@
 <div class="fixed top-0 left-0 w-full h-full border-[12px] border-surface-container-lowest/50 pointer-events-none z-[100]"></div>
 <div class="fixed inset-0 pointer-events-none z-[101] bg-gradient-to-b from-transparent via-tertiary/5 to-transparent h-20 w-full -translate-y-full opacity-10 animate-scanline"></div>
 
+<!-- Download overlay -->
+<div id="download-overlay">
+    <div class="dl-spinner"></div>
+    <p>Generating Ledger PDF…</p>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="assets/js/main.js"></script>
 <script src="assets/js/results.js"></script>
 </body>

@@ -494,7 +494,7 @@ function runEntranceAnimations(verdictKey) {
     ease: 'power2.out',
   }, '-=0.2');
 
-  // 3. Verdict stamp slams in with overshoot
+  // 3. Verdict stamp slams in with overshoot + ink ring effect
   tl.to('#verdict-stamp', {
     opacity: 0.9,
     scale: 1,
@@ -502,16 +502,29 @@ function runEntranceAnimations(verdictKey) {
     duration: 0.45,
     ease: 'back.out(1.7)',
     onComplete: () => {
-      // Add the glow pulse after stamp lands
+      // Add the ink bleed pulse after stamp lands
       const verdictEl = document.getElementById('verdict-text');
       if (verdictEl) verdictEl.classList.add('verdict--revealed');
+
+      // Ink ring spread — color based on verdict
+      const ring = document.getElementById('stamp-ink-ring');
+      if (ring) {
+        const isHired = verdictKey.startsWith('hired');
+        const isFired = verdictKey.startsWith('fired');
+        ring.classList.remove('ink-hired', 'ink-fired', 'ink-wait');
+        if (isHired) ring.classList.add('ink-hired');
+        else if (isFired) ring.classList.add('ink-fired');
+        else ring.classList.add('ink-wait');
+        ring.classList.add('stamp-ink-ring--active');
+        setTimeout(() => ring.classList.remove('stamp-ink-ring--active'), 700);
+      }
     },
   }, '-=0.05');
 
-  // 4. For fired endings: brief red flash on the portrait card
+  // 4. For fired endings: brief dark red stamp thud on portrait card
   if (verdictKey.startsWith('fired')) {
     tl.to('#portrait-card', {
-      boxShadow: '0 0 0 4px #ff4444',
+      boxShadow: '0 0 0 4px #8b1a1a, inset 0 0 20px rgba(139,26,26,0.15)',
       duration: 0.12,
       yoyo: true,
       repeat: 3,
@@ -519,10 +532,10 @@ function runEntranceAnimations(verdictKey) {
     }, '+=0.1');
   }
 
-  // 5. For hired endings: brief green flash
+  // 5. For hired endings: brief green ink stamp flash
   if (verdictKey.startsWith('hired')) {
     tl.to('#portrait-card', {
-      boxShadow: '0 0 0 4px #1aff7a',
+      boxShadow: '0 0 0 4px #2e8b57, inset 0 0 20px rgba(46,139,87,0.12)',
       duration: 0.12,
       yoyo: true,
       repeat: 2,
@@ -545,12 +558,56 @@ function bindActions() {
 
   const printBtn = document.getElementById('print-results-btn');
   if (printBtn) {
-    printBtn.addEventListener('click', () => window.print());
+    printBtn.addEventListener('click', downloadLedger);
   }
 
   const shareBtn = document.getElementById('share-results-btn');
   if (shareBtn) {
     shareBtn.addEventListener('click', shareResults);
+  }
+}
+
+/**
+ * Captures the results page as a PDF and triggers a download.
+ * Uses html2canvas + jsPDF.
+ */
+async function downloadLedger() {
+  const overlay = document.getElementById('download-overlay');
+  if (overlay) overlay.classList.add('visible');
+
+  try {
+    // Temporarily override background-attachment for canvas capture
+    document.body.style.backgroundAttachment = 'scroll';
+
+    const canvas = await html2canvas(document.querySelector('main'), {
+      backgroundColor: '#1f0f0c',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      ignoreElements: el => el.id === 'download-overlay',
+    });
+
+    document.body.style.backgroundAttachment = '';
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'px',
+      format: [canvas.width / 2, canvas.height / 2],
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width / 2, canvas.height / 2);
+
+    const verdict = getFromStorage('verdict');
+    const label = verdict?.verdict ? verdict.verdict.toLowerCase() : 'results';
+    pdf.save(`mockmode-ledger-${label}.pdf`);
+  } catch (err) {
+    console.error('[MockMode] PDF export failed:', err);
+    showToast('Export failed. Try again or screenshot the page.', 'warning');
+    document.body.style.backgroundAttachment = '';
+  } finally {
+    if (overlay) overlay.classList.remove('visible');
   }
 }
 
