@@ -22,26 +22,15 @@ async function runResumeValidation(text) {
   // ── RULE-BASED PRE-CHECK (runs regardless of AI) ──
   const lower = text.toLowerCase();
 
-  const codeSignals = [
-    'function ', 'const ', 'let ', 'var ', 'import ', 'export ',
-    'console.log', '=>', '{}', '();', '<!doctype', '<html', 'def ',
-    'class ', 'return ', 'printf', '#include'
-  ];
   const resumeSignals = [
     'experience', 'education', 'skills', 'work', 'university',
     'college', 'bachelor', 'master', 'intern', 'email', 'phone',
     'linkedin', 'objective', 'summary', 'project', 'certification'
   ];
 
-  const codeHits   = codeSignals.filter(s => lower.includes(s)).length;
   const resumeHits = resumeSignals.filter(s => lower.includes(s)).length;
 
   // block obvious code or non-resume text immediately
-  if (codeHits >= 3) {
-    setValidationState('error', '❌ This looks like code, not a resume.');
-    saveToStorage('resume_validated', false);
-    return;
-  }
   if (resumeHits < 3) {
     setValidationState('error', '❌ This doesn\'t look like a resume. Missing key sections.');
     saveToStorage('resume_validated', false);
@@ -88,7 +77,7 @@ async function runResumeValidation(text) {
     if (!parsed) throw new Error('Invalid AI response');
 
     if (parsed.isResume && parsed.confidence >= 70) {
-      setValidationState('success', `✅ Valid resume! Detected: ${parsed.detectedRole}`);
+      setValidationState('success', `✅ Resume looks good — detected role: ${parsed.detectedRole ?? 'general'}`);
       saveToStorage('resume_validated', true); 
       saveToStorage('detected_role', (parsed.detectedRole ?? 'general').toLowerCase());
     } else if (parsed.isResume && parsed.confidence < 70) {
@@ -115,20 +104,58 @@ async function runResumeValidation(text) {
   }
 }
 
-function setValidationState(state, message) {
-  const indicator = document.getElementById('resume-validation');
+function setRoleValidationState(state, message) {
+  const indicator = document.getElementById('role-validation');
   if (!indicator) return;
 
-  indicator.textContent = message;
-  indicator.className   = `resume-validation ${state}`; // style via CSS
-  indicator.style.display = 'block';
+  if (state === 'error' || state === 'warn') {
+    indicator.textContent = message;
+    indicator.className = `resume-validation ${state}`;
+    indicator.style.visibility = 'visible';
+  } else {
+    indicator.textContent = '\u00A0';
+    indicator.className = 'resume-validation';
+    indicator.style.visibility = 'visible';
+  }
+}
+
+function setValidationState(state, message) {
+  const indicator = document.getElementById('resume-validation');
+
+  // URL bar always updates
+  const labels = {
+    loading: 'project-dossier // analyzing...',
+    success: 'project-dossier // valid_entry ✓',
+    warn:    'project-dossier // incomplete ⚠',
+    error:   'project-dossier // rejected ✗',
+  };
+  if (typeof setChromeUrl === 'function') {
+    setChromeUrl(labels[state] ?? 'project-dossier // status_unknown', state);
+  }
+
+  if (!indicator) return;
+
+  if (state === 'error' || state === 'warn') {
+    // Show inline under the resume textarea
+    indicator.textContent = message;
+    indicator.className = `resume-validation ${state}`;
+    indicator.style.visibility = 'visible';
+  } else {
+    // loading & success → URL bar only, keep space so no layout shift
+    indicator.textContent = '\u00A0';
+    indicator.className = 'resume-validation';
+    indicator.style.visibility = 'visible';
+  }
 }
 
 function clearResumeValidation() {
   const indicator = document.getElementById('resume-validation');
   if (!indicator) return;
-  indicator.style.display = 'none';
+  indicator.textContent = '\u00A0';
+  indicator.className = 'resume-validation';
+  indicator.style.visibility = 'visible'; // keep space reserved
   saveToStorage('resume_validated', false);
+  if (typeof setChromeUrl === 'function') setChromeUrl('project-dossier // submission_id_404', '');
 }
 
 function bindResumeTextarea() {
@@ -244,38 +271,45 @@ function loadScript(src) {
 /* ── PHASE 1 DATA ── */
 function pickJob(job) {
   selectedRole = job;
-  saveToStorage('role', job.toLowerCase().trim()); // ← normalize here
+  saveToStorage('role', job.toLowerCase().trim());
+  setRoleValidationState('clear', ''); 
   const indicator = document.getElementById('role-validation');
-  if (indicator) indicator.style.display = 'none';
+  if (indicator) { /*indicator.style.visibility = 'hidden';*/ indicator.textContent = '\u00A0'; }
 }
 
-function validatePhase1() {
-  const resume = document.getElementById('resume-input').value.trim();
+async function validatePhase1() {
+  const resumeEl = document.getElementById('resume-input');
+  const resume   = resumeEl.value.trim();
 
   if (!resume || resume.length < 50) {
-    showToast('Please paste your resume (at least 50 characters).', 'error');
+    resumeEl.classList.add('border-error');
+    setValidationState('error', '❌ Please paste your resume (at least 50 characters).');
     return false;
   }
 
-  // Save early so enterRoom() always has it regardless of role-match outcome
-  saveToStorage('resume', resume);
+  // If user never blurred the textarea, run validation now before checking
+  const alreadyValidated = getFromStorage('resume_validated');
+  if (!alreadyValidated) {
+    await runResumeValidation(resume);
+  }
 
   const validated = getFromStorage('resume_validated');
   if (!validated) {
-    showToast('Please wait for resume validation or fix the issues flagged.', 'warning');
-    document.getElementById('resume-input').classList.add('border-error');
+    resumeEl.classList.add('border-error');
+    // setValidationState already shows the message from runResumeValidation
     return false;
   }
+
+  saveToStorage('resume', resume);
 
   const role         = getFromStorage('role')?.toLowerCase().trim();
   const detectedRole = getFromStorage('detected_role')?.toLowerCase().trim();
 
   if (!role) {
-    showToast('Pick a role first!', 'warning');
+    setRoleValidationState('error', '❌ Pick a role before submitting.');
     return false;
   }
 
-  // ── ROLE MATCH CHECK ──
   const roleKeywords = {
     developer:  ['developer', 'engineer', 'software', 'frontend', 'backend', 'fullstack', 'programmer', 'coding', 'javascript', 'python', 'react', 'node'],
     designer:   ['designer', 'design', 'ui', 'ux', 'graphic', 'visual', 'creative', 'figma', 'adobe', 'wireframe', 'prototype'],
@@ -284,23 +318,18 @@ function validatePhase1() {
     general:    []
   };
 
-  const keywords    = roleKeywords[role] ?? [];
-  const detected    = detectedRole?.toLowerCase() ?? '';
-  // ── ALSO scan the actual resume text, not just detectedRole ──
-  const resumeText  = resume.toLowerCase();
+  const keywords   = roleKeywords[role] ?? [];
+  const detected   = detectedRole?.toLowerCase() ?? '';
+  const resumeText = resume.toLowerCase();
 
-  // general always passes
   if (role === 'general') {
-    //saveToStorage('resume', resume);
     return true;
   }
 
-  // check BOTH detectedRole string AND resume text for role keywords
   const matchInDetected = keywords.some(k => detected.includes(k));
   const matchInResume   = keywords.some(k => resumeText.includes(k));
   const isMatch         = matchInDetected || matchInResume;
 
-  // cross-check: does resume contain keywords from OTHER roles more than selected role?
   const otherRoles = Object.entries(roleKeywords).filter(([r]) => r !== role && r !== 'general');
   const otherHits  = otherRoles.map(([r, kws]) => ({
     role: r,
@@ -309,7 +338,7 @@ function validatePhase1() {
   const selectedHits  = keywords.filter(k => resumeText.includes(k)).length;
   const strongerMatch = otherRoles.length > 0 && otherHits.some(o => o.hits > selectedHits + 2);
 
- if (!isMatch || strongerMatch) {
+  if (!isMatch || strongerMatch) {
     const bestMatch = otherHits.sort((a, b) => b.hits - a.hits)[0];
     setRoleValidationState('error',
       `❌ Role mismatch! Your resume fits "${bestMatch?.role ?? detectedRole}" better than "${role}". Please select the correct role.`
@@ -317,20 +346,9 @@ function validatePhase1() {
     return false;
   }
 
-  // ── MATCH CONFIRMED ──
-  //setRoleValidationState('success', `✅ Role matched! Your resume fits "${role}".`);
-  //saveToStorage('resume', resume);
   return true;
 }
 
-// ── ROLE VALIDATION INDICATOR ──
-function setRoleValidationState(state, message) {
-  const indicator = document.getElementById('role-validation');
-  if (!indicator) return;
-  indicator.textContent   = message;
-  indicator.className     = `resume-validation ${state}`; // reuse same CSS
-  indicator.style.display = 'block';
-}
 /* ── PHASE 2 DATA ── */
 function pickDoor(personality) {
   selectedPersonality = personality;
@@ -359,14 +377,13 @@ async function enterRoom() {
 
   showLoader('Analyzing your resume...');
 
-  // In enterRoom(), replace the existing try/catch with this:
 try {
     const analysis = await analyzeResume(resumeText);
     if (!analysis) throw new Error('Empty analysis result.');
 
     saveToStorage('resume_analysis', analysis);
     hideLoader();
-    showToast('Resume analyzed! Starting your interview...', 'success');
+    // No toast here — the page is already transitioning to interview.html
     setTimeout(() => navigateTo('interview.html'), 800);
 
     } catch (err) {
