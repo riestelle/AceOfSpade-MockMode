@@ -21,6 +21,12 @@ export default async function handler(req, res) {
     process.env.GROQ_API_KEY_4,
     process.env.GROQ_API_KEY_5,
     process.env.GROQ_API_KEY_6,
+    process.env.GROQ_7,
+    process.env.GROQ_8,
+    process.env.GROQ_9,
+    process.env.GROQ_10,
+    process.env.GROQ_11,
+    process.env.GROQ_12,
   ].filter(Boolean); // removes undefined keys so missing ones are skipped
 
   const GEMINI_KEYS = [
@@ -39,6 +45,13 @@ export default async function handler(req, res) {
     process.env.GEMINI_13,
     process.env.GEMINI_14,
     process.env.GEMINI_15,
+    process.env.GEMINI_16,
+    process.env.GEMINI_17,
+    process.env.GEMINI_18,
+    process.env.GEMINI_19,
+    process.env.GEMINI_20,
+    process.env.GEMINI_21,
+    process.env.GEMINI_22,
   ].filter(Boolean);
 
   const OPENROUTER_KEYS = [
