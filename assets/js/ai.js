@@ -227,7 +227,7 @@ async function streamInterviewerMessage(prompt, personality, targetElement, onDo
   );
 }
 
-async function generateVerdict(scores, resumeAnalysis, personality, role = 'general') {
+async function generateVerdict(scores, resumeAnalysis, personality, role = 'general', expressionSummary = null) {
   const average = scores.reduce((a, b) => a + b, 0) / scores.length;
   let verdict;
 
@@ -256,7 +256,10 @@ async function generateVerdict(scores, resumeAnalysis, personality, role = 'gene
       The final verdict is: ${verdict}.
       ${toneGuide}
       Base your verdict_message on the candidate's ACTUAL answers, not just their resume.
-      Call out specific strong or weak answers by reference.
+      Call out specific strong or weak answers by reference.${expressionSummary ? `
+      You also have access to the candidate's facial expression data captured during the interview.
+      If the data shows significant anxiety or fear, reference it naturally — e.g. "you clearly struggled under pressure" or "your composure never wavered".
+      Only mention expressions if meaningfully present (e.g. fearful or angry > 20%). Skip if mostly neutral/happy.` : ''}
       Return ONLY a JSON object with no extra text.
       Format: {
         "verdict": "${verdict}",
@@ -269,7 +272,9 @@ async function generateVerdict(scores, resumeAnalysis, personality, role = 'gene
       content: `Average score: ${Math.round(average)}%.
 Individual scores: ${scores.join(', ')}.
 Resume strengths: ${resumeAnalysis.strengths.join(', ')}.
-Resume weaknesses: ${resumeAnalysis.weaknesses.join(', ')}.
+Resume weaknesses: ${resumeAnalysis.weaknesses.join(', ')}.${expressionSummary ? `
+\nFacial expression breakdown (% of interview time as dominant expression):
+${Object.entries(expressionSummary).map(([k, v]) => `  ${k}: ${v}`).join('\n')}` : ''}
 
 Interview transcript:
 ${qaTranscript}`

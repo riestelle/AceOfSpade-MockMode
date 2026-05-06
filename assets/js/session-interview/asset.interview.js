@@ -30,17 +30,30 @@ let lastAnswerContext = null; // { answer, score } from previous question — us
 let verdictAttempts = 0;    // counts finishInterview retries — hard-stops at 3
 
 // ── Face expression → stress integration ──────────────────────────────────
-// Listens to the mm:face-monitor event from asset.webcam.js and
-// nudges stress up when the user looks fearful, angry, or disgusted.
-const FACE_STRESS_MAP = {
-  fearful:   6,   // strong spike
-  angry:     4,
-  disgusted: 3,
-  sad:       2,
-  surprised: 1,   // minor
-  neutral:   0,
-  happy:    -2,   // slightly calming
+// Option B: tracks a running expression summary (tick counts per expression)
+//           saved to storage so generateVerdict can reference it.
+// Option C: stress spikes only fire after 3+ consecutive ticks of a negative
+//           expression — sustained panic, not a random blink.
+
+const FACE_STRESS_EXPRESSIONS = new Set(['fearful', 'angry', 'disgusted', 'sad']);
+const FACE_STRESS_SPIKE = {
+  fearful:   8,
+  angry:     6,
+  disgusted: 5,
+  sad:       4,
 };
+
+// Running totals — counts how many ticks each expression was dominant
+const _exprTickCounts = {
+  happy: 0, neutral: 0, sad: 0,
+  fearful: 0, angry: 0, disgusted: 0, surprised: 0,
+};
+let _exprTotalTicks = 0;
+
+// Consecutive-tick counter for Option C (sustained spike logic)
+let _consecutiveNegTicks = 0;
+let _lastNegExpr = null;
+const SUSTAINED_TICK_THRESHOLD = 3; // ticks before a stress spike fires
 
 document.addEventListener('mm:face-monitor', (e) => {
   // Only affect stress while an answer is being composed (not mid-AI-response)
@@ -49,16 +62,54 @@ document.addEventListener('mm:face-monitor', (e) => {
   const exprs = e.detail?.expressions;
   if (!exprs) return;
 
-  // Get dominant expression
+  // Dominant expression this tick
   const [topExpr] = Object.entries(exprs).reduce((a, b) => b[1] > a[1] ? b : a);
-  const delta = FACE_STRESS_MAP[topExpr] ?? 0;
-  if (delta === 0) return;
 
-  // Apply a small nudge (scaled down so it's not overpowering)
-  stressLevel = Math.max(0, Math.min(100, stressLevel + (delta * 0.4)));
-  if (stressLevel > peakStressLevel) peakStressLevel = stressLevel;
-  updateStressMeter(stressLevel);
+  // ── Option B: accumulate expression summary ────────────────────────────
+  if (topExpr in _exprTickCounts) {
+    _exprTickCounts[topExpr]++;
+    _exprTotalTicks++;
+  }
+
+  // ── Option C: sustained-expression stress spike ────────────────────────
+  if (FACE_STRESS_EXPRESSIONS.has(topExpr)) {
+    if (topExpr === _lastNegExpr) {
+      _consecutiveNegTicks++;
+    } else {
+      // Different negative expression — reset streak, start fresh
+      _consecutiveNegTicks = 1;
+      _lastNegExpr = topExpr;
+    }
+
+    if (_consecutiveNegTicks === SUSTAINED_TICK_THRESHOLD) {
+      // Sustained panic — fire a real spike
+      const spike = FACE_STRESS_SPIKE[topExpr] ?? 4;
+      stressLevel = Math.max(0, Math.min(100, stressLevel + spike));
+      if (stressLevel > peakStressLevel) peakStressLevel = stressLevel;
+      updateStressMeter(stressLevel);
+      // Reset so it can fire again after another 3 sustained ticks
+      _consecutiveNegTicks = 0;
+    }
+  } else {
+    // Neutral or happy — break the streak
+    _consecutiveNegTicks = 0;
+    _lastNegExpr = null;
+  }
 });
+
+// Returns a human-readable expression summary for the verdict prompt.
+// e.g. { fearful: "42%", neutral: "50%", happy: "8%" }
+// Only expressions that appeared at all are included.
+function buildExpressionSummary() {
+  if (_exprTotalTicks === 0) return null;
+  const summary = {};
+  for (const [expr, count] of Object.entries(_exprTickCounts)) {
+    if (count > 0) {
+      summary[expr] = Math.round((count / _exprTotalTicks) * 100) + '%';
+    }
+  }
+  return summary;
+}
 
 // ── Timer state ────────────────────────────────────────────────────────────
 // Logic is wired — UI hookup (display element) is frontend's job.
@@ -1049,13 +1100,20 @@ async function finishInterview() {
   }
   saveToStorage('best_combo', bestCombo);
   saveToStorage('session_complete', Date.now());
+
+  // ── Option B: save expression summary for results page + verdict ───────
+  const expressionSummary = buildExpressionSummary();
+  if (expressionSummary) {
+    saveToStorage('expression_summary', expressionSummary);
+  }
+
   showLoader('Calculating your verdict...');
 
   try {
     const resumeAnalysis = getFromStorage('resume_analysis');
     if (!resumeAnalysis) throw new Error('Resume analysis not found in storage.');
 
-    const verdict = await generateVerdict(scores, resumeAnalysis, personality, role);
+    const verdict = await generateVerdict(scores, resumeAnalysis, personality, role, expressionSummary);
     if (!verdict) throw new Error('Verdict generation returned empty.');
 
     saveToStorage('verdict', verdict);
