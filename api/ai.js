@@ -27,6 +27,16 @@ export default async function handler(req, res) {
     process.env.GEMINI_API_KEY_3,
     process.env.GEMINI_API_KEY_4,
     process.env.GEMINI_API_KEY_5,
+    process.env.GEMINI_6,
+    process.env.GEMINI_7,
+    process.env.GEMINI_8,
+    process.env.GEMINI_9,
+    process.env.GEMINI_10,
+    process.env.GEMINI_11,
+    process.env.GEMINI_12,
+    process.env.GEMINI_13,
+    process.env.GEMINI_14,
+    process.env.GEMINI_15,
   ].filter(Boolean);
 
   const OPENROUTER_KEYS = [
