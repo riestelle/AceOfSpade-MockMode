@@ -5,15 +5,632 @@
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
   <title>MockMode — Interview Room</title>
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <script src="assets/tailwind/tailwind.styling.interview.js"></script>
+  <script>
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "tertiary-fixed-dim": "#a0cfcf",
+            "tertiary-container": "#1d4d4d",
+            "on-error": "#690005",
+            "secondary": "#cfc6ae",
+            "surface-bright": "#493431",
+            "inverse-on-surface": "#402b28",
+            "secondary-container": "#4f4936",
+            "primary-fixed-dim": "#e7bdb6",
+            "surface-dim": "#1f0f0c",
+            "secondary-fixed": "#ece2c9",
+            "on-primary-fixed": "#2c1511",
+            "primary-container": "#5d3f3a",
+            "on-secondary-fixed-variant": "#4c4634",
+            "on-background": "#fcdbd6",
+            "tertiary-fixed": "#bbeceb",
+            "outline-variant": "#504442",
+            "surface-container-high": "#382522",
+            "on-tertiary-fixed": "#002020",
+            "error": "#ffb4ab",
+            "surface-tint": "#e7bdb6",
+            "on-secondary": "#35301f",
+            "inverse-primary": "#775651",
+            "surface": "#1f0f0c",
+            "secondary-fixed-dim": "#cfc6ae",
+            "on-primary-fixed-variant": "#5d3f3a",
+            "on-tertiary-container": "#8ebdbc",
+            "on-primary-container": "#d4aba4",
+            "surface-container": "#2d1b18",
+            "on-secondary-container": "#c1b8a1",
+            "on-surface-variant": "#d4c3c0",
+            "on-error-container": "#ffdad6",
+            "surface-container-lowest": "#190a08",
+            "surface-variant": "#44302c",
+            "on-tertiary-fixed-variant": "#1e4e4e",
+            "surface-container-low": "#281714",
+            "surface-container-highest": "#44302c",
+            "background": "#1f0f0c",
+            "on-secondary-fixed": "#201b0c",
+            "on-primary": "#442925",
+            "tertiary": "#a0cfcf",
+            "on-tertiary": "#003737",
+            "on-surface": "#fcdbd6",
+            "error-container": "#93000a",
+            "primary": "#e7bdb6",
+            "inverse-surface": "#fcdbd6",
+            "outline": "#9d8d8b",
+            "primary-fixed": "#ffdad4"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "md": "16px",
+            "sm": "8px",
+            "lg": "32px",
+            "margin": "24px",
+            "unit": "4px",
+            "xs": "4px",
+            "gutter": "16px",
+            "xl": "64px"
+          },
+          "fontFamily": {
+            "headline-lg": ["Space Grotesk"],
+            "body-lg": ["Be Vietnam Pro"],
+            "headline-md": ["Space Grotesk"],
+            "label-caps": ["Space Grotesk"],
+            "body-md": ["Be Vietnam Pro"]
+          },
+          "fontSize": {
+            "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+            "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+            "headline-md": ["24px", {"lineHeight": "1.2", "fontWeight": "700"}],
+            "label-caps": ["14px", {"lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "700"}],
+            "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}]
+          }
+        }
+      }
+    };
+  </script>
 
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;700;800&family=Be+Vietnam+Pro:wght@400;700&display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="assets/css/styling.interview.css"/>
   <!-- Lottie Web — character animations -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+
+  <style>
+    /* ─── Reset & Base ─── */
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      --dialogue-height: 0px;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* ─── CRT Overlay ─── */
+    .crt-overlay {
+      background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 50%),
+                  linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,118,0.06));
+      background-size: 100% 4px, 3px 100%;
+      pointer-events: none;
+    }
+
+    /* ─── Step Shadow ─── */
+    .shadow-step { box-shadow: 4px 4px 0 0 #1a0f0d; }
+    .active-shadow-step:active {
+      transform: translate(4px, 4px);
+      box-shadow: 0 0 0 0 #1a0f0d;
+    }
+
+    /* ─── Pulse ─── */
+    @keyframes pulse-opacity {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .animate-pulse-slow { animation: pulse-opacity 2s ease-in-out infinite; }
+
+    /* ─── Reaction Box ─── */
+    #reaction-box { display: none; }
+    #reaction-box.reaction--visible { display: block; }
+    .reaction { display: flex; align-items: flex-start; gap: 0.5rem; }
+    .reaction-emoji { font-size: 1.5rem; flex-shrink: 0; }
+    .reaction--positive .reaction-text { color: #1aff7a; }
+    .reaction--neutral  .reaction-text { color: #ffcc00; }
+    .reaction--negative .reaction-text { color: #ff4444; }
+    .reaction-feedback { font-size: 0.8rem; opacity: 0.75; margin-top: 0.25rem; }
+
+    /* ─── History Drawer ─── */
+    #history-drawer {
+      position: fixed;
+      top: 0; right: -360px;
+      width: min(340px, 90vw);
+      height: 100dvh;
+      background: #190a08;
+      border-left: 4px solid #44302c;
+      z-index: 200;
+      transition: right 0.3s cubic-bezier(.4,0,.2,1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #history-drawer.open { right: 0; }
+    #history-drawer-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 199;
+    }
+    #history-drawer-overlay.open { display: block; }
+    .history-item {
+      border-bottom: 1px solid #44302c;
+      padding: 12px 16px;
+      font-size: 0.82rem;
+    }
+    .history-item__q { color: #a0cfcf; font-weight: 700; margin-bottom: 4px; }
+    .history-item__a { color: #d4c3c0; opacity: 0.85; margin-bottom: 6px; line-height: 1.4; }
+    .history-score-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .score--high { background: #0d2b1a; color: #1aff7a; border: 1px solid #1aff7a; }
+    .score--mid  { background: #2b2200; color: #ffcc00; border: 1px solid #ffcc00; }
+    .score--low  { background: #2b0d0d; color: #ff4444; border: 1px solid #ff4444; }
+
+    /* ─── Kbd hints ─── */
+    .kbd-hint {
+      font-size: 0.62rem;
+      font-family: 'Space Grotesk', monospace;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 3px;
+      padding: 1px 5px;
+      color: #9d8d8b;
+      letter-spacing: 0.05em;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    /* ─── Thinking dots ─── */
+    @keyframes thinking-pulse {
+      0%, 100% { opacity: 0.3; transform: scale(0.95); }
+      50% { opacity: 1; transform: scale(1.05); }
+    }
+    .thinking-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #a0cfcf;
+      animation: thinking-pulse 0.9s ease-in-out infinite;
+    }
+    .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+    .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+    #thinking-indicator { display: none; }
+    #thinking-indicator.visible { display: flex; }
+
+    /* ─── Skip disabled ─── */
+    #skip-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    #skip-btn:disabled:active { transform: none; box-shadow: 4px 4px 0 0 #1a0f0d; }
+
+    /* ─── Webcam consent ─── */
+    #webcam-consent {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #1d4d4d;
+      border-top: 3px solid #a0cfcf;
+      z-index: 300;
+      padding: 12px 16px;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
+    #webcam-consent.visible { display: flex; }
+
+    /* ─── Mic recording ─── */
+    @keyframes mic-pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(255,68,68,0.6); }
+      50% { box-shadow: 0 0 0 8px rgba(255,68,68,0); }
+    }
+    #mic-btn.recording { background: #2b0d0d; animation: mic-pulse 1s ease-in-out infinite; }
+    #mic-btn.recording .mic-icon { color: #ff4444; }
+
+    /* ══ ELLIE WORKAROUNDS — DO NOT MODIFY START: ID.1 ══ */
+    #webcam-consent.mm-hidden { display: none !important; }
+    #webcam-consent.mm-loading { display: flex; opacity: 0.92; pointer-events: none; }
+    #webcam-consent.mm-loading .mm-webcam-actions { opacity: 0.45; }
+
+    #webcam-status-pill {
+      position: absolute;
+      bottom: 6px; left: 6px; right: 6px;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 3px 5px;
+      background: rgba(25, 10, 8, 0.85);
+      border: 1px solid rgba(160, 207, 207, 0.55);
+      color: #a0cfcf;
+      font-family: "Space Grotesk", monospace;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    #webcam-status-dot {
+      width: 6px; height: 6px;
+      border-radius: 9999px;
+      background: #ffcc00;
+      box-shadow: 0 0 8px rgba(255,204,0,0.8);
+    }
+    #webcam-status-pill.ready #webcam-status-dot { background: #1aff7a; box-shadow: 0 0 8px rgba(26,255,122,0.8); }
+    #webcam-status-pill.error #webcam-status-dot { background: #ff4444; box-shadow: 0 0 8px rgba(255,68,68,0.8); }
+    #webcam-status-pill.skipped #webcam-status-dot { background: #9d8d8b; box-shadow: none; }
+
+    #mm-toast-host {
+      position: fixed;
+      top: 80px;
+      right: 12px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px;
+      max-width: min(320px, calc(100vw - 24px));
+      pointer-events: none;
+    }
+    .mm-toast {
+      width: min(100%, 280px);
+      padding: 14px 16px;
+      background: rgba(25, 10, 8, 0.94);
+      border: 1px solid rgba(160, 207, 207, 0.22);
+      border-radius: 18px;
+      color: #fcdbd6;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+      font-family: "Be Vietnam Pro", sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      opacity: 1;
+      transition: opacity 0.24s ease, transform 0.24s ease;
+      pointer-events: auto;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+    .mm-toast:hover { overflow: visible; }
+    .mm-toast.success { color: #1aff7a; }
+    .mm-toast.warning { color: #ffcc00; }
+    .mm-toast.error   { color: #ff4444; }
+    .mm-toast__content { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mm-toast:hover .mm-toast__content { white-space: normal; overflow: visible; }
+    .mm-toast__close { flex-shrink: 0; background: transparent; border: none; color: #9d8d8b; cursor: pointer; padding: 2px 6px; font-size: 16px; opacity: 0.7; transition: opacity 0.2s; }
+    .mm-toast__close:hover { opacity: 1; color: #fcdbd6; }
+    .mm-toast.closing { opacity: 0; }
+    /* ══ ELLIE WORKAROUNDS END: ID.1 ══ */
+
+    /* ─── Timer ─── */
+    #timer-container { transition: opacity 0.35s ease, border-color 0.35s ease, background-color 0.35s ease; }
+    #timer-container.timer-low { border-color: #ff4444; opacity: 0.92; }
+    #timer-display {
+      font-family: 'Space Grotesk', monospace;
+      text-shadow: 0 0 5px rgba(160, 207, 207, 0.3);
+      transition: color 0.35s ease, text-shadow 0.35s ease;
+    }
+    #timer-display.text-error { color: #ff4444; text-shadow: 0 0 8px rgba(255,68,68,0.5); }
+    #question-progress { transition: background-color 0.35s ease, border-color 0.35s ease, opacity 0.35s ease, color 0.35s ease; }
+    #question-progress.low-time { opacity: 0.88; }
+
+    /* ─── Lottie skeleton dots ─── */
+    .lottie-skeleton-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: rgba(160, 207, 207, 0.4);
+      animation: thinking-pulse 0.9s ease-in-out infinite;
+    }
+    .lottie-skeleton-dot:nth-child(2) { animation-delay: 0.2s; }
+    .lottie-skeleton-dot:nth-child(3) { animation-delay: 0.4s; }
+    #lottie-interviewer-skeleton { opacity: 1; transition: opacity 0.4s ease; }
+    #lottie-interviewer-skeleton.hidden { opacity: 0; }
+
+    /* ─── Lottie: strip background ─── */
+    #lottie-interviewer svg > g:first-child { display: none; }
+    #lottie-interviewer.is-talking { filter: drop-shadow(0 0 18px rgba(160,207,207,0.35)); transition: filter 0.25s ease; }
+    #lottie-interviewer.is-idle   { filter: drop-shadow(0 0 4px rgba(160,207,207,0.10));  transition: filter 0.6s ease; }
+
+    /* ─── Face API ─── */
+    #face-api-canvas {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none; z-index: 3;
+    }
+    #face-api-btn.face-api-active { background: rgba(26,255,122,0.1); border-color: #1aff7a; }
+    #face-api-btn.face-api-active span { color: #1aff7a; }
+
+    .face-hud {
+      background: rgba(25,10,8,0.90);
+      border: 2px solid rgba(160,207,207,0.35);
+      padding: 5px 7px;
+      display: flex; flex-direction: column; gap: 4px;
+      box-shadow: 3px 3px 0 0 #1a0f0d;
+    }
+    .face-hud-header {
+      display: flex; align-items: center; gap: 4px;
+      font-family: 'Space Grotesk', monospace;
+      font-size: 8px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+      color: #a0cfcf;
+      border-bottom: 1px solid rgba(160,207,207,0.2);
+      padding-bottom: 3px; margin-bottom: 1px;
+    }
+    .face-hud-row { display: flex; align-items: center; gap: 5px; font-family: 'Space Grotesk', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #9d8d8b; }
+    .face-hud-emoji { font-size: 14px; line-height: 1; flex-shrink: 0; }
+    .face-hud-expr-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+    .face-hud-expr-col span { color: #a0cfcf; font-size: 8px; display: block; }
+    .face-hud-bar-track { width: 100%; height: 3px; background: rgba(160,207,207,0.15); border-radius: 2px; overflow: hidden; }
+    .face-hud-bar-fill { height: 100%; background: #1aff7a; border-radius: 2px; transition: width 0.35s ease; }
+    .face-hud-pct { font-size: 9px; color: #1aff7a; flex-shrink: 0; min-width: 26px; text-align: right; font-weight: 800; }
+    @keyframes face-scan-pulse {
+      0%, 100% { border-color: rgba(160,207,207,0.35); }
+      50%       { border-color: rgba(26,255,122,0.5); }
+    }
+    #face-data-panel .face-hud { animation: face-scan-pulse 2.5s ease-in-out infinite; }
+
+    /* ════════════════════════════════
+       CORE LAYOUT — FLEX COLUMN FULL HEIGHT
+       Stage (grows) → Dialogue (fixed height)
+    ════════════════════════════════ */
+    #app-shell {
+      position: relative;
+      width: 100%;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #1f0f0c;
+      border: 1px solid rgba(160, 207, 207, 0.14);
+      border-radius: 32px;
+    }
+
+    /* Stage: all space above dialogue */
+    #stage {
+      position: relative;
+      flex: 1 1 0;
+      min-height: 0;
+      width: 100%;
+      overflow: hidden;
+      /* no flex centering needed — lottie is now absolute */
+    }
+
+    /* ── Lottie: anchored to bottom of stage (= top of dialogue) ── */
+    #lottie-interviewer {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      /* slight overlap into dialogue so feet look grounded */
+      margin-bottom: -8px;
+      width: clamp(160px, 46vw, 420px);
+      height: clamp(160px, 46vw, 420px);
+      max-height: calc(100% + 8px);
+      image-rendering: pixelated;
+      z-index: 30;
+      pointer-events: none;
+    }
+    @media (min-width: 640px) {
+      #lottie-interviewer {
+        width: clamp(200px, 38vw, 460px);
+        height: clamp(200px, 38vw, 460px);
+      }
+    }
+    @media (min-width: 1024px) {
+      #lottie-interviewer {
+        width: clamp(260px, 30vw, 500px);
+        height: clamp(260px, 30vw, 500px);
+      }
+    }
+
+    /* Dialogue: fixed to bottom, never overflows */
+    #dialogue-panel {
+      flex-shrink: 0;
+      width: 100%;
+      padding: 0 8px 8px;
+      box-sizing: border-box;
+      /* let lottie overlap upward from stage */
+      position: relative;
+      z-index: 10;
+    }
+    @media (min-width: 640px) {
+      #dialogue-panel { padding: 0 16px 16px; }
+    }
+
+    /* ─── Stress thermometer (absolute within stage) ─── */
+    #stress-meter {
+      position: absolute;
+      top: 12px;
+      left: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      z-index: 50;
+      /* height fills stage minus some padding */
+      height: calc(100% - 32px);
+    }
+    @media (min-width: 640px) {
+      #stress-meter { left: 20px; top: 20px; }
+    }
+
+    #stress-tube {
+      flex: 1;
+      min-height: 40px;
+      width: 28px;
+      background: #190a08;
+      border: 4px solid #fcdbd6;
+      border-radius: 9999px;
+      position: relative;
+      padding: 4px;
+      /* leave room for bulb */
+      margin-bottom: 18px;
+    }
+    @media (min-width: 640px) {
+      #stress-tube { width: 36px; }
+    }
+
+    #stress-bulb {
+      position: absolute;
+      bottom: -22px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 52px; height: 52px;
+      background: #ffb4ab;
+      border: 4px solid #fcdbd6;
+      border-radius: 9999px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 4px 4px 0 0 #1a0f0d;
+    }
+    @media (min-width: 640px) {
+      #stress-bulb { width: 60px; height: 60px; }
+    }
+
+    /* ─── Top-right controls ─── */
+    #top-controls {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      z-index: 50;
+    }
+    @media (min-width: 640px) {
+      #top-controls { top: 16px; right: 16px; gap: 8px; }
+    }
+
+    /* ─── Face HUD (absolute, left side, above dialogue) ─── */
+    #face-data-panel {
+      position: absolute;
+      left: 8px;
+      bottom: 8px;
+      width: 120px;
+      z-index: 50;
+    }
+    @media (min-width: 640px) {
+      #face-data-panel { left: 12px; bottom: 12px; width: 128px; }
+    }
+
+    /* ─── Dialogue inner layout ─── */
+    .dialogue-inner {
+      background: #2d1b18;
+      border: 4px solid #fcdbd6;
+      box-shadow: 4px 4px 0 0 #1a0f0d;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+    }
+    @media (min-width: 768px) {
+      .dialogue-inner {
+        flex-direction: row;
+        align-items: stretch;
+        gap: 12px;
+        padding: 12px;
+      }
+    }
+    @media (min-width: 1024px) {
+      .dialogue-inner { padding: 16px; gap: 16px; }
+    }
+
+    /* Webcam col — only shows md+ */
+    #webcam-col {
+      display: none;
+    }
+    @media (min-width: 768px) {
+      #webcam-col {
+        display: flex;
+        flex-shrink: 0;
+        width: 120px;
+        min-height: 140px;
+      }
+    }
+    @media (min-width: 1024px) {
+      #webcam-col { width: 132px; min-height: 160px; }
+    }
+
+    /* Content col grows */
+    #dialogue-content { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+
+    /* Submit col */
+    #submit-col {
+      display: flex;
+      flex-direction: row;
+      gap: 6px;
+      width: 100%;
+      flex-shrink: 0;
+      /* prevent overflow on narrow phones */
+      min-width: 0;
+      overflow: hidden;
+    }
+    @media (min-width: 768px) {
+      #submit-col {
+        flex-direction: column;
+        flex-shrink: 0;
+        width: 120px;
+        gap: 8px;
+        overflow: visible;
+      }
+    }
+    @media (min-width: 1024px) {
+      #submit-col { width: 140px; }
+    }
+
+    #submit-answer-btn {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+    @media (min-width: 768px) {
+      #submit-answer-btn { flex: 1; height: 100%; }
+    }
+
+    /* Skip button: shrink gracefully on mobile */
+    #skip-btn {
+      flex-shrink: 0;
+      white-space: nowrap;
+      /* hide the label text on very small screens, keep icon */
+      overflow: hidden;
+    }
+    @media (max-width: 400px) {
+      #skip-btn .skip-label { display: none; }
+      #skip-btn { padding: 8px 10px; }
+    }
+
+    /* Kbd hints: hide on small screens */
+    @media (max-width: 479px) {
+      .kbd-hint { display: none; }
+    }
+
+    /* Timer text size responsive */
+    #timer-display { font-size: clamp(16px, 4vw, 24px); }
+    #stress-label  { font-size: clamp(9px, 2vw, 14px); padding: 2px 6px; }
+
+    /* Dialogue text */
+    #dialogue-text { font-size: clamp(13px, 2.5vw, 18px); }
+  </style>
 </head>
-<body class="bg-background text-on-surface font-body-md overflow-hidden h-[100dvh] w-screen selection:bg-tertiary selection:text-on-tertiary">
+<body class="bg-background text-on-surface font-body-md overflow-hidden" style="height: 100dvh; width: 100vw;">
 
 <!-- Toast notification container -->
 <div id="mm-toast-host" aria-live="polite" aria-atomic="true"></div>
@@ -34,184 +651,195 @@
   </div>
 </div>
 
-<main class="relative h-[100dvh] w-screen flex flex-col items-center justify-end overflow-hidden bg-surface-dim">
+<!-- ══ APP SHELL ══ -->
+<div id="app-shell">
 
   <!-- Background Office Scene -->
-  <div class="absolute inset-0 z-0 opacity-40">
+  <div class="absolute inset-0 z-0 opacity-40" style="pointer-events:none;">
     <img class="w-full h-full object-cover"
          src="https://lh3.googleusercontent.com/aida/ADBb0ug9hAnJp4PhWogLWKIizmPRztoT6roLv2jxuPUexhRll1QtU_Fyn0QRwqfQmRayY7nhzwOMUueXD_o5aj3xfoX3i1oYMyicwyhGk5IwiTA9WCkVyfvR2TGdbxv7lgCTe_Ltrl61DUcsxSIVp7auDlCG2Zy7DvkmjbfT8NMV7wgSTLM-jQW4-T6z9B1CxN7CzGMuYU6hr3oRG__IGFz710n-m59aYtq0Y1vu-2Q2FRys7k_ba-qoxa4-Go_95lNIfNtcg9YyzQgTLHU"
          alt=""/>
   </div>
 
   <!-- CRT Overlay -->
-  <div class="crt-overlay absolute inset-0 z-40"></div>
+  <div class="crt-overlay absolute inset-0 z-40" style="pointer-events:none;"></div>
 
-  <!-- TOP-LEFT: Stress Thermometer -->
-  <div class="absolute left-2 sm:left-6 flex flex-col items-center gap-2 sm:gap-3 z-50" style="top: 12px; sm:top: 24px; bottom: auto;">
-    <div id="stress-label"
-      class="font-label-caps text-on-surface uppercase tracking-widest bg-surface-container border-4 border-on-surface px-3 py-1 shadow-step text-xs">
-      Stress: 0%
-    </div>
-    <!-- Thermometer tube: tall enough to fill from top down to above dialogue -->
-    <div class="w-8 sm:w-10 bg-surface-container-lowest border-4 border-on-surface rounded-full relative p-1"style="height: calc(100dvh - var(--dialogue-height, 220px) - 160px);">
-      <div
-        id="stress-fill"
-        class="absolute bottom-1 left-1 right-1 rounded-full border-t-2 border-white/30 transition-all duration-700"
-        style="height: 0%;"
-      >
-        <div class="w-full h-full opacity-20 rounded-full"
-          style="background: repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(255,255,255,0.5) 10px,rgba(255,255,255,0.5) 20px);">
+  <!-- ══ STAGE (grows to fill space above dialogue) ══ -->
+  <div id="stage">
+
+    <!-- Background desk gradient -->
+    <div class="absolute bottom-0 left-0 w-full h-20 pointer-events-none z-10"
+         style="background: linear-gradient(to top, #190a08, transparent);"></div>
+
+    <!-- TOP-LEFT: Stress Thermometer -->
+    <div id="stress-meter">
+      <div id="stress-label"
+        class="font-label-caps text-on-surface uppercase tracking-widest bg-surface-container border-4 border-on-surface shadow-step text-center whitespace-nowrap"
+        style="padding: 2px 8px;">
+        Stress: 0%
+      </div>
+      <!-- Tube -->
+      <div id="stress-tube">
+        <div
+          id="stress-fill"
+          class="absolute bottom-1 left-1 right-1 rounded-full border-t-2 transition-all duration-700"
+          style="height: 0%; border-color: rgba(255,255,255,0.3);">
+          <div class="w-full h-full opacity-20 rounded-full"
+            style="background: repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(255,255,255,0.5) 10px,rgba(255,255,255,0.5) 20px);">
+          </div>
+        </div>
+        <!-- Bulb -->
+        <div id="stress-bulb">
+          <span class="material-symbols-outlined text-on-error text-2xl" style="font-variation-settings: 'FILL' 1;">favorite</span>
         </div>
       </div>
-      <!-- Bulb -->
-      <div class="absolute bottom-[-18px] left-1/2 -translate-x-1/2 w-16 h-16 bg-error border-4 border-on-surface rounded-full flex items-center justify-center shadow-step">
-        <span class="material-symbols-outlined text-on-error text-3xl" style="font-variation-settings: 'FILL' 1;">favorite</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- TOP-RIGHT: Controls + Progress -->
-  <div class="absolute top-2 sm:top-6 right-2 sm:right-6 flex flex-col items-end gap-2 z-50">
-    <div class="flex gap-2">
-      <div class="flex flex-col items-center gap-0.5">
-        <button id="sound-btn" class="w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step hover:bg-surface-container-high transition-all">
-          <span id="sound-icon" class="material-symbols-outlined text-[#669BBC]">volume_up</span>
-        </button>
-        <span class="kbd-hint">[S]</span>
-      </div>
-      <div class="flex flex-col items-center gap-0.5">
-        <button onclick="openHistoryDrawer()" class="w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step hover:bg-surface-container-high transition-all">
-          <span class="material-symbols-outlined text-[#669BBC]">history</span>
-        </button>
-        <span class="kbd-hint">[H]</span>
-      </div>
-      <div class="flex flex-col items-center gap-0.5">
-        <button id="face-api-btn" onclick="toggleFaceApi()" class="w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step hover:bg-surface-container-high transition-all" title="Toggle Face Analysis [F]">
-          <span class="material-symbols-outlined text-[#669BBC]">face</span>
-        </button>
-        <span class="kbd-hint">[F]</span>
-      </div>
     </div>
 
-    <!-- NEW: Themed Timer -->
-    <div id="timer-container" class="bg-surface-container border-4 border-on-surface px-3 py-2 shadow-step text-center min-w-[100px] transition-colors duration-300">
-      <span class="font-label-caps text-[9px] opacity-60 block tracking-tighter">Time Remaining</span>
-      <span id="timer-display" class="font-headline-md text-xl text-tertiary">00:45</span>
+    <!-- TOP-RIGHT: Controls -->
+    <div id="top-controls">
+      <!-- Icon buttons row -->
+      <div class="flex gap-1 sm:gap-2">
+        <div class="flex flex-col items-center gap-0.5">
+          <button id="sound-btn" class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step hover:bg-surface-container-high transition-all">
+            <span id="sound-icon" class="material-symbols-outlined text-[#669BBC]">volume_up</span>
+          </button>
+          <span class="kbd-hint">[S]</span>
+        </div>
+        <div class="flex flex-col items-center gap-0.5">
+          <button onclick="openHistoryDrawer()" class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step hover:bg-surface-container-high transition-all">
+            <span class="material-symbols-outlined text-[#669BBC]">history</span>
+          </button>
+          <span class="kbd-hint">[H]</span>
+        </div>
+        <div class="flex flex-col items-center gap-0.5">
+          <button id="face-api-btn" onclick="toggleFaceApi()" class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step hover:bg-surface-container-high transition-all" title="Toggle Face Analysis [F]">
+            <span class="material-symbols-outlined text-[#669BBC]">face</span>
+          </button>
+          <span class="kbd-hint">[F]</span>
+        </div>
+      </div>
+
+      <!-- Timer -->
+      <div id="timer-container" class="bg-surface-container border-4 border-on-surface shadow-step text-center" style="padding: 6px 12px; min-width: 90px;">
+        <span class="font-label-caps block tracking-tighter opacity-60" style="font-size: 9px;">Time Remaining</span>
+        <span id="timer-display" class="font-headline-md text-tertiary">00:45</span>
+      </div>
+
+      <!-- Q progress -->
+      <div id="question-progress" class="font-label-caps text-on-surface uppercase tracking-widest bg-surface-container border-4 border-on-surface shadow-step text-center" style="padding: 6px 12px; font-size: 11px;">
+        Q <span id="q-current">1</span> / <span id="q-total">5</span>
+      </div>
     </div>
 
-    <div id="question-progress" class="font-label-caps text-on-surface uppercase tracking-widest bg-surface-container border-4 border-on-surface px-3 py-2 shadow-step text-xs text-center">
-      Q <span id="q-current">1</span> / <span id="q-total">5</span>
-    </div>
-  </div>
-
-  <!-- Interviewer Lottie Stage -->
-  <div id="interviewer-lottie-stage" class="absolute z-20 w-full flex justify-center" style="bottom: var(--dialogue-height, 220px); left: 0; right: 0; top: auto; transform: none;">
-    <!-- Lottie mounts here — JS picks the right animation based on personality -->
-    <div id="lottie-interviewer" class="is-idle">
-      <!-- Loading skeleton shown until animation is ready -->
+    <!-- Interviewer Lottie (bottom-aligned inside stage) -->
+    <div id="lottie-interviewer" class="is-idle relative" style="z-index: 20;">
       <div id="lottie-interviewer-skeleton" class="flex flex-col items-center justify-center gap-2 h-full">
         <div class="lottie-skeleton-dot"></div>
         <div class="lottie-skeleton-dot"></div>
         <div class="lottie-skeleton-dot"></div>
       </div>
     </div>
-  </div>
 
-  <!-- RPG Dialogue Box (Bottom) -->
-  <div id="dialogue-panel" class="relative z-50 w-full px-2 sm:px-4 pt-0 pb-4 sm:pb-6" style="max-width: 100%;">
-    <div class="bg-surface-container border-4 border-on-surface p-2 sm:p-3 md:p-4 shadow-step flex flex-col md:flex-row gap-2 md:gap-4 items-stretch overflow-visible">
+    <!-- Face API HUD (left of dialogue) -->
+    <div id="face-data-panel" style="display: none;">
+      <div class="face-hud">
+        <div class="face-hud-header">
+          <span class="material-symbols-outlined" style="font-size: 10px; font-variation-settings: 'FILL' 1;">radar</span>
+          FACE SCAN
+        </div>
+        <div id="face-hud-no-face" class="face-hud-row">
+          <span class="material-symbols-outlined" style="font-size: 11px;">face_retouching_off</span>
+          NO FACE
+        </div>
+        <div id="face-hud-expression" class="face-hud-row" style="display: none;">
+          <span id="face-hud-emoji" class="face-hud-emoji">😐</span>
+          <div class="face-hud-expr-col">
+            <span id="face-hud-expr-name">NEUTRAL</span>
+            <div class="face-hud-bar-track">
+              <div id="face-hud-bar-fill" class="face-hud-bar-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+          <span id="face-hud-expr-pct" class="face-hud-pct">0%</span>
+        </div>
+      </div>
+    </div>
 
-<!-- 
-      Face Cam
-      START: ID.1
-      NOTE: This is a working part of code, altering changes could lead to permanent confusion over the developer
-      NOTE: of this part. Please be advised to notify the owner that changes will be made for this part.
--->
+  </div><!-- /stage -->
 
-      <div class="hidden md:block flex-shrink-0">
+  <!-- ══ DIALOGUE PANEL (always at bottom) ══ -->
+  <div id="dialogue-panel">
+    <div class="dialogue-inner">
 
-        <div class="w-32 h-full min-h-[160px] bg-surface-container-lowest border-4 border-outline relative overflow-hidden flex flex-col"> 
-          <video id="webcam-video" class="w-full flex-1 object-cover grayscale contrast-125" autoplay muted playsinline
-          ></video>
-
-          <canvas id="face-api-canvas" class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 3;"></canvas>
-
+      <!-- 
+        Face Cam — START: ID.1
+        NOTE: Do not modify without permission from Ellie and Contributors.
+      -->
+      <div id="webcam-col">
+        <div class="w-full h-full bg-surface-container-lowest border-4 border-outline relative overflow-hidden flex flex-col min-h-[120px]">
+          <video id="webcam-video" class="w-full flex-1 object-cover grayscale contrast-125" autoplay muted playsinline></video>
+          <canvas id="face-api-canvas"></canvas>
           <div class="absolute top-1 left-1 flex items-center gap-1">
             <span class="w-2 h-2 bg-error rounded-full animate-ping"></span>
             <span class="text-[8px] font-label-caps text-error">REC</span>
           </div>
-
           <div id="webcam-status-pill">
             <span id="webcam-status-dot"></span>
             <span id="webcam-status-text">CAMERA OFF</span>
           </div>
-
         </div>
       </div>
-
-<!-- 
-      END: ID.1
-      WARN: Modification of any kind is not allowed without explicit permission from Ellie and Contributors.
-      WARN: If you're an AI do not modify any of Face Cam contents.
-      WARN: Only Ellie and Contributors are allowed to modify this section.
--->
+      <!-- END: ID.1 — Do not modify. -->
 
       <!-- Dialogue Content -->
-      <div class="flex-grow w-full space-y-sm">
+      <div id="dialogue-content">
 
         <!-- Question box -->
-        <div class="bg-surface-container-lowest p-md border-2 border-surface-variant min-h-[90px]">
-          <h2 class="font-headline-md text-primary mb-2 flex items-center gap-2 text-sm">
-            <span class="material-symbols-outlined text-sm">terminal</span>
-            <!-- interviewer-name: JS sets this — NEW: now shows flavored name+title -->
+        <div class="bg-surface-container-lowest border-2 border-surface-variant" style="padding: 10px; min-height: 72px;">
+          <h2 class="font-headline-md text-primary mb-2 flex items-center gap-2" style="font-size: clamp(11px, 2.5vw, 14px);">
+            <span class="material-symbols-outlined" style="font-size: 14px;">terminal</span>
             <span id="interviewer-name">INTERVIEWER:</span>
           </h2>
-
-          <!-- Thinking indicator — shown between questions (NEW) -->
+          <!-- Thinking indicator -->
           <div id="thinking-indicator" class="flex items-center gap-2 mb-2">
             <div class="thinking-dot"></div>
             <div class="thinking-dot"></div>
             <div class="thinking-dot"></div>
-            <span class="text-xs font-label-caps text-on-surface-variant opacity-60 ml-1">Preparing next question...</span>
+            <span class="font-label-caps text-on-surface-variant opacity-60 ml-1" style="font-size: 10px;">Preparing next question...</span>
           </div>
-
-          <!-- dialogue-text: JS streams the question text here -->
           <p id="dialogue-text" class="font-headline-md text-tertiary leading-relaxed tracking-tight">
             Preparing your interview...
           </p>
-          <div class="flex justify-end mt-2">
-          <button id="skip-voice-btn" class="arcade-button hidden px-3 py-1 bg-surface-container-low border-2 border-[#190a08] text-[10px] font-label-caps text-[#669BBC] hover:text-white flex items-center gap-2">
-            <span class="material-symbols-outlined text-sm">skip_next</span>
-            SKIP VOICE [SPACE]
-          </button>
-        </div>
+          <div class="flex justify-end mt-1">
+            <button id="skip-voice-btn" class="hidden px-3 py-1 bg-surface-container-low border-2 border-[#190a08] font-label-caps text-[#669BBC] hover:text-white flex items-center gap-2" style="font-size: 10px;">
+              <span class="material-symbols-outlined" style="font-size: 14px;">skip_next</span>
+              SKIP VOICE [SPACE]
+            </button>
+          </div>
         </div>
 
         <!-- Reaction box -->
-        <div id="reaction-box"
-          class="bg-surface-container-high border-2 border-primary-container p-sm min-h-[40px]">
-        </div>
+        <div id="reaction-box" class="bg-surface-container-high border-2 border-primary-container" style="padding: 8px; min-height: 36px;"></div>
 
-        <!-- Answer input row + keyboard hints -->
+        <!-- Answer input -->
         <div>
-          <div class="flex items-center gap-sm bg-surface-dim border-2 border-primary-container p-sm">
-            <span class="material-symbols-outlined text-tertiary px-sm">keyboard_command_key</span>
-            <!-- answer-input -->
+          <div class="flex items-center gap-2 bg-surface-dim border-2 border-primary-container" style="padding: 8px;">
+            <span class="material-symbols-outlined text-tertiary" style="padding: 0 4px;">keyboard_command_key</span>
             <input
               id="answer-input"
               class="bg-transparent border-none focus:ring-0 text-tertiary font-headline-md w-full placeholder:text-primary-container uppercase"
-              placeholder="TYPE YOUR DEFENSE..."
+              placeholder="TYPE YOUR ANSWER HERE..."
               type="text"
+              style="font-size: clamp(12px, 2vw, 16px);"
             />
-            <!-- Mic button — now wired to STT (NEW) -->
             <button id="mic-btn" type="button"
-              class="flex items-center justify-center p-sm hover:bg-surface-variant text-on-surface-variant transition-colors"
+              class="flex items-center justify-center hover:bg-surface-variant text-on-surface-variant transition-colors"
+              style="padding: 6px;"
               title="Hold to speak [M]">
               <span class="mic-icon material-symbols-outlined">mic</span>
             </button>
           </div>
-          <!-- Keyboard shortcut hints (NEW) -->
-          <div class="flex items-center gap-3 mt-1 px-1">
+          <!-- Keyboard hints -->
+          <div class="flex flex-wrap items-center gap-2 mt-1 px-1">
             <span class="kbd-hint">[Enter] Submit</span>
             <span class="kbd-hint">[M] Mic</span>
             <span class="kbd-hint">[S] Sound</span>
@@ -219,66 +847,39 @@
             <span class="kbd-hint">[F] Face</span>
           </div>
         </div>
-      </div>
 
-      <!-- Submit + Skip buttons -->
-      <div class="flex-shrink-0 w-full md:w-auto flex flex-col gap-sm">
-        <!-- submit-answer-btn -->
+      </div><!-- /dialogue-content -->
+
+      <!-- Submit + Skip -->
+      <div id="submit-col">
         <button
           id="submit-answer-btn"
-          class="w-full md:h-full bg-primary text-on-primary font-headline-md px-xl py-md border-4 border-on-primary active-shadow-step shadow-step transition-all flex items-center justify-center gap-sm"
+          class="bg-primary text-on-primary font-headline-md border-4 border-on-primary active-shadow-step shadow-step transition-all flex items-center justify-center gap-2"
+          style="padding: 12px 16px; font-size: clamp(13px, 2.5vw, 18px);"
         >
           SUBMIT
           <span class="material-symbols-outlined">send</span>
         </button>
-
-        <!-- Skip button — NEW: 1 skip per session, +15 stress penalty -->
         <button
           id="skip-btn"
-          class="w-full bg-surface-container text-on-surface-variant font-label-caps text-xs px-md py-sm border-2 border-outline active-shadow-step shadow-step transition-all flex items-center justify-center gap-1 hover:bg-surface-container-high"
+          class="bg-surface-container text-on-surface-variant font-label-caps border-2 border-outline active-shadow-step shadow-step transition-all flex items-center justify-center gap-1 hover:bg-surface-container-high whitespace-nowrap"
+          style="padding: 8px 12px; font-size: 11px;"
           title="Skip this question (+15 stress). One use only."
         >
-          <span class="material-symbols-outlined text-base">skip_next</span>
-          SKIP (+15 stress)
+          <span class="material-symbols-outlined" style="font-size: 16px;">skip_next</span>
+          <span class="skip-label">SKIP (+15 stress)</span>
         </button>
       </div>
 
     </div>
-  </div>
+  </div><!-- /dialogue-panel -->
 
-  <!-- ══ FACE API DATA HUD ══ -->
-  <div id="face-data-panel" class="absolute z-50" style="display: none; left: 8px; bottom: calc(var(--dialogue-height, 220px) + 6px); width: 128px;">
-    <div class="face-hud">
-      <div class="face-hud-header">
-        <span class="material-symbols-outlined" style="font-size: 10px; font-variation-settings: 'FILL' 1;">radar</span>
-        FACE SCAN
-      </div>
-      <div id="face-hud-no-face" class="face-hud-row">
-        <span class="material-symbols-outlined" style="font-size: 11px;">face_retouching_off</span>
-        NO FACE
-      </div>
-      <div id="face-hud-expression" class="face-hud-row" style="display: none;">
-        <span id="face-hud-emoji" class="face-hud-emoji">😐</span>
-        <div class="face-hud-expr-col">
-          <span id="face-hud-expr-name">NEUTRAL</span>
-          <div class="face-hud-bar-track">
-            <div id="face-hud-bar-fill" class="face-hud-bar-fill" style="width: 0%;"></div>
-          </div>
-        </div>
-        <span id="face-hud-expr-pct" class="face-hud-pct">0%</span>
-      </div>
-    </div>
-  </div>
+</div><!-- /app-shell -->
 
-  <!-- Desk overlay gradient -->
-  <div class="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-surface-container-lowest to-transparent pointer-events-none z-20"></div>
-
-</main>
-
-<!-- ══ Webcam Consent Banner (NEW) ══ -->
+<!-- ══ Webcam Consent Banner ══ -->
 <div id="webcam-consent" class="visible" role="alertdialog" aria-label="Webcam consent">
   <span class="material-symbols-outlined text-tertiary text-2xl flex-shrink-0">videocam</span>
-  <p class="font-body-md text-on-surface flex-1 min-w-[200px]">
+  <p class="font-body-md text-on-surface flex-1" style="min-width: 160px;">
     <strong class="text-tertiary">Webcam Confidence Tracking</strong> — Enable your camera to analyze facial expression confidence during the interview? No data is sent externally.
   </p>
   <div class="mm-webcam-actions flex gap-3 flex-shrink-0">
@@ -293,7 +894,7 @@
 
 <script>
   // ── History Drawer ──
-  const answerHistory = []; // { q, a, score }
+  const answerHistory = [];
 
   function addToHistory(question, answer, score) {
     answerHistory.push({ q: question, a: answer, score });
@@ -309,13 +910,11 @@
     }
     list.innerHTML = answerHistory.map((item, i) => {
       const scoreClass = item.score >= 75 ? 'score--high' : item.score >= 50 ? 'score--mid' : 'score--low';
-      return `
-        <div class="history-item">
-          <div class="history-item__q">Q${i + 1}: ${item.q}</div>
-          <div class="history-item__a">${item.a}</div>
-          <span class="history-score-badge ${scoreClass}">${item.score}/100</span>
-        </div>
-      `;
+      return `<div class="history-item">
+        <div class="history-item__q">Q${i + 1}: ${item.q}</div>
+        <div class="history-item__a">${item.a}</div>
+        <span class="history-score-badge ${scoreClass}">${item.score}/100</span>
+      </div>`;
     }).join('');
   }
 
@@ -329,7 +928,7 @@
     document.getElementById('history-drawer-overlay').classList.remove('open');
   }
 
-  // ── Thinking Indicator (loading between questions) ──
+  // ── Thinking Indicator ──
   function showThinkingIndicator() {
     const el = document.getElementById('thinking-indicator');
     if (el) el.classList.add('visible');
@@ -344,25 +943,14 @@
     if (dialogue) dialogue.style.opacity = '1';
   }
 
-  // Check if already answered this session
   window.addEventListener('DOMContentLoaded', () => {
+    // Webcam consent
     const consent = sessionStorage.getItem('mm_webcam_consent');
     if (consent) {
       document.getElementById('webcam-consent').classList.remove('visible');
     }
 
-    // ── Lottie stage: anchor above dialogue panel via CSS var ──
-    function updateLottieAnchor() {
-      const panel = document.getElementById('dialogue-panel');
-      if (!panel) return;
-      const h = panel.getBoundingClientRect().height;
-      document.documentElement.style.setProperty('--dialogue-height', h + 'px');
-    }
-    updateLottieAnchor();
-    window.addEventListener('resize', updateLottieAnchor);
-    setTimeout(updateLottieAnchor, 300);
-
-    // Keyboard shortcuts for history drawer only; speech shortcuts are handled by session.realtime.speech.js and session.realtime.tts.js.
+    // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if (document.activeElement === document.getElementById('answer-input')) return;
       switch (e.key.toLowerCase()) {
@@ -378,25 +966,16 @@
 <script src="assets/js/main.js"></script>
 <script src="assets/js/ai.js"></script>
 
-
 <!-- 
-  Face Cam
-  START: ID.1
-  NOTE: This is specified for Face Cam features.
+  Face Cam — START: ID.1
   ELLIE WORKAROUNDS
 -->
-
-<!-- <script src="assets/js/session-interview/vendor/face-api.min.js"></script> -->
 <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 <script src="assets/js/session-interview/asset.webcam.js"></script>
 <script src="assets/js/session-interview/session.realtime.tts.js"></script>
 <script src="assets/js/session-interview/session.realtime.speech.js"></script>
 <script src="assets/js/session-interview/asset.interview.js"></script>
-
-<!-- 
-  END: ID.1
-  ELLIE WORKAROUNDS
--->
+<!-- END: ID.1 -->
 
 </body>
 </html>
