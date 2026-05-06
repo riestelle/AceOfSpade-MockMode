@@ -1,0 +1,17 @@
+# Whisper model ONNX files go here.
+#
+# This directory holds the bundled Xenova/whisper-tiny.en quantized model so the
+# browser does not need to download it from HuggingFace at runtime.
+#
+# Run the GitHub Actions workflow "Download Whisper Model" to populate this
+# directory, or download manually:
+#
+#   BASE="https://huggingface.co/Xenova/whisper-tiny.en/resolve/main"
+#   mkdir -p onnx
+#   for f in encoder_model_quantized.onnx decoder_model_merged_quantized.onnx; do
+#     curl -fsSL "$BASE/onnx/$f" -o "onnx/$f"
+#   done
+#
+# Expected files once downloaded:
+#   encoder_model_quantized.onnx   (~10 MB)
+#   decoder_model_merged_quantized.onnx  (~19 MB)
