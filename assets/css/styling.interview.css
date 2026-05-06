@@ -192,12 +192,12 @@
 
 #mm-toast-host {
   position: fixed;
-  top: 128px;
-  left: 22px;
+  top: 92px;
+  right: 22px;
   z-index: 9999;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: flex-end;
   gap: 12px;
   max-width: min(360px, calc(100vw - 44px));
   pointer-events: none;
@@ -212,8 +212,7 @@ main {
 }
 
 .mm-toast {
-  width: min(240px, calc(100vw - 120px));
-  max-width: min(240px, calc(100vw - 120px));
+  width: min(100%, 340px);
   padding: 14px 16px;
   background: rgba(25, 10, 8, 0.94);
   border: 1px solid rgba(160, 207, 207, 0.22);
@@ -233,11 +232,6 @@ main {
   position: relative;
 }
 
-.mm-toast:hover {
-  width: min(420px, calc(100vw - 44px));
-  max-width: min(420px, calc(100vw - 44px));
-}
-
 .mm-toast.show {
   opacity: 1;
   transform: translateY(0);
@@ -247,19 +241,7 @@ main {
 .mm-toast.warning { border-color: #ffcc00; }
 .mm-toast.error { border-color: #ff4444; }
 
-.mm-toast__content {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.mm-toast:hover .mm-toast__content {
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
-}
+.mm-toast__content { flex: 1; }
 .mm-toast__close {
 flex-shrink: 0;
 background: transparent;

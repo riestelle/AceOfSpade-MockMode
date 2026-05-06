@@ -270,15 +270,6 @@ function showToast(message, type = 'info') {
   const host = document.getElementById('mm-toast-host');
   if (!host) { console.warn('[MockMode] Toast host not found'); return; }
 
-  while (host.children.length >= 4) {
-    const oldest = host.firstElementChild;
-    if (!oldest) break;
-    if (oldest._closeTimeout) {
-      clearTimeout(oldest._closeTimeout);
-    }
-    oldest.remove();
-  }
-
   const toast = document.createElement('div');
   toast.className = `mm-toast ${type}`;
   toast.setAttribute('role', 'alert');
