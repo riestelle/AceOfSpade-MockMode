@@ -84,9 +84,9 @@
     }
 </script>
 <style>
-    /* Allow text selection everywhere, disable only on interactive elements */
-    * { user-select: text; -webkit-user-select: text; }
-    button, a, [role="button"] { user-select: none; -webkit-user-select: none; }
+    /* Disable text selection on UI; allow only in inputs/textareas */
+    * { user-select: none; -webkit-user-select: none; }
+    input, textarea { user-select: text; -webkit-user-select: text; }
 
     .material-symbols-outlined {
         font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
@@ -94,6 +94,9 @@
     .pixel-border {
         border: 4px solid #190a08;
         box-shadow: inset -4px -4px 0px rgba(0,0,0,0.2), inset 4px 4px 0px rgba(255,255,255,0.1);
+    }
+    html.light .pixel-border {
+        border-color: #7a5240 !important;
     }
     .arcade-button {
         transition: all 0.05s steps(2);
@@ -191,21 +194,6 @@
         animation: icon-spin-ccw 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
     }
 
-    /* ── Single circle ripple on click ── */
-    @keyframes circle-ripple {
-        0%   { transform: translate(-50%,-50%) scale(0); opacity: 1; }
-        100% { transform: translate(-50%,-50%) scale(4); opacity: 0; }
-    }
-    .click-ripple {
-        position: fixed;
-        pointer-events: none;
-        z-index: 9999;
-        width: 40px; height: 40px;
-        border-radius: 50%;
-        border: 2px solid var(--rc, #a0cfcf);
-        box-shadow: 0 0 6px 1px var(--rc, #a0cfcf);
-        animation: circle-ripple 0.5s ease-out forwards;
-    }
 
     /* ── White dot ripple on non-button clicks ── */
     @keyframes dot-ripple {
@@ -376,26 +364,181 @@
     #how-to-play-modal { display:none; }
     #how-to-play-modal.open { display:flex; }
 
-    html.light body { background-color:#f5ede6; color:#2c1511; }
-    html.light #main-panel { background-color:#fdf3e3 !important; border-color:#5c3d2e !important; }
-    html.light #title-hired { color:#1a6b8a !important; }
-    html.light #title-fired  { color:#5c3d2e !important; }
-    html.light #tagline-text { color:#7a5c52 !important; border-color:#d4b8aa !important; }
-    html.light #btn-start-inner { background-color:#3a9e9e !important; color:#fff !important; }
-    html.light #btn-how-inner   { background-color:#e8ddd4 !important; color:#1a6b8a !important; }
-    html.light #press-start-row { color:#7a5c52 !important; }
-    html.light header span.crt-glow { color:#1a6b8a !important; text-shadow: 0 0 10px rgba(26,107,138,0.4) !important; }
-    html.light header .bg-surface-container\/60 { background-color:rgba(253,243,227,0.8) !important; }
-    html.light header .text-on-surface-variant { color:#7a5c52 !important; }
-    html.light header button { background-color:rgba(253,243,227,0.8) !important; }
+    html.light body { background-color:#d6c9b8; color:#1e0f0a; }
+
+    /* Background */
+    html.light #bg-overlay { background-color:rgba(214,201,184,0.75) !important; }
+    html.light #bg-img { opacity:0.3 !important; filter: sepia(40%) !important; }
+
+    /* Panel */
+    html.light #main-panel,
+    html.light #main-panel.pixel-border {
+        background-color: #f2e8d9 !important;
+        outline: none !important;
+        box-shadow: 8px 8px 0px rgba(30,15,10,0.35),
+                    inset -4px -4px 0px rgba(30,15,10,0.08),
+                    inset 4px 4px 0px rgba(255,255,255,0.5) !important;
+    }
+
+    /* Titlebar */
+    html.light #panel-titlebar { background-color:#3d2314 !important; border-bottom: 4px solid #1e0f0a !important; }
+    html.light #panel-titlebar span { color:#e8d5b0 !important; }
+    html.light #panel-titlebar .material-symbols-outlined { color:#a0cfcf !important; }
+    html.light #panel-titlebar .bg-error { background-color:#c0392b !important; }
+    html.light #panel-titlebar .bg-\[#669BBC\] { background-color:#669BBC !important; }
+
+    /* Titles */
+    html.light #title-hired {
+        color: #1a6b8a !important;
+        text-shadow: 3px 3px 0px rgba(30,15,10,0.2) !important;
+        animation: none !important;
+    }
+    html.light #title-fired {
+        color: #8b2500 !important;
+        text-shadow: 3px 3px 0px rgba(30,15,10,0.2) !important;
+        animation: none !important;
+    }
+
+    /* Tagline */
+    html.light #tagline-text { color:#4a3020 !important; border-color:#c4a882 !important; }
+
+    /* Buttons */
+    html.light #btn-start-inner { background-color:#1a6b8a !important; color:#fff !important; border-color:#0d3d50 !important; }
+    html.light #btn-how-inner   { background-color:#e8d5b0 !important; color:#1a6b8a !important; border-color:#8b6040 !important; }
+
+    /* Press start */
+    html.light #press-start-row { color:#4a3020 !important; }
+
+    /* Corner ticks */
+    html.light .corner-tick { background-color: #c4b5a0 !important; }
+    html.light .corner-tick.tl { border-right-color: #1e0f0a !important; border-bottom-color: #1e0f0a !important; }
+    html.light .corner-tick.tr { border-left-color: #1e0f0a !important; border-bottom-color: #1e0f0a !important; }
+    html.light .corner-tick.bl { border-right-color: #1e0f0a !important; border-top-color: #1e0f0a !important; }
+    html.light .corner-tick.br { border-left-color: #1e0f0a !important; border-top-color: #1e0f0a !important; }
+
+    /* Navbar */
+    html.light #mockmode-title { color:#1a6b8a !important; text-shadow: none !important; }
+    html.light header span.crt-glow { color:#1a6b8a !important; text-shadow: none !important; }
+    html.light header .bg-surface-container\/60 { background-color:rgba(242,232,217,0.95) !important; border-color:#3d2314 !important; }
+    html.light header button { background-color:rgba(242,232,217,0.95) !important; border-color:#3d2314 !important; }
     html.light header .material-symbols-outlined { color:#1a6b8a !important; }
-    html.light #how-to-play-modal > div { background-color:#fdf3e3 !important; }
-    html.light .bg-background\/80 { background-color:rgba(245,237,230,0.85) !important; }
-    html.light #bg-overlay { background-color:rgba(245,237,230,0.55) !important; }
-    html.light #bg-img { opacity:0.6 !important; }
+    html.light header .text-on-surface-variant { color:#4a3020 !important; }
+
+    /* Modal */
+    html.light #how-to-play-modal > div { background-color:#f2e8d9 !important; }
+    html.light .bg-background\/80 { background-color:rgba(214,201,184,0.92) !important; }
+
+    /* ── RESPONSIVE ── */
+
+    /* Main layout: allow scrolling on small screens */
+    @media (max-width: 639px) {
+        body { overflow-x: hidden; overflow-y: auto; }
+
+        /* Navbar: tighter on mobile */
+        header { padding: 10px 12px !important; }
+
+        /* Main: min-height instead of fixed height so panel isn't clipped */
+        main {
+            height: auto !important;
+            min-height: 100svh;
+            padding: 80px 12px 100px !important;
+            justify-content: center;
+        }
+
+        /* Panel: reduce padding, let it breathe */
+        #main-panel {
+            padding: 40px 16px 20px !important;
+            width: 100% !important;
+        }
+
+        /* Titlebar text: truncate gracefully */
+        #panel-titlebar span.font-label-caps {
+            font-size: 7px !important;
+            letter-spacing: 0.05em !important;
+        }
+
+        /* Title: scale down on very small screens */
+        h1.font-headline-lg {
+            font-size: 3rem !important;
+        }
+        #title-fired { margin-top: -6px !important; }
+
+        /* Tagline: smaller font, tighter margins */
+        #tagline-text {
+            font-size: 14px !important;
+            margin-top: 12px !important;
+            padding-top: 8px !important;
+            padding-bottom: 8px !important;
+        }
+
+        /* Title section: less bottom margin */
+        #main-panel .relative.z-10 { margin-bottom: 16px !important; margin-top: 8px !important; }
+
+        /* Buttons: stack vertically, full width */
+        #btn-start, #btn-how {
+            max-width: 100% !important;
+            width: 100% !important;
+        }
+        #btn-start-inner, #btn-how-inner {
+            padding-top: 12px !important;
+            padding-bottom: 12px !important;
+            font-size: 16px !important;
+        }
+
+        /* Press start row: smaller, less top margin */
+        #press-start-row {
+            margin-top: 16px !important;
+            font-size: 11px !important;
+            letter-spacing: 0.15em !important;
+        }
+
+        /* Footer: stack vertically, smaller padding */
+        footer {
+            bottom: 8px !important;
+            left: 8px !important;
+            right: 8px !important;
+        }
+        footer > div:first-child { padding: 6px 10px !important; }
+        footer .text-xs { font-size: 9px !important; }
+
+        /* CRT border: thinner on mobile */
+        /* CRT border handled by inline style */
+
+        /* Modal: full screen on mobile */
+        #how-to-play-modal { padding: 0 !important; align-items: flex-end !important; }
+        #how-to-play-modal > div {
+            max-width: 100% !important;
+            max-height: 90svh;
+            overflow-y: auto;
+            border-bottom: none !important;
+        }
+        #how-to-play-modal .p-lg { padding: 16px !important; }
+        #how-to-play-modal .gap-lg { gap: 16px !important; }
+        #how-to-play-modal .flex.gap-md { gap: 10px !important; }
+        #how-to-play-modal .w-12.h-12 { width: 40px !important; height: 40px !important; font-size: 16px !important; }
+        #how-to-play-modal .font-body-md { font-size: 13px !important; }
+    }
+
+    /* Small-medium: tablets in portrait */
+    @media (min-width: 640px) and (max-width: 767px) {
+        main { padding: 80px 24px 90px !important; height: auto !important; min-height: 100svh; }
+        #main-panel { padding: 48px 32px 28px !important; }
+        h1.font-headline-lg { font-size: 4rem !important; }
+    }
+
+    /* Landscape phones: keep panel visible without scroll */
+    @media (max-height: 600px) and (max-width: 900px) {
+        main { padding-top: 64px !important; padding-bottom: 20px !important; height: auto !important; min-height: 100svh; }
+        #main-panel { padding: 36px 24px 16px !important; }
+        h1.font-headline-lg { font-size: 2.5rem !important; }
+        #tagline-text { display: none !important; }
+        .mt-6.mb-8 { margin-top: 4px !important; margin-bottom: 10px !important; }
+        #press-start-row { margin-top: 10px !important; }
+        footer { display: none !important; }
+    }
 </style>
 </head>
-<body class="bg-background text-on-background font-body-md overflow-hidden selection:bg-tertiary selection:text-on-tertiary" style="user-select:text;">
+<body class="bg-background text-on-background font-body-md overflow-x-hidden selection:bg-tertiary selection:text-on-tertiary">
 
 <!-- Lobby Music -->
 <audio id="lobby-music" loop>
@@ -410,6 +553,10 @@
 <!-- Click Sound -->
 <audio id="click-sound" preload="auto">
     <source src="sounds/index button click.wav" type="audio/wav">
+</audio>
+
+<audio id="howtoplay-sound" preload="auto">
+    <source src="sounds/how to play.mp3" type="audio/mpeg">
 </audio>
 
 <audio id="start-sound" preload="auto">
@@ -436,29 +583,29 @@
 <div class="fixed inset-0 pointer-events-none z-[101] bg-gradient-to-b from-transparent via-tertiary/5 to-transparent h-20 w-full -translate-y-full opacity-10 animate-scanline"></div>
 
 <!-- Navbar -->
-<header class="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 py-4">
-    <div class="flex items-center gap-4">
-        <span class="text-[#669BBC] font-headline-md tracking-tighter uppercase font-black crt-glow">MockMode</span>
-        <div class="bg-surface-container/60 px-2 py-1 border-2 border-[#190a08] text-[10px] font-label-caps text-on-surface-variant">
+<header class="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-3 sm:px-6 py-3 sm:py-4">
+    <div class="flex items-center gap-2 sm:gap-4">
+        <span class="text-[#669BBC] font-headline-md tracking-tighter uppercase font-black crt-glow text-xl sm:text-2xl">MockMode</span>
+        <div class="hidden sm:block bg-surface-container/60 px-2 py-1 border-2 border-[#190a08] text-[10px] font-label-caps text-on-surface-variant">
             MOCK_MODE_v2.0
         </div>
     </div>
-    <div class="flex items-center gap-3">
-        <button id="volume-btn" onclick="playClick(); spawnBurst(event); toggleMusic()" onmouseenter="playHover()" class="arcade-button w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
-            <span id="volume-icon" class="material-symbols-outlined text-[#669BBC]">volume_off</span>
+    <div class="flex items-center gap-2 sm:gap-3">
+        <button id="volume-btn" onclick="playClick(); toggleMusic()" onmouseenter="playHover()" class="arcade-button w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
+            <span id="volume-icon" class="material-symbols-outlined text-[#669BBC] text-[20px] sm:text-[24px]">volume_off</span>
         </button>
-        <button id="theme-toggle" onclick="playClick(); spawnBurst(event); toggleTheme()" onmouseenter="playHover()" class="arcade-button w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
-            <span id="theme-icon" class="material-symbols-outlined text-[#669BBC]">light_mode</span>
+        <button id="theme-toggle" onclick="playClick(); toggleTheme()" onmouseenter="playHover()" class="arcade-button w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
+            <span id="theme-icon" class="material-symbols-outlined text-[#669BBC] text-[20px] sm:text-[24px]">light_mode</span>
         </button>
-        <button onclick="playClick(); spawnBurst(event); document.getElementById('how-to-play-modal').classList.add('open')" onmouseenter="playHover()" class="arcade-button w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
-            <span class="material-symbols-outlined text-[#669BBC]">help</span>
+        <button onclick="playClick(); window.location.href='privacy.html'" onmouseenter="playHover()" class="arcade-button w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors">
+            <span class="material-symbols-outlined text-[#669BBC] text-[20px] sm:text-[24px]">settings</span>
         </button>
     </div>
 </header>
 
 <!-- Main Content -->
-<main class="relative z-10 w-screen h-screen flex flex-col items-center justify-center p-6">
-    <div id="main-panel" class="w-full max-w-2xl bg-[#2a1f1a] border-[6px] border-[#1A0F0D] p-12 relative flex flex-col items-center text-center shadow-[12px_12px_0px_rgba(0,0,0,0.6)] pixel-border overflow-hidden">
+<main class="relative z-10 w-screen min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 pt-20 pb-24">
+    <div id="main-panel" class="w-full max-w-2xl bg-[#2a1f1a] p-8 sm:p-12 relative flex flex-col items-center text-center pixel-border" style="overflow: visible; border: 6px solid #1A0F0D;">
 
         <div class="absolute inset-0 pixel-dither opacity-5 pointer-events-none"></div>
 
@@ -467,26 +614,26 @@
         <div class="corner-tick bl"></div>
         <div class="corner-tick br"></div>
 
-        <div class="absolute top-0 left-0 right-0 h-8 bg-surface-container-low border-b-4 border-[#190a08] flex items-center px-4 gap-2">
+        <div id="panel-titlebar" class="absolute top-0 left-0 right-0 h-8 bg-surface-container-low flex items-center px-4 gap-2" style="border-bottom: 4px solid #190a08;">
             <div class="w-3 h-3 bg-error pixel-border"></div>
             <div class="w-3 h-3 bg-[#669BBC] pixel-border"></div>
             <span class="ml-2 font-label-caps text-on-surface-variant text-[9px] uppercase tracking-widest">SESSION_INIT // AWAITING_INPUT</span>
             <span class="ml-auto material-symbols-outlined text-[#669BBC] text-sm">terminal</span>
         </div>
 
-        <div id="particles-container" class="absolute inset-0 overflow-hidden pointer-events-none"></div>
+        <div id="particles-container" class="absolute inset-0 overflow-hidden pointer-events-none" style="border-radius:inherit;"></div>
 
-        <div class="mt-6 mb-8 relative z-10">
-            <h1 class="font-headline-lg text-6xl md:text-8xl flex flex-col leading-none tracking-tight">
+        <div class="mt-6 mb-6 sm:mb-8 relative z-10">
+            <h1 class="font-headline-lg text-5xl sm:text-6xl md:text-8xl flex flex-col leading-none tracking-tight">
                 <span id="title-hired" class="text-[#669BBC] retro-glow font-black italic title-hired-glow">HIRED</span>
-                <span id="title-fired"  class="text-primary  retro-glow font-black mt-[-10px] title-fired-glow">OR FIRED?</span>
+                <span id="title-fired"  class="text-primary  retro-glow font-black mt-[-8px] sm:mt-[-10px] title-fired-glow">OR FIRED?</span>
             </h1>
-            <p id="tagline-text" class="font-body-lg text-on-surface-variant mt-6 max-w-md mx-auto italic border-y-2 border-surface-container-highest py-2">
+            <p id="tagline-text" class="font-body-md sm:font-body-lg text-on-surface-variant mt-4 sm:mt-6 max-w-md mx-auto italic border-y-2 border-surface-container-highest py-2">
                 Survive the interview. Earn your desk.
             </p>
         </div>
 
-        <div class="flex flex-col sm:flex-row gap-6 w-full max-w-sm relative z-10">
+        <div class="flex flex-col sm:flex-row gap-4 sm:gap-6 w-full sm:max-w-sm relative z-10">
             <button id="btn-start" onmouseenter="playHover()" class="flex-1 group relative">
                 <div class="absolute inset-0 bg-[#1A0F0D] translate-x-2 translate-y-2"></div>
                 <div id="btn-start-inner" class="relative bg-[#a0cfcf] text-[#002020] font-headline-md py-4 border-2 border-[#190a08] flex items-center justify-center gap-2 arcade-button active:translate-x-2 active:translate-y-2">
@@ -494,7 +641,7 @@
                     START GAME
                 </div>
             </button>
-            <button id="btn-how" onmouseenter="playHover()" onclick="playClick(); spawnBurst(event); document.getElementById('how-to-play-modal').classList.add('open')" class="flex-1 group relative">
+            <button id="btn-how" onmouseenter="playHover()" onclick="playHowTo(); document.getElementById('how-to-play-modal').classList.add('open')" class="flex-1 group relative">
                 <div class="absolute inset-0 bg-[#1A0F0D] translate-x-2 translate-y-2"></div>
                 <div id="btn-how-inner" class="relative bg-surface-container text-[#669BBC] font-headline-md py-4 border-2 border-[#190a08] flex items-center justify-center gap-2 arcade-button active:translate-x-2 active:translate-y-2">
                     <span class="material-symbols-outlined">help_center</span>
@@ -503,7 +650,7 @@
             </button>
         </div>
 
-        <div id="press-start-row" class="mt-10 font-label-caps text-base tracking-[0.2em] flex items-center gap-3 text-on-surface-variant relative z-10">
+        <div id="press-start-row" class="mt-6 sm:mt-10 mb-2 font-label-caps text-sm sm:text-base tracking-[0.2em] flex items-center gap-3 text-on-surface-variant relative z-10 px-4">
             <span class="w-2 h-2 bg-primary rotate-45 inline-block blink"></span>
             PRESS START
             <span class="w-2 h-2 bg-primary rotate-45 inline-block blink" style="animation-delay:0.5s"></span>
@@ -512,12 +659,12 @@
 </main>
 
 <!-- How To Play Modal -->
-<div id="how-to-play-modal" class="fixed inset-0 bg-background/80 backdrop-blur-sm z-[150] items-center justify-center p-gutter">
-    <div class="relative w-full max-w-2xl bg-surface-container border-4 border-[#1A0F0D] shadow-[8px_8px_0_0_#190a08] flex flex-col overflow-hidden">
+<div id="how-to-play-modal" class="fixed inset-0 bg-background/80 backdrop-blur-sm z-[150] items-center justify-center p-4 sm:p-gutter">
+    <div class="relative w-full max-w-2xl bg-surface-container border-4 border-[#1A0F0D] shadow-[8px_8px_0_0_#190a08] flex flex-col overflow-hidden max-h-[90svh] overflow-y-auto">
         <div class="absolute inset-0 pixel-dither pointer-events-none opacity-10"></div>
         <div class="bg-[#2D1B18] border-b-4 border-[#1A0F0D] px-6 py-4 flex justify-between items-center relative z-10">
             <h2 class="font-headline-md text-[#a0cfcf] tracking-tighter uppercase crt-glow">HOW TO PLAY</h2>
-            <button onclick="playClick(); spawnBurst(event); document.getElementById('how-to-play-modal').classList.remove('open')" onmouseenter="playHover()"
+            <button onclick="playClick(); document.getElementById('how-to-play-modal').classList.remove('open')" onmouseenter="playHover()"
                 class="arcade-button w-10 h-10 bg-error text-on-error border-2 border-[#1A0F0D] flex items-center justify-center hover:opacity-90">
                 <span class="material-symbols-outlined font-black">close</span>
             </button>
@@ -550,7 +697,7 @@
                 </div>
             </div>
             <div class="flex justify-end">
-                <button onclick="playClick(); spawnBurst(event); document.getElementById('how-to-play-modal').classList.remove('open')" onmouseenter="playHover()"
+                <button onclick="playClick(); document.getElementById('how-to-play-modal').classList.remove('open')" onmouseenter="playHover()"
                     class="arcade-button bg-primary text-on-primary font-headline-md px-lg py-sm border-4 border-[#1A0F0D] flex items-center gap-md group hover:opacity-90">
                     <span class="uppercase">I UNDERSTAND</span>
                     <span class="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
@@ -565,17 +712,14 @@
 </div>
 
 <!-- Footer -->
-<footer class="fixed bottom-6 left-6 right-6 z-20 flex justify-between items-end pointer-events-none">
+<footer class="fixed bottom-3 sm:bottom-6 left-3 sm:left-6 right-3 sm:right-6 z-20 flex justify-between items-end pointer-events-none">
     <div class="bg-surface-container/60 backdrop-blur-md p-3 border-2 border-[#190a08] shadow-[4px_4px_0_0_#190a08]">
         <div class="flex items-center gap-3 text-xs font-label-caps text-on-surface">
             <div class="w-3 h-3 rounded-full bg-[#4CAF50] led-pulse"></div>
             SYSTEM ONLINE: 100%
         </div>
     </div>
-    <div class="hidden md:flex flex-col items-end gap-2 text-[10px] font-label-caps text-outline uppercase">
-        <a href="privacy.html" class="pointer-events-auto hover:text-[#a0cfcf] transition-colors">Privacy &amp; Consent</a>
-        <span>MockMode v2.0</span>
-    </div>
+
 </footer>
 
 <div class="fixed top-0 left-0 w-full h-full border-[12px] border-surface-container-lowest/50 pointer-events-none z-[100]"></div>
@@ -586,13 +730,19 @@
     function toggleTheme() {
         const html = document.documentElement;
         const icon = document.getElementById('theme-icon');
+        const panel = document.getElementById('main-panel');
+        const titlebar = document.getElementById('panel-titlebar');
         const isDark = html.classList.contains('dark');
         if (isDark) {
             html.classList.remove('dark'); html.classList.add('light');
             icon.textContent = 'dark_mode';
+            panel.style.border = '6px solid #1e0f0a';
+            titlebar.style.borderBottom = '4px solid #1e0f0a';
         } else {
             html.classList.remove('light'); html.classList.add('dark');
             icon.textContent = 'light_mode';
+            panel.style.border = '6px solid #1A0F0D';
+            titlebar.style.borderBottom = '4px solid #190a08';
         }
     }
 
@@ -617,19 +767,13 @@
         clickSfx.play().catch(() => {});
     }
 
-    /* ── Single Circle Ripple on Click ── */
-    const RIPPLE_COLORS = ['#a0cfcf','#bbeceb','#e7bdb6','#669BBC','#cfc6ae','#ffffff'];
-    function spawnBurst(e) {
-        const el = document.createElement('div');
-        el.className = 'click-ripple';
-        el.style.cssText = `
-            left: ${e.clientX}px;
-            top:  ${e.clientY}px;
-            --rc: ${RIPPLE_COLORS[Math.floor(Math.random() * RIPPLE_COLORS.length)]};
-        `;
-        document.body.appendChild(el);
-        el.addEventListener('animationend', () => el.remove());
+    const howToSfx = document.getElementById('howtoplay-sound');
+    howToSfx.volume = 0.7;
+    function playHowTo() {
+        howToSfx.currentTime = 0;
+        howToSfx.play().catch(() => {});
     }
+
 
     // ── White dot on any non-button click ──
     document.addEventListener('click', (e) => {
@@ -826,7 +970,7 @@
 
     const startSfx = document.getElementById('start-sound');
     function playStart(e) {
-        spawnBurst(e);
+        
         startSfx.currentTime = 0;
         startSfx.volume = 0.8;
         startSfx.play().catch(() => {});

@@ -94,32 +94,128 @@ function updateWebcamUiState(state, label) {
 // ──── START: ID.2 ────
 // ───────────────────────────────────────────────────────────────────────────
 
-
+// ── State ──────────────────────────────────────────────────────────────────
 let faceMonitorTimer = null;
 let faceApiModelsLoaded = false;
+let faceApiOverlayEnabled = false;
 
+// Expression → emoji map
+const FACE_EXPR_EMOJI = {
+  happy:     '😊',
+  sad:       '😢',
+  angry:     '😠',
+  fearful:   '😨',
+  disgusted: '🤢',
+  surprised: '😮',
+  neutral:   '😐',
+};
+
+// ── Model loading ───────────────────────────────────────────────────────────
+async function loadFaceApiModels(modelPath = 'assets/js/session-interview/models') {
+  if (faceApiModelsLoaded) return;
+  if (!window.faceapi) throw new Error('[MockMode] face-api.js is not loaded.');
+  await Promise.all([
+    faceapi.nets.tinyFaceDetector.loadFromUri(modelPath),
+    faceapi.nets.faceExpressionNet.loadFromUri(modelPath),
+  ]);
+  faceApiModelsLoaded = true;
+}
+
+// ── Canvas helpers ──────────────────────────────────────────────────────────
+function clearFaceApiCanvas() {
+  const canvas = document.getElementById('face-api-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function renderFaceApiOnCanvas(video, detections) {
+  const canvas = document.getElementById('face-api-canvas');
+  if (!canvas) return;
+
+  const w = video.offsetWidth || 128;
+  const h = video.offsetHeight || 160;
+  if (canvas.width !== w) canvas.width = w;
+  if (canvas.height !== h) canvas.height = h;
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!detections || detections.length === 0) return;
+
+  const resized = faceapi.resizeResults(detections, { width: w, height: h });
+  const cs = 5;
+
+  resized.forEach(det => {
+    const box = det.detection.box;
+
+    // Bounding box
+    ctx.strokeStyle = 'rgba(160,207,207,0.6)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(box.x, box.y, box.width, box.height);
+
+    // Corner markers — tech aesthetic
+    ctx.strokeStyle = '#1aff7a';
+    ctx.lineWidth = 2;
+    // top-left
+    ctx.beginPath(); ctx.moveTo(box.x, box.y + cs); ctx.lineTo(box.x, box.y); ctx.lineTo(box.x + cs, box.y); ctx.stroke();
+    // top-right
+    ctx.beginPath(); ctx.moveTo(box.x + box.width - cs, box.y); ctx.lineTo(box.x + box.width, box.y); ctx.lineTo(box.x + box.width, box.y + cs); ctx.stroke();
+    // bottom-left
+    ctx.beginPath(); ctx.moveTo(box.x, box.y + box.height - cs); ctx.lineTo(box.x, box.y + box.height); ctx.lineTo(box.x + cs, box.y + box.height); ctx.stroke();
+    // bottom-right
+    ctx.beginPath(); ctx.moveTo(box.x + box.width - cs, box.y + box.height); ctx.lineTo(box.x + box.width, box.y + box.height); ctx.lineTo(box.x + box.width, box.y + box.height - cs); ctx.stroke();
+  });
+}
+
+// ── Face data HUD update ────────────────────────────────────────────────────
+function updateFaceDataHUD(detections) {
+  const noFaceEl  = document.getElementById('face-hud-no-face');
+  const exprEl    = document.getElementById('face-hud-expression');
+  const emojiEl   = document.getElementById('face-hud-emoji');
+  const nameEl    = document.getElementById('face-hud-expr-name');
+  const pctEl     = document.getElementById('face-hud-expr-pct');
+  const barFill   = document.getElementById('face-hud-bar-fill');
+
+  if (!noFaceEl || !exprEl) return;
+
+  if (!detections || detections.length === 0) {
+    noFaceEl.style.display = '';
+    exprEl.style.display   = 'none';
+    return;
+  }
+
+  noFaceEl.style.display = 'none';
+  exprEl.style.display   = '';
+
+  const exprs = detections[0].expressions;
+  if (!exprs) return;
+
+  const [exprName, exprScore] = Object.entries(exprs).reduce((a, b) => b[1] > a[1] ? b : a);
+  const pct = Math.round(exprScore * 100);
+
+  if (emojiEl)  emojiEl.textContent = FACE_EXPR_EMOJI[exprName] || '😐';
+  if (nameEl)   nameEl.textContent  = exprName.toUpperCase();
+  if (pctEl)    pctEl.textContent   = pct + '%';
+  if (barFill)  barFill.style.width = pct + '%';
+}
+
+// ── Face monitoring loop ────────────────────────────────────────────────────
 async function manageFaceMonitoring(enable, videoElementId = 'webcam-video', modelPath = 'assets/js/session-interview/models') {
   if (!enable) {
     if (faceMonitorTimer) {
       clearInterval(faceMonitorTimer);
       faceMonitorTimer = null;
     }
+    clearFaceApiCanvas();
+    updateFaceDataHUD(null);
     return;
   }
 
   const video = document.getElementById(videoElementId);
-  if (!video) {
-    throw new Error(`Video element with id "${videoElementId}" was not found.`);
-  }
+  if (!video) throw new Error(`[MockMode] Video element "${videoElementId}" not found.`);
+  if (!window.faceapi) throw new Error('[MockMode] face-api.js is not loaded.');
 
-  if (!window.faceapi) {
-    throw new Error('face-api.js is not loaded.');
-  }
-
-  if (!faceApiModelsLoaded) {
-    await faceapi.nets.tinyFaceDetector.loadFromUri(modelPath);
-    faceApiModelsLoaded = true;
-  }
+  await loadFaceApiModels(modelPath);
 
   if (faceMonitorTimer) {
     clearInterval(faceMonitorTimer);
@@ -127,61 +223,95 @@ async function manageFaceMonitoring(enable, videoElementId = 'webcam-video', mod
   }
 
   faceMonitorTimer = setInterval(async () => {
-    if (video.paused || video.ended || video.readyState < 2) {
-      return;
-    }
+    if (video.paused || video.ended || video.readyState < 2) return;
 
     try {
-      const detections = await faceapi.detectAllFaces(
-        video,
-        new faceapi.TinyFaceDetectorOptions({
-          scoreThreshold: 0.5
-        })
-      );
+      const detections = await faceapi
+        .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.5 }))
+        .withFaceExpressions();
 
-      document.dispatchEvent(
-        new CustomEvent('mm:face-monitor', {
-          detail: {
-            hasFace: detections.length > 0,
-            faceCount: detections.length,
-            detections
-          }
-        })
-      );
+      if (faceApiOverlayEnabled) {
+        renderFaceApiOnCanvas(video, detections);
+        updateFaceDataHUD(detections);
+      }
+
+      document.dispatchEvent(new CustomEvent('mm:face-monitor', {
+        detail: {
+          hasFace:     detections.length > 0,
+          faceCount:   detections.length,
+          detections,
+          expressions: detections.length > 0 ? detections[0].expressions : null,
+        },
+      }));
     } catch (err) {
       console.error('[MockMode] Face monitoring failed:', err);
     }
   }, 500);
 }
 
+// ── Face API toggle ─────────────────────────────────────────────────────────
+function setFaceApiEnabled(enabled) {
+  faceApiOverlayEnabled = enabled;
+  sessionStorage.setItem('mm_face_api_overlay', enabled ? '1' : '0');
+
+  const btn   = document.getElementById('face-api-btn');
+  const panel = document.getElementById('face-data-panel');
+
+  if (btn) btn.classList.toggle('face-api-active', enabled);
+
+  if (enabled) {
+    if (panel) panel.style.display = '';
+    const video = document.getElementById('webcam-video');
+    if (video && video.srcObject && !faceMonitorTimer) {
+      loadFaceApiModels()
+        .then(() => manageFaceMonitoring(true))
+        .catch(err => console.error('[MockMode] Face API enable failed:', err));
+    }
+  } else {
+    if (panel) panel.style.display = 'none';
+    manageFaceMonitoring(false);
+  }
+}
+
+function toggleFaceApi() {
+  setFaceApiEnabled(!faceApiOverlayEnabled);
+}
+
+// ── Auto-init on DOMContentLoaded ───────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  const consent = sessionStorage.getItem('mm_webcam_consent');
+  const consent     = sessionStorage.getItem('mm_webcam_consent');
+  const faceEnabled = sessionStorage.getItem('mm_face_api_overlay') === '1';
 
-  if (consent !== 'granted') {
-    return;
+  // Restore toggle UI state from previous session
+  faceApiOverlayEnabled = faceEnabled;
+  const btn   = document.getElementById('face-api-btn');
+  const panel = document.getElementById('face-data-panel');
+  if (btn)   btn.classList.toggle('face-api-active', faceEnabled);
+  if (panel) panel.style.display = faceEnabled ? '' : 'none';
+
+  // Start face monitoring automatically when the video starts playing.
+  // This handles both: first-time consent grant AND page reload with prior consent.
+  const video = document.getElementById('webcam-video');
+  if (video) {
+    video.addEventListener('play', () => {
+      if (faceApiOverlayEnabled && !faceMonitorTimer) {
+        loadFaceApiModels()
+          .then(() => manageFaceMonitoring(true))
+          .catch(err => console.error('[MockMode] Face API auto-start failed:', err));
+      }
+    });
   }
 
-  if (typeof setWebcamUiState === 'function') {
-    setWebcamUiState('loading', 'Starting Camera...');
-  }
+  if (consent !== 'granted') return;
+
   updateWebcamUiState('', 'Starting Camera...');
 
   startWebcam('webcam-video')
-    .then(() => manageFaceMonitoring(true, 'webcam-video'))
-    .then(() => {
-      if (typeof setWebcamUiState === 'function') {
-        setWebcamUiState('ready', 'Camera ONLINE');
-      }
-      updateWebcamUiState('ready', 'Camera ONLINE');
-    })
-    .catch((err) => {
-      console.error('[MockMode] Auto webcam monitor failed:', err);
-
+    .then(() => updateWebcamUiState('ready', 'Camera ONLINE'))
+    .catch(err => {
+      console.error('[MockMode] Auto webcam start failed:', err);
       sessionStorage.removeItem('mm_webcam_consent');
       manageFaceMonitoring(false);
-      if (typeof setWebcamUiState === 'function') {
-        setWebcamUiState('error', 'Camera failed to initialize.');
-      }
       updateWebcamUiState('error', 'Camera failed to initialize.');
     });
 });

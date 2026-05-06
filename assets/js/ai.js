@@ -235,23 +235,31 @@ async function generateVerdict(scores, resumeAnalysis, personality, role = 'gene
   else if (average >= 50) verdict = 'WAITLISTED';
   else verdict = 'FIRED';
 
+  const toneGuide = verdict === 'HIRED'
+    ? 'The candidate performed well. Be positive and welcoming.'
+    : verdict === 'WAITLISTED'
+    ? 'The candidate was borderline. Be cautiously neutral — acknowledge effort but be honest about the gaps. Do not congratulate.'
+    : 'The candidate failed. Do NOT congratulate them. Be direct and critical — reflect their poor performance clearly.';
+
   const messages = [
     {
       role: 'system',
       content: `You are the interviewer for a ${role} position. Give a final verdict message in character.
+      The final verdict is: ${verdict}.
+      ${toneGuide}
       Return ONLY a JSON object with no extra text.
       Format: {
-        "verdict": "${verdict}",
-        "verdict_message": "2-3 sentence in-character final message to the candidate",
-        "final_tip": "one specific actionable tip to improve as a ${role}"
+        \"verdict\": \"${verdict}\",
+        \"verdict_message\": \"2-3 sentence in-character final message to the candidate\",
+        \"final_tip\": \"one specific actionable tip to improve as a ${role}\"
       }`
     },
     {
       role: 'user',
-      content: `Average score: ${average}. 
+      content: `Average score: ${Math.round(average)}%.
+      Individual scores: ${scores.join(', ')}.
       Resume strengths: ${resumeAnalysis.strengths.join(', ')}.
-      Resume weaknesses: ${resumeAnalysis.weaknesses.join(', ')}.
-      Individual scores: ${scores.join(', ')}.`
+      Resume weaknesses: ${resumeAnalysis.weaknesses.join(', ')}.`
     }
   ];
 

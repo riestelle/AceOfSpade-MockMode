@@ -4,14 +4,24 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>MockMode — Debrief</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdn.tailwindcss.com/3.4.1"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;700;900&family=Be+Vietnam+Pro:wght@400;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <style>
+    /* ── Fixed background image ── */
+    body {
+        background-image:
+            url("assets/img/results-bg.png");
+        background-attachment: fixed;
+        background-repeat: no-repeat;
+        background-size: cover;
+        background-position: center;
+    }
+
     .pixel-scanline {
-        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-        background-size: 100% 4px, 3px 100%;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+        background-size: 100% 4px;
         pointer-events: none;
     }
     .pixel-dither {
@@ -19,52 +29,119 @@
         background-size: 4px 4px;
     }
 
-    /* verdict stamp colors */
-    body[data-verdict="hired"]          #verdict-text { color: #1aff7a; border-color: #1aff7a; }
-    body[data-verdict="hired-lucky"]    #verdict-text { color: #1aff7a; border-color: #1aff7a; }
-    body[data-verdict="waitlisted"]     #verdict-text { color: #ffcc00; border-color: #ffcc00; }
-    body[data-verdict="fired-breakdown"] #verdict-text { color: #ff4444; border-color: #ff4444; }
-    body[data-verdict="fired-technical"] #verdict-text { color: #ff4444; border-color: #ff4444; }
-    body[data-verdict="fired-attitude"]  #verdict-text { color: #ff6a00; border-color: #ff6a00; }
+    /* ── Verdict stamp colors — ink tones, no neon ── */
+    body[data-verdict="hired"]           #verdict-text { color: #2e8b57; border-color: #2e8b57; }
+    body[data-verdict="hired-lucky"]     #verdict-text { color: #2e8b57; border-color: #2e8b57; }
+    body[data-verdict="waitlisted"]      #verdict-text { color: #b8860b; border-color: #b8860b; }
+    body[data-verdict="fired-breakdown"] #verdict-text { color: #8b1a1a; border-color: #8b1a1a; }
+    body[data-verdict="fired-technical"] #verdict-text { color: #8b1a1a; border-color: #8b1a1a; }
+    body[data-verdict="fired-attitude"]  #verdict-text { color: #8b3a1a; border-color: #8b3a1a; }
 
-    /* verdict glow pulse */
-    @keyframes verdictGlow {
-        0%, 100% { text-shadow: 0 0 16px currentColor; }
-        50%       { text-shadow: 0 0 40px currentColor, 0 0 80px currentColor; }
+    /* ── Verdict post-stamp: static ink bleed, no loop ── */
+    .verdict--revealed {
+        text-shadow:
+            1px 1px 0 currentColor,
+            -1px -1px 0 currentColor,
+            2px 0 1px currentColor,
+            0 0 6px rgba(0,0,0,0.3);
+        opacity: 0.93;
     }
-    .verdict--revealed { animation: verdictGlow 2.5s ease-in-out infinite; }
 
-    /* insight list items */
+    /* ── Ink ring burst (one-shot, no loop) ── */
+    @keyframes inkSpread {
+        0%   { opacity: 0;    transform: scale(0.8); }
+        30%  { opacity: 0.5;  transform: scale(1.1); }
+        100% { opacity: 0;    transform: scale(1.7); }
+    }
+    .stamp-ink-ring {
+        position: absolute;
+        inset: -8px;
+        border-radius: 4px;
+        border: 3px solid currentColor;
+        opacity: 0;
+        pointer-events: none;
+    }
+    .stamp-ink-ring.ink-fired { color: #8b1a1a; }
+    .stamp-ink-ring.ink-hired { color: #2e8b57; }
+    .stamp-ink-ring.ink-wait  { color: #b8860b; }
+    .stamp-ink-ring--active   { animation: inkSpread 0.5s ease-out forwards; }
+
+    /* ── Insight list items ── */
     .insight-item { padding: 0.35rem 0; font-size: 0.85rem; }
-    .insight-item--strength { color: #1aff7a; }
-    .insight-item--weakness  { color: #ff4444; }
+    .insight-item--strength { color: #4caf82; }
+    .insight-item--weakness  { color: #cf6679; }
 
-    /* scanline sweep */
+    /* ── Scanline sweep ── */
     @keyframes scanline {
         0%   { transform: translateY(-100%); }
         100% { transform: translateY(100vh); }
     }
     .animate-scanline { animation: scanline 8s linear infinite; }
 
-    /* compensation card states */
+    /* ── Compensation card states ── */
     .comp-card { transition: transform 0.15s ease; }
     .comp-card:hover { transform: translateY(-4px); }
-    .comp-card.comp--void { opacity: 0.45; filter: grayscale(1); }
+    .comp-card.comp--void { opacity: 0.75; filter: grayscale(1); }
     .comp-card.comp--void:hover { transform: none; }
+    /* Force solid backgrounds so bg image never bleeds through the cards */
+    #comp-offer    { background-color: #ECE2C9 !important; }
+    #comp-access   { background-color: #2d1b18 !important; }
+    #comp-caffeine { background-color: #231512 !important; }
 
-    /* stat cards start hidden for GSAP */
-    .stat-card { opacity: 0; transform: translateY(24px); transition: opacity 0.4s ease, transform 0.4s ease; }
+    /* ── Stat cards: hidden initially, NO transition (GSAP owns this) ── */
+    .stat-card { opacity: 0; transform: translateY(24px); }
 
-    /* portrait starts hidden */
-    #portrait-card { opacity: 0; transition: opacity 0.5s ease; }
+    /* ── Portrait: hidden initially, NO transition (GSAP owns this) ── */
+    #portrait-card { opacity: 0; }
 
-    /* verdict stamp starts hidden */
-    #verdict-stamp { opacity: 0; transform: scale(0.4) rotate(-20deg); }
+    /* ── Verdict stamp: hidden initially ── */
+    #verdict-stamp { opacity: 0; }
 
-    /* Safety net: if JS never fires (e.g. network failure), reveal after 3s */
-    @keyframes mm-reveal { to { opacity: 1; transform: none; } }
-    .stat-card     { animation: mm-reveal 0s 3s forwards; }
-    #portrait-card { animation: mm-reveal 0s 3s forwards; }
+    /* Safety net: if JS never fires, reveal after 3s — uses will-change to avoid repaint */
+    @keyframes mm-reveal { to { opacity: 1; transform: translateY(0); } }
+    .stat-card-fallback     { animation: mm-reveal 0.4s 3s ease forwards; }
+    #portrait-card-fallback { animation: mm-reveal 0.4s 3s ease forwards; }
+
+    /* ── Buttons ── */
+    .btn-action {
+        cursor: pointer;
+        outline: none;
+        user-select: none;
+        transition: opacity 0.12s ease, transform 0.08s ease, box-shadow 0.08s ease;
+    }
+    .btn-action:hover  { opacity: 0.85; }
+    .btn-action:active { transform: translate(4px, 4px); box-shadow: none !important; }
+    .btn-action:focus-visible { outline: 2px solid #a0cfcf; outline-offset: 3px; }
+
+    /* ── Download ledger overlay ── */
+    #download-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 7, 5, 0.82);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 16px;
+    }
+    #download-overlay.visible { display: flex; }
+    #download-overlay p {
+        color: #fcdbd6;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 14px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        opacity: 0.8;
+    }
+    .dl-spinner {
+        width: 36px; height: 36px;
+        border: 3px solid rgba(252,219,214,0.2);
+        border-top-color: #a0cfcf;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 <script id="tailwind-config">
     tailwind.config = {
@@ -163,9 +240,25 @@
     <div class="absolute inset-0 pixel-scanline opacity-20 pointer-events-none"></div>
 
     <!-- Terminal Header -->
-    <div class="flex justify-between items-center border-l-4 border-tertiary pl-4 stat-card">
-        <h1 class="font-headline-md text-tertiary tracking-widest uppercase">MockMode Output v2.0</h1>
-        <p class="font-label-caps text-outline opacity-70">SESSION_ID: 8829-X</p>
+    <div class="stat-card bg-surface-container-low border-4 border-surface-container-highest shadow-[4px_4px_0_0_#1A0F0D] overflow-hidden">
+        <!-- Terminal title bar -->
+        <div class="flex items-center justify-between bg-surface-container-highest px-4 py-2 border-b-2 border-outline-variant">
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-[#8b1a1a] border border-[#5a0f0f] block"></span>
+                <span class="w-3 h-3 rounded-full bg-[#b8860b] border border-[#7a5800] block"></span>
+                <span class="w-3 h-3 rounded-full bg-[#2e8b57] border border-[#1a5c38] block"></span>
+            </div>
+            <p class="font-label-caps text-outline text-[10px] tracking-widest uppercase">mockmode.terminal — session output</p>
+            <p class="font-label-caps text-outline text-[10px] opacity-60">SESSION_ID: 8829-X</p>
+        </div>
+        <!-- Terminal content row -->
+        <div class="flex items-center gap-3 px-4 py-3">
+            <span class="text-tertiary font-headline-md text-sm select-none">▶</span>
+            <span class="font-label-caps text-outline text-xs">$</span>
+            <h1 class="font-headline-md text-tertiary tracking-widest uppercase text-base">MockMode Output <span class="text-outline opacity-60 font-body-md text-sm normal-case tracking-normal">v2.0</span></h1>
+            <div class="flex-1 h-px bg-outline-variant opacity-30 ml-2"></div>
+            <span class="font-label-caps text-[#2e8b57] text-[10px] uppercase tracking-widest">● PROCESS COMPLETE</span>
+        </div>
     </div>
 
     <!-- Main Bento Grid -->
@@ -181,12 +274,12 @@
             </div>
 
             <!-- Verdict stamp box -->
-            <div class="flex flex-col items-center justify-center py-lg border-4 border-surface-container-highest bg-surface-container-low">
+            <div class="flex flex-col items-center justify-center py-lg border-4 border-surface-container-highest bg-surface-container-low overflow-hidden">
                 <p class="font-label-caps text-outline text-[10px] uppercase tracking-widest mb-sm">FINAL VERDICT</p>
-                <div class="-rotate-6">
+                <div id="verdict-stamp" class="relative inline-block" style="opacity:0;">
+                    <div class="stamp-ink-ring" id="stamp-ink-ring"></div>
                     <span id="verdict-text"
-                        class="text-6xl font-black text-tertiary tracking-tighter leading-none block uppercase font-headline-md"
-                        style="text-shadow: 0 0 16px rgba(160,207,207,0.5)">
+                        class="text-6xl font-black tracking-tighter leading-none block uppercase font-headline-md border-4 border-current px-3 py-1">
                         ...
                     </span>
                 </div>
@@ -331,20 +424,20 @@
     </section>
 
     <!-- Action Buttons -->
-    <div class="stat-card flex justify-center gap-8 pt-md pb-xl">
+    <div class="stat-card flex flex-col sm:flex-row flex-wrap justify-center gap-4 pt-md pb-xl">
         <button id="try-again-btn"
-            class="flex items-center gap-3 px-8 py-3 bg-[#669BBC] text-[#2D1B18] shadow-[4px_4px_0_0_#1A0F0D] font-headline-md font-bold text-sm active:translate-x-1 active:translate-y-1 active:shadow-none transition-none hover:opacity-90">
-            <span class="material-symbols-outlined">refresh</span>
+            class="btn-action flex items-center justify-center gap-2 px-6 py-3 bg-[#669BBC] text-[#2D1B18] shadow-[4px_4px_0_0_#1A0F0D] font-headline-md font-bold text-sm w-full sm:w-auto cursor-pointer">
+            <span class="material-symbols-outlined text-base leading-none">refresh</span>
             NEW GAME
         </button>
         <button id="print-results-btn"
-            class="flex items-center gap-3 px-8 py-3 bg-[#5D3F3A] text-[#ECE2C9] shadow-[4px_4px_0_0_#1A0F0D] hover:bg-[#669BBC] hover:text-[#2D1B18] font-headline-md font-bold text-sm active:translate-x-1 active:translate-y-1 active:shadow-none transition-none">
-            <span class="material-symbols-outlined">file_download</span>
+            class="btn-action flex items-center justify-center gap-2 px-6 py-3 bg-[#5D3F3A] text-[#ECE2C9] shadow-[4px_4px_0_0_#1A0F0D] font-headline-md font-bold text-sm w-full sm:w-auto cursor-pointer">
+            <span class="material-symbols-outlined text-base leading-none">file_download</span>
             EXPORT LEDGER
         </button>
         <button id="share-results-btn"
-            class="flex items-center gap-3 px-8 py-3 bg-surface-container border-4 border-outline text-on-surface shadow-[4px_4px_0_0_#1A0F0D] font-headline-md font-bold text-sm active:translate-x-1 active:translate-y-1 active:shadow-none transition-none hover:opacity-90">
-            <span class="material-symbols-outlined">share</span>
+            class="btn-action flex items-center justify-center gap-2 px-6 py-3 bg-surface-container border-4 border-outline text-on-surface shadow-[4px_4px_0_0_#1A0F0D] font-headline-md font-bold text-sm w-full sm:w-auto cursor-pointer">
+            <span class="material-symbols-outlined text-base leading-none">share</span>
             SHARE
         </button>
     </div>
@@ -354,7 +447,15 @@
 <div class="fixed top-0 left-0 w-full h-full border-[12px] border-surface-container-lowest/50 pointer-events-none z-[100]"></div>
 <div class="fixed inset-0 pointer-events-none z-[101] bg-gradient-to-b from-transparent via-tertiary/5 to-transparent h-20 w-full -translate-y-full opacity-10 animate-scanline"></div>
 
+<!-- Download overlay -->
+<div id="download-overlay">
+    <div class="dl-spinner"></div>
+    <p>Generating Ledger PDF…</p>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="assets/js/main.js"></script>
 <script src="assets/js/results.js"></script>
 </body>

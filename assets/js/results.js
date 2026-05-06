@@ -466,7 +466,10 @@ function runEntranceAnimations(verdictKey) {
     const portraitCard = document.getElementById('portrait-card');
     if (portraitCard) portraitCard.style.opacity = '1';
     const verdictStamp = document.getElementById('verdict-stamp');
-    if (verdictStamp) verdictStamp.style.opacity = '1';
+    if (verdictStamp) {
+      verdictStamp.style.opacity = '0.93';
+      verdictStamp.style.transform = 'scale(1) rotate(-12deg)';
+    }
     document.querySelectorAll('.stat-card').forEach(el => {
       el.style.opacity = '1';
       el.style.transform = 'none';
@@ -478,11 +481,15 @@ function runEntranceAnimations(verdictKey) {
 
   const tl = gsap.timeline();
 
+  // Tell GPU to prep these layers — cleared after animation to prevent edge artifacts
+  gsap.set(['#portrait-card', '.stat-card', '#verdict-stamp'], { willChange: 'opacity, transform' });
+
   // 1. Portrait card fades in
   tl.to('#portrait-card', {
     opacity: 1,
     duration: 0.5,
     ease: 'power2.out',
+    onComplete: () => gsap.set('#portrait-card', { willChange: 'auto' }),
   });
 
   // 2. Stat cards stagger up
@@ -492,26 +499,56 @@ function runEntranceAnimations(verdictKey) {
     duration: 0.4,
     stagger: 0.1,
     ease: 'power2.out',
+    onComplete: () => gsap.set('.stat-card', { willChange: 'auto' }),
   }, '-=0.2');
 
-  // 3. Verdict stamp slams in with overshoot
-  tl.to('#verdict-stamp', {
-    opacity: 0.9,
-    scale: 1,
-    rotation: -12,
-    duration: 0.45,
-    ease: 'back.out(1.7)',
+  // 3. Verdict stamp: slam down from above like a rubber stamp
+  //    Starts high up, drops fast, hits with a squash + tiny bounce, done.
+  tl.fromTo('#verdict-stamp', {
+    opacity: 0,
+    y: -120,
+    scaleY: 0.6,
+    scaleX: 1.1,
+    rotation: -8,
+  }, {
+    opacity: 1,
+    y: 0,
+    scaleY: 1,
+    scaleX: 1,
+    rotation: -6,
+    duration: 0.22,
+    ease: 'power4.out',
     onComplete: () => {
-      // Add the glow pulse after stamp lands
-      const verdictEl = document.getElementById('verdict-text');
-      if (verdictEl) verdictEl.classList.add('verdict--revealed');
+      // Impact squash: flatten briefly then settle
+      gsap.timeline()
+        .to('#verdict-stamp', { scaleY: 0.88, scaleX: 1.08, duration: 0.07, ease: 'power2.out' })
+        .to('#verdict-stamp', { scaleY: 1.04, scaleX: 0.98, duration: 0.08, ease: 'power2.out' })
+        .to('#verdict-stamp', { scaleY: 1,    scaleX: 1,    duration: 0.06, ease: 'power1.inOut' })
+        .call(() => {
+          gsap.set('#verdict-stamp', { willChange: 'auto' });
+          // Reveal static ink state — no loop
+          const verdictEl = document.getElementById('verdict-text');
+          if (verdictEl) verdictEl.classList.add('verdict--revealed');
+          // One-shot ink ring burst
+          const ring = document.getElementById('stamp-ink-ring');
+          if (ring) {
+            const isHired = verdictKey.startsWith('hired');
+            const isFired = verdictKey.startsWith('fired');
+            ring.classList.remove('ink-hired', 'ink-fired', 'ink-wait');
+            if (isHired) ring.classList.add('ink-hired');
+            else if (isFired) ring.classList.add('ink-fired');
+            else ring.classList.add('ink-wait');
+            ring.classList.add('stamp-ink-ring--active');
+            setTimeout(() => ring.classList.remove('stamp-ink-ring--active'), 500);
+          }
+        });
     },
   }, '-=0.05');
 
-  // 4. For fired endings: brief red flash on the portrait card
+  // 4. For fired endings: brief dark red stamp thud on portrait card
   if (verdictKey.startsWith('fired')) {
     tl.to('#portrait-card', {
-      boxShadow: '0 0 0 4px #ff4444',
+      boxShadow: '0 0 0 4px #8b1a1a, inset 0 0 20px rgba(139,26,26,0.15)',
       duration: 0.12,
       yoyo: true,
       repeat: 3,
@@ -519,10 +556,10 @@ function runEntranceAnimations(verdictKey) {
     }, '+=0.1');
   }
 
-  // 5. For hired endings: brief green flash
+  // 5. For hired endings: brief green ink stamp flash
   if (verdictKey.startsWith('hired')) {
     tl.to('#portrait-card', {
-      boxShadow: '0 0 0 4px #1aff7a',
+      boxShadow: '0 0 0 4px #2e8b57, inset 0 0 20px rgba(46,139,87,0.12)',
       duration: 0.12,
       yoyo: true,
       repeat: 2,
@@ -545,12 +582,56 @@ function bindActions() {
 
   const printBtn = document.getElementById('print-results-btn');
   if (printBtn) {
-    printBtn.addEventListener('click', () => window.print());
+    printBtn.addEventListener('click', downloadLedger);
   }
 
   const shareBtn = document.getElementById('share-results-btn');
   if (shareBtn) {
     shareBtn.addEventListener('click', shareResults);
+  }
+}
+
+/**
+ * Captures the results page as a PDF and triggers a download.
+ * Uses html2canvas + jsPDF.
+ */
+async function downloadLedger() {
+  const overlay = document.getElementById('download-overlay');
+  if (overlay) overlay.classList.add('visible');
+
+  try {
+    // Temporarily override background-attachment for canvas capture
+    document.body.style.backgroundAttachment = 'scroll';
+
+    const canvas = await html2canvas(document.querySelector('main'), {
+      backgroundColor: '#1f0f0c',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      ignoreElements: el => el.id === 'download-overlay',
+    });
+
+    document.body.style.backgroundAttachment = '';
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'px',
+      format: [canvas.width / 2, canvas.height / 2],
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width / 2, canvas.height / 2);
+
+    const verdict = getFromStorage('verdict');
+    const label = verdict?.verdict ? verdict.verdict.toLowerCase() : 'results';
+    pdf.save(`mockmode-ledger-${label}.pdf`);
+  } catch (err) {
+    console.error('[MockMode] PDF export failed:', err);
+    showToast('Export failed. Try again or screenshot the page.', 'warning');
+    document.body.style.backgroundAttachment = '';
+  } finally {
+    if (overlay) overlay.classList.remove('visible');
   }
 }
 

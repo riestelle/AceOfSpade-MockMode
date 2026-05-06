@@ -314,38 +314,46 @@ transition: opacity 0.2s, color 0.2s;
 
 /* ── Interviewer Lottie frame ── */
 #interviewer-lottie-stage {
+  /* Anchored above dialogue panel via JS-set CSS var */
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  bottom: var(--dialogue-height, 220px);
+  left: 0;
+  right: 0;
+  top: auto;
+  transform: none;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  width: min(100%, 700px);
-  min-height: 560px;
-  padding: 26px;
-  background: rgba(31, 15, 12, 0.92);
-  border: 2px solid rgba(160, 207, 207, 0.18);
-  border-radius: 34px;
-  box-shadow: 0 0 0 4px rgba(25, 10, 8, 0.75);
-  overflow: hidden;
+  width: 100%;
+  /* No background panel — character sits naturally above the box */
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
   z-index: 20;
   pointer-events: none;
 }
 #interviewer-lottie-stage::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(circle at center, rgba(160, 207, 207, 0.14), transparent 42%);
-  filter: blur(18px);
+  display: none;
 }
 #lottie-interviewer {
   position: relative;
-  width: clamp(340px, 44vw, 620px);
-  height: clamp(340px, 44vw, 620px);
+  /* Responsive: large on mobile, capped on desktop */
+  width: clamp(240px, 55vw, 520px);
+  height: clamp(240px, 55vw, 520px);
   aspect-ratio: 1 / 1;
   image-rendering: pixelated;
+  /* Slight bottom overlap so character looks like they're standing behind the desk */
+  margin-bottom: -24px;
+}
+
+@media (min-width: 768px) {
+  #lottie-interviewer {
+    width: clamp(300px, 38vw, 520px);
+    height: clamp(300px, 38vw, 520px);
+  }
 }
 #lottie-interviewer.is-talking {
   filter: drop-shadow(0 0 18px rgba(160, 207, 207, 0.35));
@@ -376,3 +384,203 @@ transition: opacity 0.2s, color 0.2s;
 }
 .lottie-skeleton-dot:nth-child(2) { animation-delay: 0.2s; }
 .lottie-skeleton-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* ── Global responsive fixes ── */
+
+/* Use dynamic viewport height everywhere so mobile browser chrome doesn't clip */
+:root {
+  --vh: 1dvh;
+}
+
+/* Dialogue panel: never overflow the screen, scroll internally if content is long */
+#dialogue-panel {
+  flex-shrink: 0;
+  min-height: 0;
+}
+
+/* On small screens (phones/tablets): stack dialogue content vertically, tighter spacing */
+@media (max-width: 767px) {
+  #dialogue-panel > div {
+    flex-direction: column !important;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  /* Submit/skip buttons go full width below content on mobile */
+  #dialogue-panel .flex-shrink-0.flex-col {
+    flex-direction: row !important;
+    width: 100%;
+  }
+  #submit-answer-btn {
+    flex: 1;
+    padding: 10px 8px;
+    font-size: 14px;
+  }
+  #skip-btn {
+    flex: 0 0 auto;
+    padding: 10px 10px;
+  }
+
+  /* Shrink question text on mobile so it fits */
+  #dialogue-text {
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Stress meter label — smaller text on mobile */
+  #stress-label {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+
+  /* Top-right controls — shrink buttons on mobile */
+  #timer-container {
+    padding: 4px 8px;
+    min-width: 72px;
+  }
+  #timer-display {
+    font-size: 16px;
+  }
+  #question-progress {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+
+  /* Answer input smaller on mobile */
+  #answer-input {
+    font-size: 13px;
+  }
+
+  /* Hide kbd hints on very small screens to save space */
+  .kbd-hint {
+    display: none;
+  }
+}
+
+/* Tablet (768px–1024px): slight adjustments */
+@media (min-width: 768px) and (max-width: 1024px) {
+  #dialogue-panel > div {
+    overflow: visible;
+  }
+
+  #lottie-interviewer {
+    width: clamp(260px, 42vw, 440px);
+    height: clamp(260px, 42vw, 440px);
+  }
+}
+
+/* Ensure the main container never clips the dialogue on any device */
+main {
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+}
+/* ── Face API canvas overlay ── */
+#face-api-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ── Face API toggle button — active state ── */
+#face-api-btn.face-api-active {
+  background: rgba(26, 255, 122, 0.1);
+  border-color: #1aff7a;
+}
+#face-api-btn.face-api-active span {
+  color: #1aff7a;
+}
+
+/* ── Face data HUD panel ── */
+.face-hud {
+  background: rgba(25, 10, 8, 0.90);
+  border: 2px solid rgba(160, 207, 207, 0.35);
+  padding: 5px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 3px 3px 0 0 #1a0f0d;
+}
+
+.face-hud-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Space Grotesk', monospace;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a0cfcf;
+  border-bottom: 1px solid rgba(160, 207, 207, 0.2);
+  padding-bottom: 3px;
+  margin-bottom: 1px;
+}
+
+.face-hud-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Space Grotesk', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #9d8d8b;
+}
+
+.face-hud-emoji {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.face-hud-expr-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.face-hud-expr-col span {
+  color: #a0cfcf;
+  font-size: 8px;
+  display: block;
+}
+
+.face-hud-bar-track {
+  width: 100%;
+  height: 3px;
+  background: rgba(160, 207, 207, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.face-hud-bar-fill {
+  height: 100%;
+  background: #1aff7a;
+  border-radius: 2px;
+  transition: width 0.35s ease;
+  min-width: 0;
+}
+
+.face-hud-pct {
+  font-size: 9px;
+  color: #1aff7a;
+  flex-shrink: 0;
+  min-width: 26px;
+  text-align: right;
+  font-weight: 800;
+}
+
+@keyframes face-scan-pulse {
+  0%, 100% { border-color: rgba(160, 207, 207, 0.35); }
+  50%       { border-color: rgba(26, 255, 122, 0.5); }
+}
+#face-data-panel .face-hud {
+  animation: face-scan-pulse 2.5s ease-in-out infinite;
+}
