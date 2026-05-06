@@ -3,8 +3,8 @@
 // transitions to the results page.
 // Depends on: main.js, ai.js
 // New in this version:
-//   - TTS via speakText() (defined in vendor/test.synthesis.js)
-//   - STT via mic button (wired in vendor/test.whisper.js)
+//   - TTS via speakText() (defined in session.realtime.tts.js)
+//   - STT via mic button (wired in session.realtime.speech.js)
 //   - Skip question button (one per session, +15 stress)
 //   - Answer history drawer integration
 //   - Loading indicator between questions
@@ -358,7 +358,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ── Boot the Lottie character animation ────────────────────────────────
   // Resolves personality → animation JSON path, then loads CharacterController.
   // The controller is stored at module scope (_interviewerCtrl) so speakText
-  // can call startTalking() / stopTalking() from vendor/test.synthesis.js.
+  // can call startTalking() / stopTalking() from session.realtime.tts.js.
   (async () => {
     const animDef = INTERVIEWER_ANIMATIONS[personality] ?? INTERVIEWER_ANIMATIONS['corporate'];
     if (typeof lottie !== 'undefined') {
@@ -366,7 +366,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         _interviewerCtrl = new CharacterController('lottie-interviewer', animDef.path, animDef.eyes);
         await _interviewerCtrl.init();
         _interviewerCtrl.goIdle();
-        // Expose globally so vendor/test.synthesis.js can reach it
+        // Expose globally so session.realtime.tts.js can reach it
         window._interviewerCtrl = _interviewerCtrl;
       } catch (err) {
         console.warn('[MockMode] Lottie init failed — running without character animation:', err);
@@ -627,7 +627,7 @@ async function askCurrentQuestion() {
   }
 
   // FIX: Expose _safeEnableAnsweringPhase so the skip-voice button (wired in
-  // vendor/test.synthesis.js) can fire through the guard without double-enabling.
+  // session.realtime.tts.js) can fire through the guard without double-enabling.
   window._skipVoiceBridge = _safeEnableAnsweringPhase;
 
   let streamFinished = false;
