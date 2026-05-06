@@ -2,7 +2,7 @@
 
 **[MockMode — Hired or Fired?](https://mockmode.vercel.app/)**
 
-Download fake.txt if you want to test
+Download `fake.txt` if you want to test with a sample resume.
 
 **MockMode** is a gamified AI-powered interview simulator. You paste your resume, pick an interviewer personality, and get put through a real-time interview where an AI asks you questions, reacts to your answers, and judges whether you're hired, waitlisted, or fired.
 
@@ -40,17 +40,20 @@ There's actual game logic running underneath:
 
 **Frontend**
 - HTML5, Tailwind CSS, Vanilla JS
-- Chart.js for the results breakdown
-- Web Speech API for voice input/output
+- Chart.js for the results score breakdown
+- Lottie (bodymovin) for animated interviewer characters
+- Web Speech API for voice input/output (browser-native TTS/STT)
+- Xenova/whisper-tiny.en (ONNX, via Transformers.js) for offline speech recognition
+- face-api.js for webcam-based confidence tracking
 
 **Backend**
-- Vercel Serverless Functions (Node.js)
+- Vercel Serverless Functions (Node.js 20.x)
 - Single `/api/ai.js` route with key rotation across multiple Groq and Gemini keys
 
 **AI**
 - Groq (`llama-3.3-70b-versatile`) — question generation and answer evaluation
 - Gemini (`gemini-1.5-flash`) — resume analysis and final feedback
-- OpenRouter as optional fallback
+- OpenRouter (`meta-llama/llama-3.3-70b-instruct:free`) — fallback when primary keys are exhausted
 
 ---
 
@@ -58,30 +61,41 @@ There's actual game logic running underneath:
 
 ```
 mockmode/
-├── index.html                  # Landing page
-├── upload.html                 # Resume input + setup
-├── interview.html              # Main game screen
-├── results.html                # Final verdict + score chart
+├── index.html                    # Landing page
+├── upload.html                   # Resume input + setup
+├── interview.html                # Main game screen
+├── results.html                  # Final verdict + score chart + PDF export
 ├── 404.html
 ├── privacy.html
 ├── api/
-│   └── ai.js                   # Unified AI proxy with key rotation
+│   └── ai.js                     # Unified AI proxy with key rotation
 ├── assets/
+│   ├── animations/               # Lottie JSON character files (Reyes, Kai, Matsuda)
 │   ├── css/
-│   │   └── styling.interview.css # Interview-specific styling
+│   │   ├── styling.interview.css         # Interview-specific styling
+│   │   └── mobile.styling.interview.css  # Mobile responsive overrides
+│   ├── img/
 │   ├── js/
-│   │   ├── ai.js                # Frontend AI caller (askAI, askAIStream)
-│   │   ├── main.js              # Shared utilities
-│   │   ├── results.js           # Verdict calculation + chart
-│   │   ├── upload.js            # Resume handling + session init
-│   │   ├── session-interview/    # Webcam + face-api support
-│   │   │   ├── asset.interview.js
-│   │   │   ├── asset.webcam.js
-│   │   │   ├── vendor/face-api.min.js
-│   │   │   └── models/
-│   │   └── (other page scripts)
+│   │   ├── ai.js                 # Frontend AI caller (askAI, askAIStream)
+│   │   ├── main.js               # Shared utilities
+│   │   ├── results.js            # Verdict calculation + chart + PDF export
+│   │   ├── upload.js             # Resume handling + session init
+│   │   └── session-interview/
+│   │       ├── asset.interview.js        # Core interview session logic
+│   │       ├── asset.webcam.js           # Webcam consent + face monitoring
+│   │       ├── session.realtime.tts.js   # Browser TTS/STT bridge
+│   │       ├── session.realtime.speech.js
+│   │       ├── sessionators.interface.js # Mobile vs desktop platform detector
+│   │       ├── vendor/
+│   │       │   ├── face-api.min.js
+│   │       │   ├── test.whisper.js
+│   │       │   └── test.synthesis.js
+│   │       └── models/           # face-api + Whisper ONNX model files
 │   └── tailwind/
-│       └── tailwind.styling.interview.js # Tailwind config helper
+│       └── tailwind.styling.interview.js
+├── sounds/                       # UI sound effects and lobby music
+├── fake.txt                      # Sample resume for testing
+├── package.json
 └── vercel.json
 ```
 
@@ -95,7 +109,7 @@ The easiest way is to just hit the live link above. But if you want to run it lo
 
 ```bash
 git clone https://github.com/riestelle/AceInSpade-MockMode.git
-cd MockMode
+cd AceInSpade-MockMode-main
 ```
 
 ### 2. Install Vercel CLI and run
@@ -107,11 +121,21 @@ vercel dev
 
 Then open `http://localhost:3000`.
 
+### 3. Whisper model files
+
+The Whisper ONNX model files are large and not committed to the repo. Download them via the included GitHub Actions workflow:
+
+```
+.github/workflows/download-whisper-model.yml
+```
+
+You can trigger it manually from the GitHub UI under **Actions → Download Whisper Model**, or run it automatically on push. The workflow downloads `Xenova/whisper-tiny.en` encoder and decoder ONNX files into `assets/js/session-interview/models/Xenova/whisper-tiny.en/onnx/`.
+
 ---
 
 ## Status
 
-This project is still in active development. Things that are working:
+**Working:**
 
 - Resume input and session initialization
 - AI-generated questions based on resume content
@@ -119,23 +143,28 @@ This project is still in active development. Things that are working:
 - Stress meter and combo tracking
 - Follow-up question branching
 - Skip button (one per session)
-- Interviewer personas (Ms. Reyes, Kai, Dr. Matsuda)
+- Interviewer personas (Ms. Reyes, Kai, Dr. Matsuda) with Lottie animations
 - Results page with Chart.js score breakdown
-- Voice input/output via Web Speech API
+- Downloadable results PDF (via html2canvas + jsPDF)
+- Voice input/output via Web Speech API (browser-native)
+- Webcam confidence tracking (face-api.js) with consent flow
+- Mobile responsive layout
 
-Things that are still being worked on:
+**Still being worked on:**
 
-- Lottie animated interviewer character
-- Webcam confidence tracking (Face API.js)
-- Downloadable result summary PDF
 - Full mobile responsiveness polish
+- Whisper offline STT as primary speech path
 
 ---
+
 ## Contributors
-@riestelle
-@bugvn
-@vectoriunknown
-@cantilangalexandramarie-lgtm
+
+[@riestelle](https://github.com/riestelle)
+[@bugvn](https://github.com/bugvn)
+[@vectoriunknown](https://github.com/vectoriunknown)
+[@cantilangalexandramarie-lgtm](https://github.com/cantilangalexandramarie-lgtm)
+
+---
 
 ## Built for
 
