@@ -83,7 +83,7 @@
         /* ── BACKGROUND ── */
         #office-bg {
             position: absolute; inset: 0;
-            background: url('g.jpg') center center / cover no-repeat;
+            background: url('assets/images/uploadbg.jpg') center center / cover no-repeat;
             transform-origin: center 40%;
             transition: transform 2.6s cubic-bezier(0.2, 0.0, 0.1, 1);
             filter: sepia(0.18) brightness(0.88) contrast(1.08);
@@ -166,6 +166,28 @@
             0%   { transform: translateY(0px); }
             50%  { transform: translateY(-14px); }
             100% { transform: translateY(0px); }
+        }
+
+        /* mobile horizontal sway — for vertical stacked layout */
+        @keyframes floatSway {
+            0%   { transform: translateX(0px); }
+            30%  { transform: translateX(4px); }
+            70%  { transform: translateX(-3px); }
+            100% { transform: translateX(0px); }
+        }
+
+        /* door slide-in on reveal */
+        @keyframes doorSlideIn {
+            0%   { opacity: 0; transform: translateY(28px); }
+            60%  { opacity: 1; transform: translateY(-4px); }
+            100% { opacity: 1; transform: translateY(0px); }
+        }
+
+        /* mobile card slide-in — whole row box */
+        @keyframes doorCardIn {
+            0%   { opacity: 0; transform: translateX(-24px); }
+            60%  { opacity: 1; transform: translateX(4px); }
+            100% { opacity: 1; transform: translateX(0px); }
         }
 
         .door-wrap.revealed {opacity: 1;}
@@ -723,44 +745,56 @@
 
             /* ── PHASE 1: monitor centered, bigger, above desk ── */
             #monitor-wrap {
-                bottom: 68px;
+                bottom: 110px;
                 left: 50%;
                 transform: translateX(-50%);
             }
 
             #monitor-bezel {
                 height: auto;
-                min-height: 0;
-                max-height: 75vh;
+                min-height: 460px;
+                max-height: 72vh;
                 padding: 10px;
                 width: auto;
             }
 
             #browser {
-                width: min(520px, 82vw);
+                width: min(560px, 80vw);
                 height: auto;
-                min-height: 400px;
+                min-height: 420px;
             }
 
-            .b-body { padding: 14px 20px 10px; min-height: 0; }
-            #resume-input { height: 95px; }
-            #monitor-base { width: 140px; }
-            #monitor-neck { width: 40px; height: 24px; }
+            .b-body { padding: 14px 24px 10px; min-height: 0; }
+            #resume-input { height: 105px; }
+            #monitor-base { width: 160px; }
+            #monitor-neck { width: 44px; height: 28px; }
 
-            /* desk tighter */
-            #desk-layer { height: 68px; }
-            #desk-surface { height: 55px; }
-            #desk-edge { bottom: 55px; }
-            .desk-prop { bottom: 55px; }
+            /* desk taller to fill more vertical space */
+            #desk-layer { height: 120px; }
+            #desk-surface { height: 100px; }
+            #desk-edge { bottom: 100px; }
+
+            /* override ALL inline bottom values on props */
+            .desk-prop { bottom: 100px !important; }
 
             /* hide crowded right props */
-            .desk-prop[style*="right: 1%"]  { display: none; }
-            .desk-prop[style*="right: 22%"] { display: none; }
+            .desk-prop[style*="right: 1%"]  { display: none !important; }
+            .desk-prop[style*="right: 22%"] { display: none !important; }
 
-            /* scale down left props */
-            .desk-prop[style*="left: 1%"]  svg { width: 160px !important; height: 220px !important; }
-            .desk-prop[style*="left: 12%"] svg { width: 200px !important; height: 145px !important; }
-            .desk-prop[style*="left: 6%"]  svg { width: 100px !important; height: 100px !important; }
+            /* books */
+            .desk-prop[style*="left: 3%"] svg  { width: 200px !important; height: 145px !important; }
+
+            /* cactus — already correct size, just ensure bottom */
+            .desk-prop[style*="left: 18%"] svg { width: 110px !important; height: 110px !important; }
+
+            /* mug */
+            .desk-prop[style*="right: 9%"] svg { width: 200px !important; height: 145px !important; }
+
+            /* lamp */
+            .desk-prop[style*="right: 2%"] svg { width: 140px !important; height: 280px !important; }
+
+            /* hide steam — its position is hardcoded to desktop px math */
+            div[style*="position:fixed"][style*="bottom:calc"] { display: none !important; }
 
             /* ── PHASE 2: cancel scale, center doors ── */
             #doors-layer.zoomed {
@@ -861,10 +895,12 @@
             .hire-stamp { width: 60px; height: 60px; top: -10px; right: -10px; }
 
             #desk-layer, .lamp-cone-overlay, .lamp-desk-glow, #dust-canvas { display: none; }
+            .hire-stamp { display: none; }
 
             /* ── PHASE 2: vertical scrollable doors ── */
             #doors-layer {
-                padding-top: 0;
+                padding-top: 20px;
+                padding-bottom: 20px;
                 overflow-y: auto;
                 overflow-x: hidden;
                 justify-content: flex-start;
@@ -877,22 +913,25 @@
             }
 
             #choose-label-top {
-                position: sticky;
-                top: 0;
+                position: relative;
+                top: auto;
                 z-index: 10;
                 font-size: 8px;
-                padding: 12px 20px;
+                padding: 14px 20px;
                 width: 100%;
                 text-align: center;
                 box-sizing: border-box;
                 margin: 0;
+                background: rgba(10, 4, 2, 0.97);
+                border-bottom: 1px solid rgba(160, 207, 207, 0.2);
+                flex-shrink: 0;
             }
 
             #doors-row {
                 flex-direction: column;
                 align-items: center;
-                gap: 28px;
-                padding: 24px 20px 20px;
+                gap: 20px;
+                padding: 28px 20px 36px;
                 width: 100%;
             }
 
@@ -911,9 +950,32 @@
                 width: 80px !important;
                 height: 120px !important;
                 flex-shrink: 0;
-                animation: none !important;
+                animation: none !important; /* door SVG itself doesn't move */
             }
 
+            /* slide-in + sway on the WHOLE card box */
+            .door-unit {
+                opacity: 0;
+                transform: translateX(0px);
+            }
+            .door-unit.revealed-unit {
+                animation: doorCardIn 0.5s cubic-bezier(0.34, 1.2, 0.64, 1) forwards,
+                           floatSway 3.8s ease-in-out 0.5s infinite;
+            }
+            #doors-row .door-unit:nth-child(1).revealed-unit { animation-delay: 0s,    0s; }
+            #doors-row .door-unit:nth-child(2).revealed-unit { animation-delay: 0.18s, 0.18s; }
+            #doors-row .door-unit:nth-child(3).revealed-unit { animation-delay: 0.36s, 0.36s; }
+
+            .door-unit.selected {
+                opacity: 1 !important;
+                animation: floatSway 2.2s ease-in-out infinite !important;
+            }
+            .door-unit.dimmed-unit {
+                animation: none !important;
+                opacity: 0.35;
+            }
+
+            /* door-wrap revealed still needs opacity 1 for the SVG */
             .door-wrap.revealed { opacity: 1; }
 
             .door-info {
@@ -944,7 +1006,65 @@
             .door-wrap { width: 65px !important; height: 100px !important; }
             .door-name { font-size: 11px; }
             .ghost-btn { padding: 7px 8px; font-size: 8px; }
+            #doors-layer { padding-top: 20px !important; padding-bottom: 20px !important; }
         }
+        /* ── CACTUS SWAY ── */
+        .cactus-wrap {
+            transform-origin: bottom center;
+            animation: cactusSway 5s ease-in-out infinite;
+        }
+        @keyframes cactusSway {
+            0%   { transform: rotate(0deg); }
+            20%  { transform: rotate(1.2deg); }
+            50%  { transform: rotate(-0.8deg); }
+            75%  { transform: rotate(0.6deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        /* ── CACTUS FLOWER PULSE ── */
+        @keyframes flowerPulse {
+            0%,100% { opacity: 1;   transform: scale(1); }
+            40%     { opacity: 0.6; transform: scale(0.85); }
+            70%     { opacity: 1;   transform: scale(1.1); }
+        }
+        .cactus-flower {
+            animation: flowerPulse 3s ease-in-out infinite;
+            transform-origin: center;
+            transform-box: fill-box;
+        }
+
+        /* ── INTRO CURTAIN ── */
+        #curtain-left, #curtain-right {
+            position: fixed;
+            top: 0; bottom: 0;
+            width: 51%; /* slight overlap so no gap */
+            background: #0d0604;
+            z-index: 5000;
+            pointer-events: none;
+        }
+        #curtain-left  { left: 0;  transform-origin: left center; }
+        #curtain-right { right: 0; transform-origin: right center; }
+
+        /* subtle grain texture on curtains */
+        #curtain-left::after, #curtain-right::after {
+            content: '';
+            position: absolute; inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+
+        #curtain-left.open  { animation: curtainLeft  0.9s cubic-bezier(0.76, 0, 0.24, 1) 0.4s forwards; }
+        #curtain-right.open { animation: curtainRight 0.9s cubic-bezier(0.76, 0, 0.24, 1) 0.4s forwards; }
+
+        @keyframes curtainLeft  {
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(-102%); }
+        }
+        @keyframes curtainRight {
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(102%); }
+        }
+
         /* ── STEAM WISPS ── */
         .steam-wisp {
             position: absolute;
@@ -967,6 +1087,19 @@
      </style>
     </head>
     <body>
+
+        <!-- INTRO CURTAIN -->
+        <div id="curtain-left"></div>
+        <div id="curtain-right"></div>
+
+        <!-- MUSIC -->
+        <audio id="bg-music" loop>
+            <source src="assets/audio/mockmode.mp3" type="audio/mpeg">
+        </audio>
+        <button id="music-btn" title="Toggle music" onclick="toggleMusic()" class="arcade-button flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors" style="position:fixed;top:12px;right:14px;z-index:4999;width:40px;height:40px;">
+            <span id="music-icon-on"  class="material-symbols-outlined" style="color:#669BBC;font-size:20px;">volume_up</span>
+            <span id="music-icon-off" class="material-symbols-outlined" style="color:#669BBC;font-size:20px;display:none;">volume_off</span>
+        </button>
         
         <!-- DUST PARTICLES -->
         <canvas id="dust-canvas"></canvas>
@@ -1330,7 +1463,7 @@
                                 <div class="cd cd-y"></div>
                                 <div class="cd cd-g"></div>
                             </div>
-                            <div class="chrome-url" id="chrome-url">mock-data // submission_id_404</div>
+                            <div class="chrome-url" id="chrome-url">https://mockdata//</div>
                             <span style="font-size:9px;color:#9d8d8b;font-family:'Courier Prime',monospace;letter-spacing:0.08em;"> Search</span>
                         </div>
                         
@@ -1502,6 +1635,7 @@
 
                 <!-- CACTUS -->
                 <div class="desk-prop" style="left: 18%; bottom: 65px; animation-delay: 0.25s;">
+                <div class="cactus-wrap">
                     <svg width="160" height="160" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" style="image-rendering:pixelated">
 
                     <!-- POT -->
@@ -1557,11 +1691,26 @@
                     <rect x="33" y="23" width="1"  height="1"  fill="#1a6020"/>
                     <rect x="35" y="29" width="1"  height="1"  fill="#1a6020"/>
 
+                    <!-- CACTUS FLOWER — pink pixel bloom on center tip -->
+                    <!-- main pink dot -->
+                    <rect class="cactus-flower" x="22" y="4" width="4" height="3" fill="#f06090"/>
+                    <!-- lighter center highlight -->
+                    <rect class="cactus-flower" x="23" y="4" width="2" height="1" fill="#f8a0c0"/>
+                    <!-- darker bottom petal -->
+                    <rect class="cactus-flower" x="22" y="6" width="4" height="1" fill="#c04070"/>
+                    <!-- tiny side petals -->
+                    <rect class="cactus-flower" x="21" y="5" width="1" height="1" fill="#e07090"/>
+                    <rect class="cactus-flower" x="26" y="5" width="1" height="1" fill="#e07090"/>
+                    <!-- yellow stamens -->
+                    <rect class="cactus-flower" x="23" y="5" width="1" height="1" fill="#f8e040"/>
+                    <rect class="cactus-flower" x="24" y="5" width="1" height="1" fill="#f0c030"/>
+
                     <!-- SHADOW -->
                     <rect x="6"  y="46" width="36" height="2"  fill="#2a1a0c"/>
                     <rect x="8"  y="48" width="32" height="1"  fill="#1a0e06" opacity="0.5"/>
 
                     </svg>
+                </div>
                 </div>
                 
                 <!-- PAPERS STACK — right side -->
@@ -1768,6 +1917,10 @@
                 document.getElementById('office-bg').classList.add('zoomed');
                 document.getElementById('doors-layer').classList.add('zoomed');
                 document.querySelectorAll('.door-wrap').forEach(w => w.classList.add('revealed'));
+                // cards slide in immediately on mobile
+                document.querySelectorAll('.door-unit').forEach((u, i) => {
+                    setTimeout(() => u.classList.add('revealed-unit'), i * 160);
+                });
             
                 setTimeout(() => {
                 ['diff-strict','diff-chill','diff-technical'].forEach((id, i) => {
@@ -1780,8 +1933,8 @@
                     document.getElementById('doors-layer').classList.add('interactive');
                     document.getElementById('door-pick-ui').classList.add('show');
                     document.getElementById('choose-label-top').classList.add('show');
-                }, 900);
-                }, 700);
+                }, 300);
+                }, 400);
             }, 450);
             }
 
@@ -1803,19 +1956,21 @@
             function pickDoorUI(el, personality) {
                 document.querySelectorAll('.door-wrap').forEach(d => {
                     d.classList.remove('selected', 'dimmed');
-            });
+                });
                 
-            // also clear selected from all units first
-            document.querySelectorAll('.door-unit').forEach(u => {
-                u.classList.remove('selected');
-            });
+                document.querySelectorAll('.door-unit').forEach(u => {
+                    u.classList.remove('selected', 'dimmed-unit');
+                });
 
-            el.querySelector('.door-wrap').classList.add('selected');
-            el.classList.add('selected'); // ← add this
+                el.querySelector('.door-wrap').classList.add('selected');
+                el.classList.add('selected');
 
-            document.querySelectorAll('.door-unit').forEach(u => {
-                if (u !== el) u.querySelector('.door-wrap').classList.add('dimmed');
-            });
+                document.querySelectorAll('.door-unit').forEach(u => {
+                    if (u !== el) {
+                        u.querySelector('.door-wrap').classList.add('dimmed');
+                        u.classList.add('dimmed-unit');
+                    }
+                });
 
                 document.getElementById('enter-btn').classList.add('ready');
                 pickDoor(personality);
@@ -1839,6 +1994,55 @@
                 if (!el) return;
                 el.textContent = text;
                 el.className = 'chrome-url' + (state ? ' state-' + state : '');
+            }
+        </script>
+
+        <script>
+            /* ── CURTAIN OPEN ── */
+            window.addEventListener('load', () => {
+                document.getElementById('curtain-left').classList.add('open');
+                document.getElementById('curtain-right').classList.add('open');
+            });
+
+            /* ── MUSIC — start on first user interaction (Edge/Chrome autoplay policy) ── */
+            let musicStarted = false;
+            let musicMuted   = false;
+
+            function startMusic() {
+                if (musicStarted) return;
+                const music = document.getElementById('bg-music');
+                if (!music || !music.querySelector('source')) return;
+                music.volume = 0.5;
+                music.play().then(() => {
+                    musicStarted = true;
+                }).catch(() => {});
+            }
+
+            // attempt autoplay immediately, fallback to first click
+            window.addEventListener('load', () => {
+                const music = document.getElementById('bg-music');
+                if (music && music.querySelector('source')) {
+                    music.volume = 0.5;
+                    music.play().then(() => { musicStarted = true; }).catch(() => {
+                        document.addEventListener('click', () => startMusic(), { once: true });
+                    });
+                }
+            });
+
+            function toggleMusic() {
+                const music   = document.getElementById('bg-music');
+                const iconOn  = document.getElementById('music-icon-on');
+                const iconOff = document.getElementById('music-icon-off');
+                const btn     = document.getElementById('music-btn');
+                if (!music) return;
+
+                startMusic();
+
+                musicMuted = !musicMuted;
+                music.muted   = musicMuted;
+                iconOn.style.display  = musicMuted ? 'none'  : 'inline';
+                iconOff.style.display = musicMuted ? 'inline' : 'none';
+                btn.classList.toggle('muted', musicMuted);
             }
         </script>
 

@@ -17,7 +17,7 @@ async function runResumeValidation(text) {
   const indicator = document.getElementById('resume-validation');
   if (!indicator) return;
 
-  setValidationState('loading', '🔍 Analyzing resume...');
+  setValidationState('loading', 'Analyzing resume...');
 
   // ── RULE-BASED PRE-CHECK (runs regardless of AI) ──
   const lower = text.toLowerCase();
@@ -124,13 +124,13 @@ function setValidationState(state, message) {
 
   // URL bar always updates
   const labels = {
-    loading: 'project-dossier // analyzing...',
-    success: 'project-dossier // valid_entry ✓',
-    warn:    'project-dossier // incomplete ⚠',
-    error:   'project-dossier // rejected ✗',
+    loading: 'https://mockdata// analyzing...',
+    success: 'https://mockdata// valid_entry ✓',
+    warn:    'https://mockdata// incomplete ⚠',
+    error:   'https://mockdata// rejected ✗',
   };
   if (typeof setChromeUrl === 'function') {
-    setChromeUrl(labels[state] ?? 'project-dossier // status_unknown', state);
+    setChromeUrl(labels[state] ?? 'https://mockdata// status_unknown', state);
   }
 
   if (!indicator) return;
@@ -155,12 +155,7 @@ function clearResumeValidation() {
   indicator.className = 'resume-validation';
   indicator.style.visibility = 'visible'; // keep space reserved
   saveToStorage('resume_validated', false);
-  if (typeof setChromeUrl === 'function') setChromeUrl('project-dossier // submission_id_404', '');
-}
-
-function bindResumeTextarea() {
-  const textarea = document.getElementById('resume-input');
-  const counter  = document.getElementById('resume-char-count');
+  if (typeof setChromeUrl === 'function') setChromeUrl('https://mockdata//', '');
   if (!textarea) return;
 
   // ── live character count ──
