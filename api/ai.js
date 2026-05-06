@@ -27,6 +27,12 @@ export default async function handler(req, res) {
     process.env.GROQ_10,
     process.env.GROQ_11,
     process.env.GROQ_12,
+    process.env.GROQ_13,
+    process.env.GROQ_14,
+    process.env.GROQ_15,
+    process.env.GROQ_16,
+    process.env.GROQ_17,
+    process.env.GROQ_18,
   ].filter(Boolean); // removes undefined keys so missing ones are skipped
 
   const GEMINI_KEYS = [
