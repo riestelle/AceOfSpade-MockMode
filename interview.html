@@ -47,7 +47,7 @@
   <div class="crt-overlay absolute inset-0 z-40"></div>
 
   <!-- TOP-LEFT: Stress Thermometer (BUG FIX: use height not width) -->
-  <div class="absolute top-6 left-6 flex flex-col items-center gap-3 z-50">
+  <div class="absolute left-6 top-1/2 -translate-y-1/2 flex flex-col items-center gap-3 z-50">
     <div id="stress-label"
       class="font-label-caps text-on-surface uppercase tracking-widest bg-surface-container border-4 border-on-surface px-3 py-1 shadow-step text-xs">
       Stress: 0%
@@ -99,7 +99,7 @@
   </div>
 
   <!-- Interviewer Lottie Stage -->
-  <div id="interviewer-lottie-stage" class="relative z-10 mb-8 md:mb-10 w-full flex justify-center">
+  <div id="interviewer-lottie-stage" class="absolute z-20 w-full flex justify-center">
     <!-- Lottie mounts here — JS picks the right animation based on personality -->
     <div id="lottie-interviewer" class="is-idle">
       <!-- Loading skeleton shown until animation is ready -->
