@@ -466,7 +466,10 @@ function runEntranceAnimations(verdictKey) {
     const portraitCard = document.getElementById('portrait-card');
     if (portraitCard) portraitCard.style.opacity = '1';
     const verdictStamp = document.getElementById('verdict-stamp');
-    if (verdictStamp) verdictStamp.style.opacity = '1';
+    if (verdictStamp) {
+      verdictStamp.style.opacity = '0.93';
+      verdictStamp.style.transform = 'scale(1) rotate(-12deg)';
+    }
     document.querySelectorAll('.stat-card').forEach(el => {
       el.style.opacity = '1';
       el.style.transform = 'none';
@@ -494,30 +497,46 @@ function runEntranceAnimations(verdictKey) {
     ease: 'power2.out',
   }, '-=0.2');
 
-  // 3. Verdict stamp slams in with overshoot + ink ring effect
-  tl.to('#verdict-stamp', {
-    opacity: 0.9,
+  // 3. Verdict stamp: fast drop-in slam, one-shot, done
+  tl.fromTo('#verdict-stamp', {
+    opacity: 0,
+    scale: 2.8,
+    rotation: -22,
+    filter: 'blur(3px)',
+  }, {
+    opacity: 0.93,
     scale: 1,
     rotation: -12,
-    duration: 0.45,
-    ease: 'back.out(1.7)',
+    filter: 'blur(0px)',
+    duration: 0.28,
+    ease: 'power4.out',
     onComplete: () => {
-      // Add the ink bleed pulse after stamp lands
-      const verdictEl = document.getElementById('verdict-text');
-      if (verdictEl) verdictEl.classList.add('verdict--revealed');
-
-      // Ink ring spread — color based on verdict
-      const ring = document.getElementById('stamp-ink-ring');
-      if (ring) {
-        const isHired = verdictKey.startsWith('hired');
-        const isFired = verdictKey.startsWith('fired');
-        ring.classList.remove('ink-hired', 'ink-fired', 'ink-wait');
-        if (isHired) ring.classList.add('ink-hired');
-        else if (isFired) ring.classList.add('ink-fired');
-        else ring.classList.add('ink-wait');
-        ring.classList.add('stamp-ink-ring--active');
-        setTimeout(() => ring.classList.remove('stamp-ink-ring--active'), 700);
-      }
+      // Brief overshoot bounce — rubber stamp thud feel
+      gsap.to('#verdict-stamp', {
+        scale: 1.06,
+        duration: 0.06,
+        ease: 'power1.out',
+        yoyo: true,
+        repeat: 1,
+        onComplete: () => {
+          gsap.set('#verdict-stamp', { scale: 1 });
+          // Reveal static ink state
+          const verdictEl = document.getElementById('verdict-text');
+          if (verdictEl) verdictEl.classList.add('verdict--revealed');
+          // One-shot ink ring burst, then done
+          const ring = document.getElementById('stamp-ink-ring');
+          if (ring) {
+            const isHired = verdictKey.startsWith('hired');
+            const isFired = verdictKey.startsWith('fired');
+            ring.classList.remove('ink-hired', 'ink-fired', 'ink-wait');
+            if (isHired) ring.classList.add('ink-hired');
+            else if (isFired) ring.classList.add('ink-fired');
+            else ring.classList.add('ink-wait');
+            ring.classList.add('stamp-ink-ring--active');
+            setTimeout(() => ring.classList.remove('stamp-ink-ring--active'), 600);
+          }
+        },
+      });
     },
   }, '-=0.05');
 

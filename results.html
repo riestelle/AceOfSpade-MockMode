@@ -12,7 +12,7 @@
     /* ── Fixed background image ── */
     body {
         background-image:
-            url("https://www.transparenttextures.com/patterns/dark-leather.png");
+            url("https://img.itch.zone/aW1hZ2UvMzU3MTU1NC8yMTI2MjMwMi5qcGc=/original/5sO6G1.jpg");
         background-attachment: fixed;
         background-repeat: repeat;
         background-size: auto;
@@ -36,26 +36,14 @@
     body[data-verdict="fired-technical"] #verdict-text { color: #8b1a1a; border-color: #8b1a1a; }
     body[data-verdict="fired-attitude"]  #verdict-text { color: #8b3a1a; border-color: #8b3a1a; }
 
-    /* ── Stamp ink bleed pulse (replaces neon glow) ── */
-    @keyframes inkBleed {
-        0%, 100% {
-            text-shadow:
-                1px 1px 0 currentColor,
-                -1px -1px 0 currentColor,
-                0 0 8px rgba(0,0,0,0.4);
-            opacity: 0.92;
-        }
-        50% {
-            text-shadow:
-                2px 2px 1px currentColor,
-                -2px -2px 1px currentColor,
-                3px 0 2px currentColor,
-                0 0 12px rgba(0,0,0,0.5);
-            opacity: 1;
-        }
-    }
+    /* ── Verdict post-stamp static state (no looping animation) ── */
     .verdict--revealed {
-        animation: inkBleed 3s ease-in-out infinite;
+        text-shadow:
+            1px 1px 0 currentColor,
+            -1px -1px 0 currentColor,
+            2px 0 1px currentColor,
+            0 0 6px rgba(0,0,0,0.3);
+        opacity: 0.93;
     }
 
     /* ── Stamp slam animation ── */
@@ -243,9 +231,25 @@
     <div class="absolute inset-0 pixel-scanline opacity-20 pointer-events-none"></div>
 
     <!-- Terminal Header -->
-    <div class="flex justify-between items-center border-l-4 border-tertiary pl-4 stat-card">
-        <h1 class="font-headline-md text-tertiary tracking-widest uppercase">MockMode Output v2.0</h1>
-        <p class="font-label-caps text-outline opacity-70">SESSION_ID: 8829-X</p>
+    <div class="stat-card bg-surface-container-low border-4 border-surface-container-highest shadow-[4px_4px_0_0_#1A0F0D] overflow-hidden">
+        <!-- Terminal title bar -->
+        <div class="flex items-center justify-between bg-surface-container-highest px-4 py-2 border-b-2 border-outline-variant">
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-[#8b1a1a] border border-[#5a0f0f] block"></span>
+                <span class="w-3 h-3 rounded-full bg-[#b8860b] border border-[#7a5800] block"></span>
+                <span class="w-3 h-3 rounded-full bg-[#2e8b57] border border-[#1a5c38] block"></span>
+            </div>
+            <p class="font-label-caps text-outline text-[10px] tracking-widest uppercase">mockmode.terminal — session output</p>
+            <p class="font-label-caps text-outline text-[10px] opacity-60">SESSION_ID: 8829-X</p>
+        </div>
+        <!-- Terminal content row -->
+        <div class="flex items-center gap-3 px-4 py-3">
+            <span class="text-tertiary font-headline-md text-sm select-none">▶</span>
+            <span class="font-label-caps text-outline text-xs">$</span>
+            <h1 class="font-headline-md text-tertiary tracking-widest uppercase text-base">MockMode Output <span class="text-outline opacity-60 font-body-md text-sm normal-case tracking-normal">v2.0</span></h1>
+            <div class="flex-1 h-px bg-outline-variant opacity-30 ml-2"></div>
+            <span class="font-label-caps text-[#2e8b57] text-[10px] uppercase tracking-widest">● PROCESS COMPLETE</span>
+        </div>
     </div>
 
     <!-- Main Bento Grid -->
