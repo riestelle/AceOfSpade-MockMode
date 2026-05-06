@@ -13,7 +13,7 @@
   <!-- Lottie Web — character animations -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
 </head>
-<body class="bg-background text-on-surface font-body-md overflow-hidden h-screen w-screen selection:bg-tertiary selection:text-on-tertiary">
+<body class="bg-background text-on-surface font-body-md overflow-hidden h-[100dvh] w-screen selection:bg-tertiary selection:text-on-tertiary">
 
 <!-- Toast notification container -->
 <div id="mm-toast-host" aria-live="polite" aria-atomic="true"></div>
@@ -34,7 +34,7 @@
   </div>
 </div>
 
-<main class="relative h-screen w-screen flex flex-col items-center justify-end overflow-hidden bg-surface-dim">
+<main class="relative h-[100dvh] w-screen flex flex-col items-center justify-end overflow-hidden bg-surface-dim">
 
   <!-- Background Office Scene -->
   <div class="absolute inset-0 z-0 opacity-40">
@@ -47,13 +47,13 @@
   <div class="crt-overlay absolute inset-0 z-40"></div>
 
   <!-- TOP-LEFT: Stress Thermometer -->
-  <div class="absolute left-6 flex flex-col items-center gap-3 z-50" style="bottom: calc(var(--dialogue-height, 220px) + 12px); top: auto; transform: none;">
+  <div class="absolute left-2 sm:left-6 flex flex-col items-center gap-2 sm:gap-3 z-50" style="top: 12px; sm:top: 24px; bottom: auto;">
     <div id="stress-label"
       class="font-label-caps text-on-surface uppercase tracking-widest bg-surface-container border-4 border-on-surface px-3 py-1 shadow-step text-xs">
       Stress: 0%
     </div>
-    <!-- Thermometer: stress-fill uses style.height (fixed from style.width bug) -->
-    <div class="w-10 h-[28vh] bg-surface-container-lowest border-4 border-on-surface rounded-full relative p-1">
+    <!-- Thermometer tube: tall enough to fill from top down to above dialogue -->
+    <div class="w-8 sm:w-10 bg-surface-container-lowest border-4 border-on-surface rounded-full relative p-1" style="height: calc(100dvh - var(--dialogue-height, 220px) - 80px);">
       <div
         id="stress-fill"
         class="absolute bottom-1 left-1 right-1 rounded-full border-t-2 border-white/30 transition-all duration-700"
@@ -71,7 +71,7 @@
   </div>
 
   <!-- TOP-RIGHT: Controls + Progress -->
-  <div class="absolute top-6 right-6 flex flex-col items-end gap-3 z-50">
+  <div class="absolute top-2 sm:top-6 right-2 sm:right-6 flex flex-col items-end gap-2 z-50">
     <div class="flex gap-2">
       <div class="flex flex-col items-center gap-0.5">
         <button id="sound-btn" class="w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step hover:bg-surface-container-high transition-all">
@@ -112,8 +112,8 @@
   </div>
 
   <!-- RPG Dialogue Box (Bottom) -->
-  <div id="dialogue-panel" class="relative z-50 w-full px-margin pb-margin" style="max-width: 100%;">
-    <div class="bg-surface-container border-4 border-on-surface p-sm md:p-md shadow-step flex flex-col md:flex-row gap-md items-stretch">
+  <div id="dialogue-panel" class="relative z-50 w-full px-2 sm:px-4 pt-0 pb-4 sm:pb-6" style="max-width: 100%;">
+    <div class="bg-surface-container border-4 border-on-surface p-2 sm:p-3 md:p-4 shadow-step flex flex-col md:flex-row gap-2 md:gap-4 items-stretch overflow-visible">
 
 <!-- 
       Face Cam

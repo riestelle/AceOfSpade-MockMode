@@ -384,3 +384,93 @@ transition: opacity 0.2s, color 0.2s;
 }
 .lottie-skeleton-dot:nth-child(2) { animation-delay: 0.2s; }
 .lottie-skeleton-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* ── Global responsive fixes ── */
+
+/* Use dynamic viewport height everywhere so mobile browser chrome doesn't clip */
+:root {
+  --vh: 1dvh;
+}
+
+/* Dialogue panel: never overflow the screen, scroll internally if content is long */
+#dialogue-panel {
+  flex-shrink: 0;
+  min-height: 0;
+}
+
+/* On small screens (phones/tablets): stack dialogue content vertically, tighter spacing */
+@media (max-width: 767px) {
+  #dialogue-panel > div {
+    flex-direction: column !important;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  /* Submit/skip buttons go full width below content on mobile */
+  #dialogue-panel .flex-shrink-0.flex-col {
+    flex-direction: row !important;
+    width: 100%;
+  }
+  #submit-answer-btn {
+    flex: 1;
+    padding: 10px 8px;
+    font-size: 14px;
+  }
+  #skip-btn {
+    flex: 0 0 auto;
+    padding: 10px 10px;
+  }
+
+  /* Shrink question text on mobile so it fits */
+  #dialogue-text {
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Stress meter label — smaller text on mobile */
+  #stress-label {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+
+  /* Top-right controls — shrink buttons on mobile */
+  #timer-container {
+    padding: 4px 8px;
+    min-width: 72px;
+  }
+  #timer-display {
+    font-size: 16px;
+  }
+  #question-progress {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+
+  /* Answer input smaller on mobile */
+  #answer-input {
+    font-size: 13px;
+  }
+
+  /* Hide kbd hints on very small screens to save space */
+  .kbd-hint {
+    display: none;
+  }
+}
+
+/* Tablet (768px–1024px): slight adjustments */
+@media (min-width: 768px) and (max-width: 1024px) {
+  #dialogue-panel > div {
+    overflow: visible;
+  }
+
+  #lottie-interviewer {
+    width: clamp(260px, 42vw, 440px);
+    height: clamp(260px, 42vw, 440px);
+  }
+}
+
+/* Ensure the main container never clips the dialogue on any device */
+main {
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+}
