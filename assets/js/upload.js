@@ -153,12 +153,16 @@ function clearResumeValidation() {
   if (!indicator) return;
   indicator.textContent = '\u00A0';
   indicator.className = 'resume-validation';
-  indicator.style.visibility = 'visible'; // keep space reserved
+  indicator.style.visibility = 'visible';
   saveToStorage('resume_validated', false);
   if (typeof setChromeUrl === 'function') setChromeUrl('https://mockdata//', '');
+} 
+
+function bindResumeTextarea() {
+  const textarea = document.getElementById('resume-input');
+  const counter  = document.getElementById('resume-char-count');
   if (!textarea) return;
 
-  // ── live character count ──
   textarea.addEventListener('input', () => {
     const len = textarea.value.trim().length;
     if (counter) {
@@ -166,14 +170,13 @@ function clearResumeValidation() {
       counter.classList.toggle('text-tertiary', len >= 100);
     }
     textarea.classList.remove('border-error');
-    clearResumeValidation(); // clear old result when user edits
+    clearResumeValidation();
   });
 
-  // ── AI validation fires when user clicks away ──
   textarea.addEventListener('blur', async () => {
     const text = textarea.value.trim();
     if (text.length < 100) return;
-    saveToStorage('resume_validated', false); // reset before async call
+    saveToStorage('resume_validated', false);
     await runResumeValidation(text);
   });
 }
