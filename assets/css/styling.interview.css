@@ -193,11 +193,11 @@
 #mm-toast-host {
   position: fixed;
   top: 92px;
-  right: 22px;
+  left: 22px;
   z-index: 9999;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 12px;
   max-width: min(360px, calc(100vw - 44px));
   pointer-events: none;
@@ -298,7 +298,10 @@ transition: opacity 0.2s, color 0.2s;
 
 /* ── Interviewer Lottie frame ── */
 #interviewer-lottie-stage {
-  position: relative;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -310,7 +313,12 @@ transition: opacity 0.2s, color 0.2s;
   border-radius: 34px;
   box-shadow: 0 0 0 4px rgba(25, 10, 8, 0.75);
   overflow: hidden;
+  z-index: 20;
+  pointer-events: none; /* allow clicks to pass through the stage to UI controls */
 }
+
+/* Allow inner lottie to receive events if needed */
+#lottie-interviewer { pointer-events: auto; }
 #interviewer-lottie-stage::before {
   content: '';
   position: absolute;
