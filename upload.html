@@ -100,23 +100,29 @@
         
         /* ── DOORS LAYER ── */
         #doors-layer {
-            position: fixed;
+            position: absolute;
             inset: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 32px;
-            padding-top: 250px;
+            gap: 28px;
+            padding-top: 0;
             pointer-events: none;
             z-index: 2;
-            transform-origin: center 85%;
+            transform-origin: center center;
             transition: transform 2.6s cubic-bezier(0.2, 0.0, 0.1, 1);
             opacity: 0; /* ← hidden until phase 2 */
             transition: transform 2.6s cubic-bezier(0.2, 0.0, 0.1, 1), opacity 0.5s ease;
         }
-        #doors-layer.zoomed { transform: scale(1.6) translateY(-3%); opacity: 1;}
+        #doors-layer.zoomed { transform: scale(1.6) translateY(-6%); opacity: 1;}
         #doors-layer.interactive { pointer-events: all; }
+
+        @media (max-width: 1440px) and (min-width: 901px) {
+            #doors-layer.zoomed {
+                transform: scale(1.45) translateY(-6%);
+            }
+        }
 
         #doors-row {
             display: flex;
@@ -540,10 +546,18 @@
 
         /* ── DOOR PICK UI ── */
         #door-pick-ui {
-            display: flex; align-items: center; justify-content: center;
-            opacity: 0; pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
             transition: opacity 0.6s ease;
-            /* NO position, NO bottom, NO left/right */
+            position: fixed;
+            bottom: clamp(100px, 20vh, 150px);
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            white-space: nowrap;
         }
         #door-pick-ui.show { opacity: 1; pointer-events: all; }
 
@@ -551,7 +565,7 @@
             font-size: 9px; letter-spacing: 0.22em;
             color: #a0cfcf; text-transform: uppercase;
             background: rgba(15, 8, 6, 0.92);
-            padding: 8px 28px;
+            padding: 8px 28px; margin-bottom: 20px;
             border: 1px solid rgba(160, 207, 207, 0.3); 
             font-family: 'Courier Prime', monospace; font-weight: 700;
             opacity: 0; pointer-events: none;
@@ -741,7 +755,7 @@
         /* ════════════════════════════════════════
            RESPONSIVE — TABLET (max 1024px)
         ════════════════════════════════════════ */
-        @media (max-width: 1024px) {
+        @media (max-width: 900px) {
 
             /* ── PHASE 1: monitor centered, bigger, above desk ── */
             #monitor-wrap {
@@ -800,9 +814,10 @@
             #doors-layer.zoomed {
                 transform: none !important;
                 overflow-y: auto;
-                padding-top: 60px;
+                padding-top: clamp(40px, 8vh, 80px);
                 padding-bottom: 40px;
                 justify-content: center;
+                gap: 24px;
             }
 
             #doors-row {
@@ -815,7 +830,15 @@
             .door-name { font-size: 11px; }
             .door-desc { font-size: 9px; max-width: 130px; }
             #choose-label-top { font-size: 8.5px; padding: 7px 20px; }
-            #door-pick-ui { margin-top: 10px; }
+
+            /* Pull btn back into normal flow on tablet — same gap as title↔doors */
+            #door-pick-ui {
+                position: relative !important;
+                bottom: auto !important;
+                left: auto !important;
+                transform: none !important;
+                margin-top: 0;
+            }
         }
 
         /* ════════════════════════════════════════
@@ -899,29 +922,34 @@
 
             /* ── PHASE 2: vertical scrollable doors ── */
             #doors-layer {
-                padding-top: 20px;
-                padding-bottom: 20px;
-                overflow-y: auto;
+                padding-top: 0;
+                padding-bottom: 0;
+                overflow-y: scroll;  
                 overflow-x: hidden;
+                -webkit-overflow-scrolling: touch;
                 justify-content: flex-start;
                 align-items: center;
                 gap: 0;
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                height: 100%;
             }
 
             #doors-layer.zoomed {
                 transform: none !important;
             }
 
+            /* Title sticks to top so it's always visible while scrolling */
             #choose-label-top {
                 position: relative;
-                top: auto;
+                /*top: auto;*/
+                margin-top: 52px;
                 z-index: 10;
                 font-size: 8px;
                 padding: 14px 20px;
                 width: 100%;
                 text-align: center;
                 box-sizing: border-box;
-                margin: 0;
                 background: rgba(10, 4, 2, 0.97);
                 border-bottom: 1px solid rgba(160, 207, 207, 0.2);
                 flex-shrink: 0;
@@ -930,8 +958,8 @@
             #doors-row {
                 flex-direction: column;
                 align-items: center;
-                gap: 20px;
-                padding: 28px 20px 36px;
+                gap: 12px;
+                padding: 16px 20px 0;
                 width: 100%;
             }
 
@@ -987,9 +1015,17 @@
             .door-desc { font-size: 10px; max-width: 200px; text-align: left; }
 
             #door-pick-ui {
-                padding: 16px 20px 28px;
+                position: relative;
+                bottom: auto;
+                left: auto;
+                transform: none;
                 width: 100%;
+                max-width: 320px;
+                padding: 12px 20px 24px;
                 justify-content: center;
+                z-index: 10;
+                background: none;
+                border: none;
             }
 
             .enter-btn { padding: 10px 30px; font-size: 9px; }
@@ -1006,7 +1042,7 @@
             .door-wrap { width: 65px !important; height: 100px !important; }
             .door-name { font-size: 11px; }
             .ghost-btn { padding: 7px 8px; font-size: 8px; }
-            #doors-layer { padding-top: 20px !important; padding-bottom: 20px !important; }
+            #doors-layer { padding-top: 0 !important; padding-bottom: 0 !important; }
         }
         /* ── CACTUS SWAY ── */
         .cactus-wrap {
@@ -1083,6 +1119,42 @@
             50%  { transform: translateY(-22px) scaleX(1.5) rotate(7deg);  opacity: 0.4; }
             85%  { transform: translateY(-42px) scaleX(0.7) rotate(-6deg); opacity: 0.1; }
             100% { transform: translateY(-55px) scaleX(0.4) rotate(4deg);  opacity: 0;   }
+        }
+
+        @media (max-height: 768px) {
+            #doors-layer {
+                padding-top: clamp(20px, 5vh, 50px);
+                gap: 16px;
+            }
+
+            .door-wrap {
+                width: 110px;
+                height: 170px;
+            }
+
+            .door-name {
+                font-size: 10px;
+            }
+
+            .door-desc {
+                font-size: 9px;
+            }
+
+            #doors-row {
+                gap: 30px;
+            }
+        }
+
+        @media (max-height: 620px) {
+            #doors-layer {
+                padding-top: 40px;
+                gap: 10px;
+            }
+
+            .door-wrap {
+                width: 90px;
+                height: 140px;
+            }
         }
      </style>
     </head>
