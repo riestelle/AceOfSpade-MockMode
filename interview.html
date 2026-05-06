@@ -85,6 +85,12 @@
         </button>
         <span class="kbd-hint">[H]</span>
       </div>
+      <div class="flex flex-col items-center gap-0.5">
+        <button id="face-api-btn" onclick="toggleFaceApi()" class="w-10 h-10 flex items-center justify-center bg-surface-container/60 border-2 border-black shadow-step hover:bg-surface-container-high transition-all" title="Toggle Face Analysis [F]">
+          <span class="material-symbols-outlined text-[#669BBC]">face</span>
+        </button>
+        <span class="kbd-hint">[F]</span>
+      </div>
     </div>
 
     <!-- NEW: Themed Timer -->
@@ -127,6 +133,8 @@
         <div class="w-32 h-full min-h-[160px] bg-surface-container-lowest border-4 border-outline relative overflow-hidden flex flex-col"> 
           <video id="webcam-video" class="w-full flex-1 object-cover grayscale contrast-125" autoplay muted playsinline
           ></video>
+
+          <canvas id="face-api-canvas" class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 3;"></canvas>
 
           <div class="absolute top-1 left-1 flex items-center gap-1">
             <span class="w-2 h-2 bg-error rounded-full animate-ping"></span>
@@ -208,6 +216,7 @@
             <span class="kbd-hint">[M] Mic</span>
             <span class="kbd-hint">[S] Sound</span>
             <span class="kbd-hint">[H] History</span>
+            <span class="kbd-hint">[F] Face</span>
           </div>
         </div>
       </div>
@@ -234,6 +243,30 @@
         </button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ══ FACE API DATA HUD ══ -->
+  <div id="face-data-panel" class="absolute z-50" style="display: none; left: 8px; bottom: calc(var(--dialogue-height, 220px) + 6px); width: 128px;">
+    <div class="face-hud">
+      <div class="face-hud-header">
+        <span class="material-symbols-outlined" style="font-size: 10px; font-variation-settings: 'FILL' 1;">radar</span>
+        FACE SCAN
+      </div>
+      <div id="face-hud-no-face" class="face-hud-row">
+        <span class="material-symbols-outlined" style="font-size: 11px;">face_retouching_off</span>
+        NO FACE
+      </div>
+      <div id="face-hud-expression" class="face-hud-row" style="display: none;">
+        <span id="face-hud-emoji" class="face-hud-emoji">😐</span>
+        <div class="face-hud-expr-col">
+          <span id="face-hud-expr-name">NEUTRAL</span>
+          <div class="face-hud-bar-track">
+            <div id="face-hud-bar-fill" class="face-hud-bar-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+        <span id="face-hud-expr-pct" class="face-hud-pct">0%</span>
+      </div>
     </div>
   </div>
 
@@ -335,6 +368,7 @@
       switch (e.key.toLowerCase()) {
         case 'h': openHistoryDrawer(); break;
         case 'escape': closeHistoryDrawer(); break;
+        case 'f': if (typeof toggleFaceApi === 'function') toggleFaceApi(); break;
       }
     });
   });

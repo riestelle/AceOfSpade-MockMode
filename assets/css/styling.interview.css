@@ -474,3 +474,113 @@ main {
   height: 100dvh !important;
   min-height: 100dvh !important;
 }
+/* ── Face API canvas overlay ── */
+#face-api-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ── Face API toggle button — active state ── */
+#face-api-btn.face-api-active {
+  background: rgba(26, 255, 122, 0.1);
+  border-color: #1aff7a;
+}
+#face-api-btn.face-api-active span {
+  color: #1aff7a;
+}
+
+/* ── Face data HUD panel ── */
+.face-hud {
+  background: rgba(25, 10, 8, 0.90);
+  border: 2px solid rgba(160, 207, 207, 0.35);
+  padding: 5px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 3px 3px 0 0 #1a0f0d;
+}
+
+.face-hud-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Space Grotesk', monospace;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a0cfcf;
+  border-bottom: 1px solid rgba(160, 207, 207, 0.2);
+  padding-bottom: 3px;
+  margin-bottom: 1px;
+}
+
+.face-hud-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Space Grotesk', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #9d8d8b;
+}
+
+.face-hud-emoji {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.face-hud-expr-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.face-hud-expr-col span {
+  color: #a0cfcf;
+  font-size: 8px;
+  display: block;
+}
+
+.face-hud-bar-track {
+  width: 100%;
+  height: 3px;
+  background: rgba(160, 207, 207, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.face-hud-bar-fill {
+  height: 100%;
+  background: #1aff7a;
+  border-radius: 2px;
+  transition: width 0.35s ease;
+  min-width: 0;
+}
+
+.face-hud-pct {
+  font-size: 9px;
+  color: #1aff7a;
+  flex-shrink: 0;
+  min-width: 26px;
+  text-align: right;
+  font-weight: 800;
+}
+
+@keyframes face-scan-pulse {
+  0%, 100% { border-color: rgba(160, 207, 207, 0.35); }
+  50%       { border-color: rgba(26, 255, 122, 0.5); }
+}
+#face-data-panel .face-hud {
+  animation: face-scan-pulse 2.5s ease-in-out infinite;
+}
