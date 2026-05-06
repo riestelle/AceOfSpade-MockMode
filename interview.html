@@ -99,6 +99,26 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
   <!-- Lottie Web — character animations -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+  <script>
+    // Ensure all Lottie instances render on transparent background
+    document.addEventListener('DOMContentLoaded', () => {
+      const observer = new MutationObserver(() => {
+        const svgs = document.querySelectorAll('#lottie-interviewer svg');
+        svgs.forEach(svg => {
+          svg.style.background = 'transparent';
+          // Remove any <rect> that fills the whole canvas (baked-in bg)
+          svg.querySelectorAll(':scope > rect, :scope > g:first-child > rect').forEach(rect => {
+            const w = rect.getAttribute('width');
+            const h = rect.getAttribute('height');
+            if (w === '100%' || parseFloat(w) > 100 || h === '100%' || parseFloat(h) > 100) {
+              rect.style.display = 'none';
+            }
+          });
+        });
+      });
+      observer.observe(document.getElementById('lottie-interviewer'), { childList: true, subtree: true });
+    });
+  </script>
 
   <style>
     /* ─── Reset & Base ─── */
@@ -347,6 +367,16 @@
     #lottie-interviewer-skeleton.hidden { opacity: 0; }
 
     /* ─── Lottie: strip background ─── */
+    #lottie-interviewer {
+      background: transparent !important;
+    }
+    #lottie-interviewer svg {
+      background: transparent !important;
+      overflow: visible;
+    }
+    /* Hide any background rect/group baked into the Lottie JSON */
+    #lottie-interviewer svg > rect,
+    #lottie-interviewer svg > g:first-child > rect,
     #lottie-interviewer svg > g:first-child { display: none; }
     #lottie-interviewer.is-talking { filter: drop-shadow(0 0 18px rgba(160,207,207,0.35)); transition: filter 0.25s ease; }
     #lottie-interviewer.is-idle   { filter: drop-shadow(0 0 4px rgba(160,207,207,0.10));  transition: filter 0.6s ease; }
@@ -732,7 +762,7 @@
     </div>
 
     <!-- Interviewer Lottie (bottom-aligned inside stage) -->
-    <div id="lottie-interviewer" class="is-idle relative" style="z-index: 20;">
+    <div id="lottie-interviewer" class="is-idle">
       <div id="lottie-interviewer-skeleton" class="flex flex-col items-center justify-center gap-2 h-full">
         <div class="lottie-skeleton-dot"></div>
         <div class="lottie-skeleton-dot"></div>
