@@ -367,7 +367,7 @@
       document.getElementById('webcam-consent').classList.remove('visible');
     }
 
-    // Keyboard shortcuts for history drawer only; speech shortcuts are handled by session.realtime.speech.js.
+    // Keyboard shortcuts for history drawer only; speech shortcuts are handled by vendor/test.whisper.js and vendor/test.synthesis.js.
     document.addEventListener('keydown', (e) => {
       if (document.activeElement === document.getElementById('answer-input')) return;
       switch (e.key.toLowerCase()) {
