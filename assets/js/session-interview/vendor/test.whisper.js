@@ -1,11 +1,21 @@
 // assets/js/session-interview/vendor/test.whisper.js
 // Whisper STT via Transformers.js in-browser pipeline. No background recording. No infinite loops.
 // Toggle mic with button or [M]. Records a short clip, then transcribes into #answer-input.
+//
+// Model loading strategy:
+//   1. Tries to load quantized Whisper model from the bundled local path:
+//      /assets/js/session-interview/models/Xenova/whisper-tiny.en/
+//   2. Falls back to HuggingFace CDN if local files are not present.
+// Run the GitHub Actions workflow "Download Whisper Model" to bundle the model into the repo
+// so end-users do not need to download it at runtime.
 
 const MIC_MAX_ERRORS = 3;
 const TARGET_SR = 16000;
 const TRANSFORMERS_CDN = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
-const TRANSFORMERS_CACHE_DIR = 'https://cdn.huggingface.co';
+
+// Local model root served by the web server — mirrors the HuggingFace repo layout.
+const LOCAL_MODEL_PATH = '/assets/js/session-interview/models/';
+const MODEL_ID = 'Xenova/whisper-tiny.en';
 
 let micErrors = 0;
 let micHardStopped = false;
@@ -16,21 +26,21 @@ let chunks = [];
 let recording = false;
 
 let transcriberPromise = null;
-let transformersPipeline = null;
+let transformersModule = null; // full module { pipeline, env, ... }
 
 function warn(...args) { console.warn('[MockMode][Whisper]', ...args); }
 function info(...args) { console.info('[MockMode][Whisper]', ...args); }
 
-async function loadTransformersPipeline() {
-  if (!transformersPipeline) {
+async function loadTransformersModule() {
+  if (!transformersModule) {
     info('Importing transformers from', TRANSFORMERS_CDN);
     const mod = await import(TRANSFORMERS_CDN);
-    transformersPipeline = mod.pipeline;
-    if (typeof transformersPipeline !== 'function') {
+    if (typeof mod.pipeline !== 'function') {
       throw new Error('Transformers pipeline() not available');
     }
+    transformersModule = mod;
   }
-  return transformersPipeline;
+  return transformersModule;
 }
 
 function setMicUI(active) {
@@ -49,15 +59,22 @@ function setMicUI(active) {
 async function ensureTranscriber() {
   if (!transcriberPromise) {
     if (typeof showToast === 'function') {
-      showToast('Downloading speech model... first-time load may take a little while.', 'info');
+      showToast('Loading speech model... first-time load may take a moment.', 'info');
     }
 
-    transcriberPromise = loadTransformersPipeline()
-      .then((pipeline) => pipeline(
-        'automatic-speech-recognition',
-        'https://huggingface.co/Xenova/whisper-tiny.en',
-        { cache_dir: TRANSFORMERS_CACHE_DIR }
-      ))
+    transcriberPromise = loadTransformersModule()
+      .then(({ pipeline, env }) => {
+        // Tell Transformers.js to look for model files bundled inside the repo first.
+        // Falls back to HuggingFace automatically when allowRemoteModels is true (default).
+        env.localModelPath = LOCAL_MODEL_PATH;
+
+        info('Loading model', MODEL_ID, '— local path:', LOCAL_MODEL_PATH);
+        return pipeline(
+          'automatic-speech-recognition',
+          MODEL_ID,
+          { quantized: true }
+        );
+      })
       .then(p => {
         info('model loaded');
         if (typeof showToast === 'function') {
@@ -67,6 +84,7 @@ async function ensureTranscriber() {
       })
       .catch(err => {
         transcriberPromise = null;
+        warn('model load failed:', err);
         if (typeof showToast === 'function') {
           showToast('Failed to load speech model. Check your connection or browser settings.', 'error');
         }
@@ -145,7 +163,7 @@ async function transcribeBlob(blob) {
 
   const pcm = await blobToPCM16k(blob);
 
-  // Keep it simple: one-shot transcription. No auto-retry loops.
+  // One-shot transcription — no auto-retry loops.
   const out = await transcriber(pcm, { chunk_length_s: 30, stride_length_s: 5 });
   const text = (out && out.text) ? String(out.text).trim() : '';
 
@@ -279,8 +297,7 @@ function toggleMic() {
 
 // Globals expected by asset.interview.js
 window.startMicCapture = function startMicCapture() {
-  // No auto-record. This only resets per-question failure state.
-  // It does not touch the microphone at all.
+  // Resets per-question failure state. Does not auto-start recording.
 };
 
 window.stopMicCapture = function stopMicCapture() {

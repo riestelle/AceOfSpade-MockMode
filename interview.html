@@ -977,7 +977,18 @@
       document.getElementById('webcam-consent').classList.remove('visible');
     }
 
-    // Keyboard shortcuts
+    // ── Lottie stage: anchor above dialogue panel via CSS var ──
+    function updateLottieAnchor() {
+      const panel = document.getElementById('dialogue-panel');
+      if (!panel) return;
+      const h = panel.getBoundingClientRect().height;
+      document.documentElement.style.setProperty('--dialogue-height', h + 'px');
+    }
+    updateLottieAnchor();
+    window.addEventListener('resize', updateLottieAnchor);
+    setTimeout(updateLottieAnchor, 300);
+
+    // Keyboard shortcuts for history drawer only; speech shortcuts are handled by vendor/test.synthesis.js and vendor/test.whisper.js.
     document.addEventListener('keydown', (e) => {
       if (document.activeElement === document.getElementById('answer-input')) return;
       switch (e.key.toLowerCase()) {
@@ -999,8 +1010,8 @@
 -->
 <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 <script src="assets/js/session-interview/asset.webcam.js"></script>
-<script src="assets/js/session-interview/session.realtime.tts.js"></script>
-<script src="assets/js/session-interview/session.realtime.speech.js"></script>
+<script src="assets/js/session-interview/vendor/test.synthesis.js"></script>
+<script src="assets/js/session-interview/vendor/test.whisper.js"></script>
 <script src="assets/js/session-interview/asset.interview.js"></script>
 <!-- END: ID.1 -->
 
