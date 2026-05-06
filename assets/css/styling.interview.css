@@ -191,35 +191,55 @@
 }
 
 #mm-toast-host {
-position: fixed;
-top: 18px;
-right: 18px;
-z-index: 9999;
-display: flex;
-flex-direction: column;
-gap: 10px;
-pointer-events: none;
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  max-width: min(360px, calc(100vw - 44px));
+  pointer-events: none;
+}
+
+main {
+  box-sizing: border-box;
+  border: 1px solid rgba(160, 207, 207, 0.14);
+  border-radius: 32px;
+  overflow: hidden;
+  min-height: 100vh;
 }
 
 .mm-toast {
-max-width: 340px;
-padding: 12px 14px;
-background: #190a08;
-border: 2px solid #a0cfcf;
-color: #fcdbd6;
-box-shadow: 4px 4px 0 0 #000;
-font-family: "Be Vietnam Pro", sans-serif;
-font-size: 13px;
-line-height: 1.4;
-opacity: 1;
-transform: translateY(0);
-transition: opacity 0.2s ease, transform 0.2s ease;
-pointer-events: auto; /* Enable clicks on toast itself */
-display: flex;
-align-items: flex-start;
-gap: 10px;
-position: relative;
+  width: min(100%, 340px);
+  padding: 14px 16px;
+  background: rgba(25, 10, 8, 0.94);
+  border: 1px solid rgba(160, 207, 207, 0.22);
+  border-radius: 18px;
+  color: #fcdbd6;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.24s ease, transform 0.24s ease, border-color 0.24s ease, background 0.24s ease;
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  position: relative;
 }
+
+.mm-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mm-toast.success { border-color: #1aff7a; }
+.mm-toast.warning { border-color: #ffcc00; }
+.mm-toast.error { border-color: #ff4444; }
 
 .mm-toast__content { flex: 1; }
 .mm-toast__close {
@@ -248,19 +268,79 @@ transition: opacity 0.2s, color 0.2s;
 */
 
 /* Timer specific styling to match source: 5 */
+#timer-container {
+  transition: opacity 0.35s ease, border-color 0.35s ease, background-color 0.35s ease;
+}
 #timer-container.timer-low {
   border-color: #ff4444;
+  opacity: 0.92;
 }
 #timer-display {
   font-family: 'Space Grotesk', monospace;
   text-shadow: 0 0 5px rgba(160, 207, 207, 0.3);
+  transition: color 0.35s ease, text-shadow 0.35s ease;
 }
 #timer-display.text-error {
   color: #ff4444;
   text-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
+}
+#question-progress {
+  transition: background-color 0.35s ease, border-color 0.35s ease, opacity 0.35s ease, color 0.35s ease;
+}
+#question-progress.low-time {
+  opacity: 0.88;
 }
 
 /* Hide the background rect layer inside the interviewer Lottie */
 #lottie-interviewer svg > g:first-child {
   display: none;
 }
+
+/* ── Interviewer Lottie frame ── */
+#interviewer-lottie-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 620px);
+  padding: 18px;
+  background: rgba(31, 15, 12, 0.90);
+  border: 2px solid rgba(160, 207, 207, 0.16);
+  border-radius: 28px;
+  box-shadow: 0 0 0 4px rgba(25, 10, 8, 0.75);
+}
+#lottie-interviewer {
+  width: clamp(320px, 42vw, 560px);
+  height: clamp(320px, 42vw, 560px);
+  aspect-ratio: 1 / 1;
+  image-rendering: pixelated;
+}
+#lottie-interviewer.is-talking {
+  filter: drop-shadow(0 0 18px rgba(160, 207, 207, 0.35));
+  transition: filter 0.25s ease;
+}
+#lottie-interviewer.is-idle {
+  filter: drop-shadow(0 0 4px rgba(160, 207, 207, 0.10));
+  transition: filter 0.6s ease;
+}
+#lottie-interviewer-skeleton {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+#lottie-interviewer-skeleton.hidden { opacity: 0; }
+.lottie-skeleton-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: rgba(160, 207, 207, 0.4);
+  animation: thinking-pulse 0.9s ease-in-out infinite;
+}
+.lottie-skeleton-dot:nth-child(2) { animation-delay: 0.2s; }
+.lottie-skeleton-dot:nth-child(3) { animation-delay: 0.4s; }

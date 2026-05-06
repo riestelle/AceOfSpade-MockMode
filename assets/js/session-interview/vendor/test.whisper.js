@@ -4,7 +4,8 @@
 
 const MIC_MAX_ERRORS = 3;
 const TARGET_SR = 16000;
-const TRANSFORMERS_CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0';
+const TRANSFORMERS_CDN = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+const TRANSFORMERS_CACHE_DIR = 'https://cdn.huggingface.co';
 
 let micErrors = 0;
 let micHardStopped = false;
@@ -22,6 +23,7 @@ function info(...args) { console.info('[MockMode][Whisper]', ...args); }
 
 async function loadTransformersPipeline() {
   if (!transformersPipeline) {
+    info('Importing transformers from', TRANSFORMERS_CDN);
     const mod = await import(TRANSFORMERS_CDN);
     transformersPipeline = mod.pipeline;
     if (typeof transformersPipeline !== 'function') {
@@ -47,13 +49,20 @@ function setMicUI(active) {
 async function ensureTranscriber() {
   if (!transcriberPromise) {
     if (typeof showToast === 'function') {
-      showToast('Loading speech model... (first time only)', 'info');
+      showToast('Downloading speech model... first-time load may take a little while.', 'info');
     }
 
     transcriberPromise = loadTransformersPipeline()
-      .then((pipeline) => pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en'))
+      .then((pipeline) => pipeline(
+        'automatic-speech-recognition',
+        'https://huggingface.co/Xenova/whisper-tiny.en',
+        { cache_dir: TRANSFORMERS_CACHE_DIR }
+      ))
       .then(p => {
         info('model loaded');
+        if (typeof showToast === 'function') {
+          showToast('Speech model ready. Press the mic button and speak.', 'success');
+        }
         return p;
       })
       .catch(err => {
@@ -175,6 +184,12 @@ async function startRecording() {
     recorder.onerror = (e) => {
       warn('MediaRecorder error:', e);
       stopRecording(true);
+    };
+
+    recorder.onstart = () => {
+      if (typeof showToast === 'function') {
+        showToast('Recording... speak now. Click mic again when done.', 'info');
+      }
     };
 
     recorder.onstop = async () => {

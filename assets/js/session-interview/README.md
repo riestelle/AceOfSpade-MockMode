@@ -6,7 +6,8 @@ This folder contains the interview-specific frontend logic and webcam support fo
 
 - `asset.interview.js` — interview session flow, question loading, answer submission, score evaluation, stress meter, history drawer, TTS/STT wiring, and skip-question handling.
 - `asset.webcam.js` — webcam consent, camera startup, face monitoring, and webcam UI status updates.
-- `vendor/face-api.min.js` — bundled `face-api.js` library used by the webcam monitoring flow.
+- `session.realtime.tts.js` / `session.realtime.speech.js` — optional session-level browser TTS/STT bridge scripts used by the interview page when those flow paths are enabled.
+- `vendor/face-api.min.js` — bundled `face-api.js` library used by webcam monitoring.
 - `models/` — face detection model files required by `asset.webcam.js`.
 
 ## Related files used by interview mode
@@ -43,11 +44,5 @@ The interview page depends on the following elements being present:
 
 - `asset.interview.js` depends on shared utilities from `assets/js/main.js` and AI helper code in `assets/js/ai.js`.
 - `asset.webcam.js` requires the model files in `assets/js/session-interview/models/` and the bundled `vendor/face-api.min.js` library.
+- `session.realtime.tts.js` and `session.realtime.speech.js` provide the alternate browser TTS/STT wiring paths used by the interview session.
 - `interview.html` is the entry point for the interview experience and must keep the script import order: Tailwind config first, then interview CSS, then the page's JS.
-
-## Best practices
-
-- Keep UI-specific styles in `assets/css/styling.interview.css`.
-- Keep logic and state management in `asset.interview.js`.
-- Keep Face Cam consent and camera handling in `asset.webcam.js`.
-- Do not modify the protected webcam / face monitoring sections unless you explicitly know how the interview experience is wired.
