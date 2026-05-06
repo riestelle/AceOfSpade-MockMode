@@ -1,5 +1,6 @@
 // assets/js/session-interview/vendor/test.synthesis.js
 // Browser SpeechSynthesis TTS. No storage. No retries loop. Hard-stops after 3 errors until you toggle sound again.
+// Exposes: window.speakText(text, onDone), window.toggleSound(), window.unlockSpeech()
 
 (() => {
   'use strict';
@@ -8,7 +9,7 @@
   const supported = ('speechSynthesis' in window) && ('SpeechSynthesisUtterance' in window);
   const TTS_MAX_ERRORS = 3;
 
-  let soundOn = false;
+  let soundOn = true;   // auto-enabled; user can toggle off
   let errorCount = 0;
   let currentUtterance = null;
   let voices = [];
@@ -31,7 +32,7 @@
     const byLang = voices.filter(v => (v.lang || '').toLowerCase().startsWith(preferredLang));
     const pool = byLang.length ? byLang : voices;
 
-    // Prefer non-local-service voices if available (often better quality), otherwise first match.
+    // Prefer non-local-service voices for better quality; fall back to first available.
     chosenVoice = pool.find(v => !v.localService) || pool[0] || null;
     log('voices:', voices.length, 'chosen:', chosenVoice ? `${chosenVoice.name} (${chosenVoice.lang})` : 'none');
   }
@@ -64,12 +65,17 @@
     updateIcon();
   }
 
-  function speakText(text) {
-    if (!supported || !soundOn) return;
-    if (!text) return;
+  // speakText(text, onDone) — onDone is called when speech ends, errors, or is skipped.
+  // This signature matches what asset.interview.js expects.
+  function speakText(text, onDone) {
+    if (!supported || !soundOn || !text) {
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
 
     if (errorCount >= TTS_MAX_ERRORS) {
       warn('hard-stopped after errors; toggle sound to reset');
+      if (typeof onDone === 'function') onDone();
       return;
     }
 
@@ -77,26 +83,48 @@
 
     const utter = new SpeechSynthesisUtterance(String(text));
     if (chosenVoice) utter.voice = chosenVoice;
-    utter.rate = 0.95;
+    utter.rate = 1.0;
     utter.pitch = 1.05;
     utter.volume = 0.9;
+
+    // Keep hard reference on window so GC does not collect mid-speech.
+    window._currentUtterance = utter;
+
+    function fireOnDone() {
+      if (typeof onDone === 'function') {
+        const cb = onDone;
+        onDone = null; // prevent double-fire
+        cb();
+      }
+    }
 
     utter.onstart = () => {
       currentUtterance = utter;
     };
 
     utter.onend = () => {
+      if (window._currentUtterance === utter) window._currentUtterance = null;
       if (currentUtterance === utter) currentUtterance = null;
+      fireOnDone();
     };
 
     utter.onerror = (ev) => {
+      if (window._currentUtterance === utter) window._currentUtterance = null;
       if (currentUtterance === utter) currentUtterance = null;
+
+      // 'interrupted' means cancel() was called intentionally (skip-voice button).
+      // Do not count as error; onDone is intentionally NOT called here so the skip
+      // handler fires _safeEnableAnsweringPhase() directly via window._skipVoiceBridge.
+      if (ev && ev.error === 'interrupted') return;
+
       errorCount++;
       warn('error:', ev && ev.error ? ev.error : ev);
       if (errorCount >= TTS_MAX_ERRORS) {
         warn('giving up; toggle sound to retry');
         if (typeof showToast === 'function') showToast('Voice output failed. Toggle sound off and on to retry.', 'warning');
       }
+      // Always unlock the UI even on error
+      fireOnDone();
     };
 
     currentUtterance = utter;
@@ -105,6 +133,7 @@
     } catch (e) {
       errorCount++;
       warn('speak threw:', e);
+      fireOnDone();
     }
   }
 
@@ -113,7 +142,7 @@
 
     if (supported) {
       refreshVoices();
-      // Voices commonly load async; this fixes the “0 voices” first-call issue.
+      // Voices load async in many browsers — retry when the event fires.
       try {
         window.speechSynthesis.addEventListener('voiceschanged', () => {
           refreshVoices();
@@ -139,6 +168,7 @@
   // Expose globals expected by the rest of the app.
   window.toggleSound = toggleSound;
   window.speakText = speakText;
+  window.unlockSpeech = unlockSpeech;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', wire);
