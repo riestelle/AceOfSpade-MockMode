@@ -102,7 +102,33 @@
     .stat-card-fallback     { animation: mm-reveal 0.4s 3s ease forwards; }
     #portrait-card-fallback { animation: mm-reveal 0.4s 3s ease forwards; }
 
-    /* ── Download ledger overlay ── */
+    /* ── Buttons — dynamic interactions ── */
+    .btn {
+        cursor: pointer;
+        position: relative;
+        transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease, opacity 0.15s ease;
+        outline: none;
+        user-select: none;
+    }
+    .btn:hover  { opacity: 0.92; }
+    .btn:active { transform: translate(4px, 4px) !important; box-shadow: none !important; }
+    .btn:focus-visible {
+        outline: 2px solid #a0cfcf;
+        outline-offset: 3px;
+    }
+    /* Specific hover colors */
+    .btn-primary:hover   { background-color: #82b8d0 !important; }
+    .btn-secondary:hover { background-color: #7a5550 !important; }
+    .btn-ghost:hover     { background-color: #3a2420 !important; }
+
+    /* ── Comp cards — cursor pointer ── */
+    .comp-card { cursor: default; }
+
+    /* ── Stat rows — subtle hover ── */
+    .stat-row {
+        transition: background-color 0.12s ease;
+    }
+    .stat-row:hover { background-color: #331e1b !important; }
     #download-overlay {
         display: none;
         position: fixed;
@@ -275,35 +301,35 @@
             </div>
 
             <!-- Status -->
-            <div class="bg-surface-container-low border-2 border-outline-variant p-md flex items-center justify-between">
+            <div class="stat-row bg-surface-container-low border-2 border-outline-variant p-md flex items-center justify-between">
                 <p class="font-label-caps text-outline text-xs uppercase tracking-widest">Status</p>
                 <p id="status-label" class="font-label-caps text-tertiary text-xs">VALIDATED</p>
             </div>
 
             <!-- Stat rows -->
             <div class="flex flex-col gap-xs flex-1">
-                <div class="bg-surface-container-low border-2 border-outline-variant p-md flex items-center justify-between">
+                <div class="stat-row bg-surface-container-low border-2 border-outline-variant p-md flex items-center justify-between">
                     <div class="flex items-center gap-sm">
                         <span class="material-symbols-outlined text-base text-outline">psychiatry</span>
                         <p class="font-label-caps text-outline text-xs uppercase tracking-widest">Peak Stress</p>
                     </div>
                     <p id="stat-stress" class="font-headline-md text-on-surface text-sm">—</p>
                 </div>
-                <div class="bg-surface-container-low border-2 border-outline-variant p-md flex items-center justify-between">
+                <div class="stat-row bg-surface-container-low border-2 border-outline-variant p-md flex items-center justify-between">
                     <div class="flex items-center gap-sm">
                         <span class="material-symbols-outlined text-base text-outline">local_fire_department</span>
                         <p class="font-label-caps text-outline text-xs uppercase tracking-widest">Best Combo</p>
                     </div>
                     <p id="stat-combo" class="font-headline-md text-on-surface text-sm">—</p>
                 </div>
-                <div class="bg-surface-container-low border-2 border-outline-variant p-md flex items-center justify-between">
+                <div class="stat-row bg-surface-container-low border-2 border-outline-variant p-md flex items-center justify-between">
                     <div class="flex items-center gap-sm">
                         <span class="material-symbols-outlined text-base text-outline">person</span>
                         <p class="font-label-caps text-outline text-xs uppercase tracking-widest">Interviewer</p>
                     </div>
                     <p id="stat-personality" class="font-headline-md text-on-surface text-sm capitalize">—</p>
                 </div>
-                <div class="bg-surface-container-low border-2 border-outline-variant p-md flex items-center justify-between">
+                <div class="stat-row bg-surface-container-low border-2 border-outline-variant p-md flex items-center justify-between">
                     <div class="flex items-center gap-sm">
                         <span class="material-symbols-outlined text-base text-outline">quiz</span>
                         <p class="font-label-caps text-outline text-xs uppercase tracking-widest">Questions</p>
@@ -415,17 +441,17 @@
     <!-- Action Buttons -->
     <div class="stat-card flex justify-center gap-8 pt-md pb-xl">
         <button id="try-again-btn"
-            class="flex items-center gap-3 px-8 py-3 bg-[#669BBC] text-[#2D1B18] shadow-[4px_4px_0_0_#1A0F0D] font-headline-md font-bold text-sm active:translate-x-1 active:translate-y-1 active:shadow-none transition-none hover:opacity-90">
+            class="btn btn-primary flex items-center gap-3 px-8 py-3 bg-[#669BBC] text-[#2D1B18] shadow-[4px_4px_0_0_#1A0F0D] font-headline-md font-bold text-sm">
             <span class="material-symbols-outlined">refresh</span>
             NEW GAME
         </button>
         <button id="print-results-btn"
-            class="flex items-center gap-3 px-8 py-3 bg-[#5D3F3A] text-[#ECE2C9] shadow-[4px_4px_0_0_#1A0F0D] hover:bg-[#669BBC] hover:text-[#2D1B18] font-headline-md font-bold text-sm active:translate-x-1 active:translate-y-1 active:shadow-none transition-none">
+            class="btn btn-secondary flex items-center gap-3 px-8 py-3 bg-[#5D3F3A] text-[#ECE2C9] shadow-[4px_4px_0_0_#1A0F0D] font-headline-md font-bold text-sm">
             <span class="material-symbols-outlined">file_download</span>
             EXPORT LEDGER
         </button>
         <button id="share-results-btn"
-            class="flex items-center gap-3 px-8 py-3 bg-surface-container border-4 border-outline text-on-surface shadow-[4px_4px_0_0_#1A0F0D] font-headline-md font-bold text-sm active:translate-x-1 active:translate-y-1 active:shadow-none transition-none hover:opacity-90">
+            class="btn btn-ghost flex items-center gap-3 px-8 py-3 bg-surface-container border-4 border-outline text-on-surface shadow-[4px_4px_0_0_#1A0F0D] font-headline-md font-bold text-sm">
             <span class="material-symbols-outlined">share</span>
             SHARE
         </button>
