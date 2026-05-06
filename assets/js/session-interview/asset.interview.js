@@ -29,6 +29,37 @@ let isBossQuestion = false;  // true when currentIndex === 4 (Q5)
 let lastAnswerContext = null; // { answer, score } from previous question — used to connect questions
 let verdictAttempts = 0;    // counts finishInterview retries — hard-stops at 3
 
+// ── Face expression → stress integration ──────────────────────────────────
+// Listens to the mm:face-monitor event from asset.webcam.js and
+// nudges stress up when the user looks fearful, angry, or disgusted.
+const FACE_STRESS_MAP = {
+  fearful:   6,   // strong spike
+  angry:     4,
+  disgusted: 3,
+  sad:       2,
+  surprised: 1,   // minor
+  neutral:   0,
+  happy:    -2,   // slightly calming
+};
+
+document.addEventListener('mm:face-monitor', (e) => {
+  // Only affect stress while an answer is being composed (not mid-AI-response)
+  if (isProcessing) return;
+
+  const exprs = e.detail?.expressions;
+  if (!exprs) return;
+
+  // Get dominant expression
+  const [topExpr] = Object.entries(exprs).reduce((a, b) => b[1] > a[1] ? b : a);
+  const delta = FACE_STRESS_MAP[topExpr] ?? 0;
+  if (delta === 0) return;
+
+  // Apply a small nudge (scaled down so it's not overpowering)
+  stressLevel = Math.max(0, Math.min(100, stressLevel + (delta * 0.4)));
+  if (stressLevel > peakStressLevel) peakStressLevel = stressLevel;
+  updateStressMeter(stressLevel);
+});
+
 // ── Timer state ────────────────────────────────────────────────────────────
 // Logic is wired — UI hookup (display element) is frontend's job.
 let timerInterval = null;

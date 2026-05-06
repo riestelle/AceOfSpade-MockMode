@@ -923,6 +923,7 @@
 
   function addToHistory(question, answer, score) {
     answerHistory.push({ q: question, a: answer, score });
+    saveToStorage('answer_log', answerHistory);
     renderHistory();
   }
 

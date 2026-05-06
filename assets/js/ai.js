@@ -241,25 +241,38 @@ async function generateVerdict(scores, resumeAnalysis, personality, role = 'gene
     ? 'The candidate was borderline. Be cautiously neutral — acknowledge effort but be honest about the gaps. Do not congratulate.'
     : 'The candidate failed. Do NOT congratulate them. Be direct and critical — reflect their poor performance clearly.';
 
+  // Pull actual Q&A log from storage to include in verdict prompt
+  const answerLog = getFromStorage('answer_log') || [];
+  const qaTranscript = answerLog.length > 0
+    ? answerLog.map((item, i) =>
+        `Q${i + 1} (score ${item.score}/100): "${item.q}"\nAnswer: "${item.a}"`
+      ).join('\n\n')
+    : 'No transcript available.';
+
   const messages = [
     {
       role: 'system',
       content: `You are the interviewer for a ${role} position. Give a final verdict message in character.
       The final verdict is: ${verdict}.
       ${toneGuide}
+      Base your verdict_message on the candidate's ACTUAL answers, not just their resume.
+      Call out specific strong or weak answers by reference.
       Return ONLY a JSON object with no extra text.
       Format: {
-        \"verdict\": \"${verdict}\",
-        \"verdict_message\": \"2-3 sentence in-character final message to the candidate\",
-        \"final_tip\": \"one specific actionable tip to improve as a ${role}\"
+        "verdict": "${verdict}",
+        "verdict_message": "2-3 sentence in-character final message referencing their actual answers",
+        "final_tip": "one specific actionable tip based on where they struggled most"
       }`
     },
     {
       role: 'user',
       content: `Average score: ${Math.round(average)}%.
-      Individual scores: ${scores.join(', ')}.
-      Resume strengths: ${resumeAnalysis.strengths.join(', ')}.
-      Resume weaknesses: ${resumeAnalysis.weaknesses.join(', ')}.`
+Individual scores: ${scores.join(', ')}.
+Resume strengths: ${resumeAnalysis.strengths.join(', ')}.
+Resume weaknesses: ${resumeAnalysis.weaknesses.join(', ')}.
+
+Interview transcript:
+${qaTranscript}`
     }
   ];
 
