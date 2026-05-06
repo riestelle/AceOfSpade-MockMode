@@ -193,13 +193,13 @@
 #mm-toast-host {
   position: fixed;
   top: 92px;
-  right: 22px;
+  right: 140px;
   z-index: 9999;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 12px;
-  max-width: min(360px, calc(100vw - 44px));
+  max-width: min(320px, calc(100vw - 188px));
   pointer-events: none;
 }
 
@@ -212,7 +212,8 @@ main {
 }
 
 .mm-toast {
-  width: min(100%, 340px);
+  width: min(100%, 280px);
+  max-width: min(100%, 280px);
   padding: 14px 16px;
   background: rgba(25, 10, 8, 0.94);
   border: 1px solid rgba(160, 207, 207, 0.22);
@@ -230,6 +231,11 @@ main {
   align-items: flex-start;
   gap: 10px;
   position: relative;
+  overflow: hidden;
+}
+
+.mm-toast:hover {
+  overflow: visible;
 }
 
 .mm-toast.show {
@@ -241,7 +247,20 @@ main {
 .mm-toast.warning { border-color: #ffcc00; }
 .mm-toast.error { border-color: #ff4444; }
 
-.mm-toast__content { flex: 1; }
+.mm-toast__content {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.mm-toast:hover .mm-toast__content {
+  white-space: normal;
+  overflow: visible;
+}
+
 .mm-toast__close {
 flex-shrink: 0;
 background: transparent;
@@ -259,7 +278,7 @@ transition: opacity 0.2s, color 0.2s;
 .mm-toast.success { border-color: #1aff7a; }
 .mm-toast.warning { border-color: #ffcc00; }
 .mm-toast.error { border-color: #ff4444;}
-.mm-toast.closing { opacity: 0; transform: translateY(-6px); }
+.mm-toast.closing { opacity: 0; transform: translateY(0); }
 
 /* 
   DO NOT MODIFY THIS PART OF THE CODE.
