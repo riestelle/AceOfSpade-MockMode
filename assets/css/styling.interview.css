@@ -243,9 +243,9 @@ main {
   transform: translateY(0);
 }
 
-.mm-toast.success { border-color: #1aff7a; }
-.mm-toast.warning { border-color: #ffcc00; }
-.mm-toast.error { border-color: #ff4444; }
+.mm-toast.success { color: #1aff7a; }
+.mm-toast.warning { color: #ffcc00; }
+.mm-toast.error { color: #ff4444; }
 
 .mm-toast__content {
   flex: 1;
@@ -275,9 +275,6 @@ transition: opacity 0.2s, color 0.2s;
 }
 
 .mm-toast__close:hover { opacity: 1; color: #fcdbd6; }
-.mm-toast.success { border-color: #1aff7a; }
-.mm-toast.warning { border-color: #ffcc00; }
-.mm-toast.error { border-color: #ff4444;}
 .mm-toast.closing { opacity: 0; transform: translateY(0); }
 
 /* 
