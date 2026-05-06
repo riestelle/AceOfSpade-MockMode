@@ -1,6 +1,7 @@
 # MockMode
 
 **[MockMode — Hired or Fired?](https://mockmode.vercel.app/)**
+Download fake.txt if you want to test
 
 **MockMode** is a gamified AI-powered interview simulator. You paste your resume, pick an interviewer personality, and get put through a real-time interview where an AI asks you questions, reacts to your answers, and judges whether you're hired, waitlisted, or fired.
 
