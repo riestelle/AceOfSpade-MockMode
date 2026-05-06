@@ -192,7 +192,7 @@
 
 #mm-toast-host {
   position: fixed;
-  top: 22px;
+  top: 92px;
   right: 22px;
   z-index: 9999;
   display: flex;
@@ -302,16 +302,27 @@ transition: opacity 0.2s, color 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(100%, 620px);
-  padding: 18px;
-  background: rgba(31, 15, 12, 0.90);
-  border: 2px solid rgba(160, 207, 207, 0.16);
-  border-radius: 28px;
+  width: min(100%, 700px);
+  min-height: 560px;
+  padding: 26px;
+  background: rgba(31, 15, 12, 0.92);
+  border: 2px solid rgba(160, 207, 207, 0.18);
+  border-radius: 34px;
   box-shadow: 0 0 0 4px rgba(25, 10, 8, 0.75);
+  overflow: hidden;
+}
+#interviewer-lottie-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at center, rgba(160, 207, 207, 0.14), transparent 42%);
+  filter: blur(18px);
 }
 #lottie-interviewer {
-  width: clamp(320px, 42vw, 560px);
-  height: clamp(320px, 42vw, 560px);
+  position: relative;
+  width: clamp(340px, 44vw, 620px);
+  height: clamp(340px, 44vw, 620px);
   aspect-ratio: 1 / 1;
   image-rendering: pixelated;
 }
