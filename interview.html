@@ -449,12 +449,10 @@
     /* ── Lottie: anchored to bottom of stage (= top of dialogue) ── */
     #lottie-interviewer {
       position: absolute;
-      /* Pull down so feet sit flush at stage bottom */
-      bottom: -10%;
+      bottom: -20%;         /* was -10%, push down more to close the gap */
       left: 50%;
       transform: translateX(-50%);
-      /* Canvas is 386x278 (landscape). Fill stage height, let width be auto. */
-      height: 110%;
+      height: 120%;         /* was 110%, taller so character fills stage */
       width: auto;
       min-width: 280px;
       min-height: 200px;
@@ -464,8 +462,8 @@
     }
     @media (max-width: 639px) {
       #lottie-interviewer {
-        height: 90%;
-        bottom: -5%;
+        height: 100%;        /* was 90% */
+        bottom: -15%;        /* was -5% */
       }
     }
 
