@@ -1,0 +1,46 @@
+@media (max-width: 900px) {
+  body.mm-platform-mobile {
+    font-size: 0.95rem;
+  }
+
+  body.mm-platform-mobile #interviewer-lottie-stage {
+    width: min(100%, 420px);
+    min-height: 380px;
+    padding: 18px;
+    top: 48%;
+    left: 50%;
+    transform: translate(-50%, -48%);
+  }
+
+  body.mm-platform-mobile #mm-toast-host {
+    right: 18px;
+    top: 112px;
+    max-width: calc(100vw - 36px);
+  }
+
+  body.mm-platform-mobile .absolute.top-6.right-6 {
+    right: 18px;
+    top: 12px;
+    width: auto;
+  }
+
+  body.mm-platform-mobile .absolute.top-6.right-6 .flex {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  body.mm-platform-mobile #timer-container,
+  body.mm-platform-mobile #question-progress {
+    width: 100%;
+    max-width: 220px;
+  }
+
+  body.mm-platform-mobile #question-progress {
+    margin-top: 10px;
+  }
+
+  body.mm-platform-mobile #history-drawer {
+    right: 0;
+    left: auto;
+  }
+}

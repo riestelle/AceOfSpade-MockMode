@@ -6,6 +6,8 @@ This folder contains the interview-specific frontend logic and webcam support fo
 
 - `asset.interview.js` — interview session flow, question loading, answer submission, score evaluation, stress meter, history drawer, TTS/STT wiring, and skip-question handling.
 - `asset.webcam.js` — webcam consent, camera startup, face monitoring, and webcam UI status updates.
+- `sessionators.interface.js` — unified platform detector and session UI initializer for mobile vs desktop interview mode.
+- `assets/css/mobile.styling.interview.css` — mobile-specific CSS overrides that adjust the stage, toast positioning, and top-right controls for narrow screens.
 - `session.realtime.tts.js` / `session.realtime.speech.js` — optional session-level browser TTS/STT bridge scripts used by the interview page when those flow paths are enabled.
 - `vendor/face-api.min.js` — bundled `face-api.js` library used by webcam monitoring.
 - `models/` — face detection model files required by `asset.webcam.js`.
@@ -15,6 +17,8 @@ This folder contains the interview-specific frontend logic and webcam support fo
 - `interview.html` — interview game page markup. Loads the Tailwind theme, interview CSS, and the session interview scripts.
 - `assets/tailwind/tailwind.styling.interview.js` — Tailwind configuration overrides for the interview screen, including dark-theme colors, typography, spacing, and custom design tokens.
 - `assets/css/styling.interview.css` — interview-specific styling for the CRT overlay, reaction box, answer history drawer, keyboard hint badges, loading pulses, skip button states, webcam consent banner, and webcam status pill.
+- `assets/css/mobile.styling.interview.css` — responsive override stylesheet used on mobile devices to keep the interviewer stage, controls, and toast stack readable on small screens.
+- `assets/js/session-interview/sessionators.interface.js` — browser-side platform detector that applies the correct mobile or desktop session UI settings at page load.
 
 ## How it works
 
