@@ -12,10 +12,11 @@
     /* ── Fixed background image ── */
     body {
         background-image:
-            url("https://www.transparenttextures.com/patterns/dark-leather.png");
+            url("../assets/img/results-bg.png")
         background-attachment: fixed;
-        background-repeat: repeat;
-        background-size: auto;
+        background-repeat: no-repeat;
+        background-size: cover;
+        background-position: center;
     }
 
     .pixel-scanline {
@@ -80,8 +81,12 @@
     /* ── Compensation card states ── */
     .comp-card { transition: transform 0.15s ease; }
     .comp-card:hover { transform: translateY(-4px); }
-    .comp-card.comp--void { opacity: 0.45; filter: grayscale(1); }
+    .comp-card.comp--void { opacity: 0.75; filter: grayscale(1); }
     .comp-card.comp--void:hover { transform: none; }
+    /* Force solid backgrounds so bg image never bleeds through the cards */
+    #comp-offer    { background-color: #ECE2C9 !important; }
+    #comp-access   { background-color: #2d1b18 !important; }
+    #comp-caffeine { background-color: #231512 !important; }
 
     /* ── Stat cards: hidden initially, NO transition (GSAP owns this) ── */
     .stat-card { opacity: 0; transform: translateY(24px); }
