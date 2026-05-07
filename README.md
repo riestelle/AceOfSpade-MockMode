@@ -32,6 +32,33 @@ There's actual game logic running underneath:
 - **One skip** allowed per session — but it costs +15 stress.
 - **Boss question** on the last round with a score multiplier.
 - **Final verdict**: Hired, Waitlisted, or Fired — determined by the AI based on your scores and resume. Stress hitting 100 skips the AI and fires you instantly.
+- **Verdict subtypes**: Hired Confident, Hired Lucky, Waitlisted, Fired (Breakdown / Technical / Attitude) — scored from your actual performance averages.
+
+---
+
+## Features
+
+- Resume input and session initialization
+- AI-generated questions personalized to resume content
+- Answer evaluation with per-question scoring
+- Stress meter and combo tracking
+- Follow-up question branching
+- Skip button (one per session, +15 stress)
+- Interviewer personas — Ms. Reyes, Kai, Dr. Matsuda — each with Lottie character animations and distinct questioning styles
+- Face expression → stress integration: sustained negative expressions during answering apply passive stress spikes
+- Answer history drawer (keyboard shortcut `[H]`)
+- Results page with Chart.js score breakdown and verdict reveal
+- Downloadable results PDF via html2canvas + jsPDF
+- Voice output via Web Speech API with sentence-by-sentence delivery, natural pacing, and premium voice selection
+- Voice input via Web Speech API (browser-native STT)
+- Offline speech recognition via Xenova/whisper-base.en (ONNX, Transformers.js) — prewarmed on page load to reduce first-use latency
+- Webcam confidence tracking via face-api.js with consent flow and live expression HUD
+- Mobile PiP camera bubble — draggable, resizable, only visible on narrow screens where the dialogue-box camera is hidden
+- Dark/light theme support
+- Sound effects and lobby music with toggle controls
+- How-to-play modal on the landing page
+- AI fallback chain: Groq (`llama-3.3-70b-versatile`) → Gemini (`gemini-1.5-flash`) → OpenRouter (`meta-llama/llama-3.3-70b-instruct:free`) with automatic key rotation
+- Mobile responsive layout with platform detection
 
 ---
 
@@ -60,14 +87,14 @@ There's actual game logic running underneath:
 
 ```
 mockmode/
-├── index.html                    # Landing page
+├── index.html                    # Landing page (with how-to-play modal + lobby music)
 ├── upload.html                   # Resume input + setup
 ├── interview.html                # Main game screen
 ├── results.html                  # Final verdict + score chart + PDF export
 ├── 404.html
 ├── privacy.html
 ├── api/
-│   └── ai.js                     # Unified AI proxy with key rotation
+│   └── ai.js                     # Unified AI proxy with key rotation and fallback chain
 ├── assets/
 │   ├── animations/               # Lottie JSON character files (Reyes, Kai, Matsuda)
 │   ├── css/
@@ -129,30 +156,6 @@ The Whisper ONNX model files are large and not committed to the repo. Download t
 ```
 
 You can trigger it manually from the GitHub UI under **Actions → Download Whisper Model**, or run it automatically on push. The workflow downloads `Xenova/whisper-base.en` encoder and decoder ONNX files into `assets/js/session-interview/models/Xenova/whisper-base.en/onnx/`.
-
----
-
-## Status
-
-**Working:**
-
-- Resume input and session initialization
-- AI-generated questions based on resume content
-- Answer evaluation with per-question scoring
-- Stress meter and combo tracking
-- Follow-up question branching
-- Skip button (one per session)
-- Interviewer personas (Ms. Reyes, Kai, Dr. Matsuda) with Lottie animations
-- Results page with Chart.js score breakdown
-- Downloadable results PDF (via html2canvas + jsPDF)
-- Voice input/output via Web Speech API (browser-native)
-- Webcam confidence tracking (face-api.js) with consent flow
-- Mobile responsive layout
-
-**Still being worked on:**
-
-- Full mobile responsiveness polish
-- Whisper offline STT as primary speech path
 
 ---
 
