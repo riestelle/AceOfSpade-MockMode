@@ -143,6 +143,7 @@
       const utter = new SpeechSynthesisUtterance(sentence);
       if (chosenVoice) utter.voice = chosenVoice;
 
+      // Cycles through -0.015, 0, +0.015 to reduce monotone delivery.
       const variation = ((sentenceIndex % 3) - 1) * 0.015;
       utter.rate = clamp(baseRate + variation, 0.8, 1.05);
       utter.pitch = clamp(0.97 + ((sentenceIndex % 2) ? 0.015 : -0.01), 0.95, 1.0);
@@ -165,7 +166,7 @@
           return;
         }
 
-        const pauseMs = 200 + ((sentenceIndex * 67) % 201); // 200-400ms
+        const pauseMs = 200 + ((sentenceIndex * 67) % 201); // 67 is prime for even pseudo-random 200-400ms spacing
         setTimeout(speakNextSentence, pauseMs);
       };
 
