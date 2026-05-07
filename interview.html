@@ -342,6 +342,61 @@
     .mm-toast.closing { opacity: 0; }
     /* ══ ELLIE WORKAROUNDS END: ID.1 ══ */
 
+    /* ─── Mobile PiP Camera ─── */
+    #pip-camera {
+      display: none;
+      position: absolute;
+      z-index: 60;
+      border: 3px solid #fcdbd6;
+      box-shadow: 4px 4px 0 0 #1a0f0d;
+      background: #190a08;
+      overflow: hidden;
+      cursor: grab;
+      touch-action: none;
+      width: 100px;
+      height: 80px;
+      bottom: 10px;
+      right: 8px;
+      border-radius: 4px;
+      transition: box-shadow 0.15s ease, border-color 0.15s ease;
+      user-select: none;
+    }
+    #pip-camera.pip-active { display: block; }
+    #pip-camera:active { cursor: grabbing; }
+    #pip-camera video {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+      filter: grayscale(1) contrast(1.2);
+      pointer-events: none;
+    }
+    #pip-rec-badge {
+      position: absolute; top: 3px; left: 4px;
+      display: flex; align-items: center; gap: 2px;
+      pointer-events: none; z-index: 2;
+    }
+    #pip-rec-dot {
+      width: 6px; height: 6px; border-radius: 9999px;
+      background: #ff4444;
+      animation: pip-rec-blink 1.2s ease-in-out infinite;
+    }
+    @keyframes pip-rec-blink {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.25; }
+    }
+    #pip-rec-label {
+      font-family: 'Space Grotesk', monospace;
+      font-size: 7px; font-weight: 800;
+      letter-spacing: 0.1em; color: #ff4444; text-transform: uppercase;
+    }
+    #pip-resize-handle {
+      position: absolute; bottom: 0; right: 0;
+      width: 18px; height: 18px;
+      cursor: nwse-resize; touch-action: none; z-index: 3;
+      display: flex; align-items: flex-end; justify-content: flex-end;
+      padding: 2px;
+    }
+    #pip-resize-handle svg { width: 10px; height: 10px; opacity: 0.4; }
+    #pip-camera:hover #pip-resize-handle svg { opacity: 1; }
+
     /* ─── Timer ─── */
     #timer-container { transition: opacity 0.35s ease, border-color 0.35s ease, background-color 0.35s ease; }
     #timer-container.timer-low { border-color: #ff4444; opacity: 0.92; }
@@ -789,6 +844,21 @@
       </div>
     </div>
 
+    <!-- ══ MOBILE PiP CAMERA ══ -->
+    <div id="pip-camera" role="region" aria-label="Camera preview">
+      <video id="pip-video" autoplay muted playsinline></video>
+      <div id="pip-rec-badge">
+        <span id="pip-rec-dot"></span>
+        <span id="pip-rec-label">REC</span>
+      </div>
+      <div id="pip-resize-handle" title="Drag to resize">
+        <svg viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="10" y1="2" x2="2" y2="10" stroke="#fcdbd6" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="10" y1="6" x2="6" y2="10" stroke="#fcdbd6" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+
   </div><!-- /stage -->
 
   <!-- ══ DIALOGUE PANEL (always at bottom) ══ -->
@@ -918,7 +988,122 @@
 </div>
 
 <script>
-  // ── History Drawer ──
+  // ══ MOBILE PiP CAMERA ══
+  (function () {
+    const pip = document.getElementById('pip-camera');
+    const pipVideo = document.getElementById('pip-video');
+    const stage = document.getElementById('stage');
+
+    // ── Mirror the main webcam stream into the PiP ──
+    function syncPipStream() {
+      const src = document.getElementById('webcam-video');
+      if (src && src.srcObject && pipVideo.srcObject !== src.srcObject) {
+        pipVideo.srcObject = src.srcObject;
+      }
+    }
+
+    // ── Show/hide PiP based on webcam status pill class ──
+    function updatePipVisibility() {
+      const pill = document.getElementById('webcam-status-pill');
+      const isActive = pill && pill.classList.contains('ready');
+      if (isActive) {
+        syncPipStream();
+        pip.classList.add('pip-active');
+      } else {
+        pip.classList.remove('pip-active');
+      }
+    }
+
+    // Observe the status pill for class changes
+    const pill = document.getElementById('webcam-status-pill');
+    if (pill) {
+      new MutationObserver(updatePipVisibility).observe(pill, { attributes: true, attributeFilter: ['class'] });
+    }
+    // Also poll briefly on load in case stream is already running
+    setTimeout(updatePipVisibility, 1000);
+    setTimeout(updatePipVisibility, 3000);
+
+    // ── Drag logic (mouse + touch) ──
+    let dragging = false, startX, startY, startLeft, startBottom;
+
+    function dragStart(cx, cy) {
+      dragging = true;
+      startX = cx; startY = cy;
+      const rect = pip.getBoundingClientRect();
+      const stageRect = stage.getBoundingClientRect();
+      startLeft = rect.left - stageRect.left;
+      startBottom = stageRect.bottom - rect.bottom;
+      pip.style.right = 'auto';
+      pip.style.left = startLeft + 'px';
+      pip.style.bottom = startBottom + 'px';
+      pip.style.cursor = 'grabbing';
+    }
+
+    function dragMove(cx, cy) {
+      if (!dragging) return;
+      const stageRect = stage.getBoundingClientRect();
+      const dx = cx - startX, dy = cy - startY;
+      const newLeft = Math.max(0, Math.min(startLeft + dx, stageRect.width - pip.offsetWidth));
+      const newBottom = Math.max(0, Math.min(startBottom - dy, stageRect.height - pip.offsetHeight));
+      pip.style.left = newLeft + 'px';
+      pip.style.bottom = newBottom + 'px';
+    }
+
+    function dragEnd() {
+      dragging = false;
+      pip.style.cursor = 'grab';
+    }
+
+    pip.addEventListener('mousedown', e => {
+      if (e.target.closest('#pip-resize-handle')) return;
+      e.preventDefault();
+      dragStart(e.clientX, e.clientY);
+    });
+    window.addEventListener('mousemove', e => dragMove(e.clientX, e.clientY));
+    window.addEventListener('mouseup', dragEnd);
+
+    pip.addEventListener('touchstart', e => {
+      if (e.target.closest('#pip-resize-handle')) return;
+      const t = e.touches[0];
+      dragStart(t.clientX, t.clientY);
+    }, { passive: true });
+    window.addEventListener('touchmove', e => {
+      if (!dragging) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      dragMove(t.clientX, t.clientY);
+    }, { passive: false });
+    window.addEventListener('touchend', dragEnd);
+
+    // ── Resize logic ──
+    const handle = document.getElementById('pip-resize-handle');
+    let resizing = false, resStartX, resStartY, resStartW, resStartH;
+    const MIN_W = 70, MIN_H = 56, MAX_W = 220, MAX_H = 180;
+
+    function resizeStart(cx, cy) {
+      resizing = true;
+      resStartX = cx; resStartY = cy;
+      resStartW = pip.offsetWidth;
+      resStartH = pip.offsetHeight;
+    }
+    function resizeMove(cx, cy) {
+      if (!resizing) return;
+      const newW = Math.min(MAX_W, Math.max(MIN_W, resStartW + (cx - resStartX)));
+      const newH = Math.min(MAX_H, Math.max(MIN_H, resStartH + (cy - resStartY)));
+      pip.style.width = newW + 'px';
+      pip.style.height = newH + 'px';
+    }
+    function resizeEnd() { resizing = false; }
+
+    handle.addEventListener('mousedown', e => { e.stopPropagation(); e.preventDefault(); resizeStart(e.clientX, e.clientY); });
+    window.addEventListener('mousemove', e => resizeMove(e.clientX, e.clientY));
+    window.addEventListener('mouseup', resizeEnd);
+
+    handle.addEventListener('touchstart', e => { e.stopPropagation(); const t = e.touches[0]; resizeStart(t.clientX, t.clientY); }, { passive: true });
+    window.addEventListener('touchmove', e => { if (!resizing) return; e.preventDefault(); const t = e.touches[0]; resizeMove(t.clientX, t.clientY); }, { passive: false });
+    window.addEventListener('touchend', resizeEnd);
+  })();
+
   const answerHistory = [];
 
   function addToHistory(question, answer, score) {
