@@ -278,7 +278,9 @@ function toggleFaceApi() {
 }
 
 // ── Auto-init on DOMContentLoaded ───────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+// Scripts loaded at end of <body> execute after DOM is parsed, so
+// DOMContentLoaded may have already fired. Run immediately in that case.
+function _webcamInit() {
   // Respect the privacy preference from privacy.html.
   // If webcam was explicitly disabled there, deny consent for this session
   // so the banner never appears and the camera never starts.
@@ -362,7 +364,13 @@ document.addEventListener('DOMContentLoaded', () => {
       manageFaceMonitoring(false);
       updateWebcamUiState('error', 'Camera failed to initialize.');
     });
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _webcamInit);
+} else {
+  _webcamInit();
+}
 
 // ───────────────────────────────────────────────────────────────────────────
 // ──── END: ID.2 ────
