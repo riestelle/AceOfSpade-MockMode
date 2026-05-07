@@ -8,15 +8,31 @@
 
   const supported = ('speechSynthesis' in window) && ('SpeechSynthesisUtterance' in window);
   const TTS_MAX_ERRORS = 3;
+  const EMPHASIS_KEYWORDS = ['important', 'critical', 'must', 'always', 'never'];
+  const SENTENCE_ABBREVIATIONS = ['mr.', 'mrs.', 'ms.', 'dr.', 'prof.', 'sr.', 'jr.', 'u.s.', 'e.g.', 'i.e.'];
+  const SENTENCE_ABBREVIATION_PATTERNS = SENTENCE_ABBREVIATIONS.map((abbr) => new RegExp(abbr.replace(/\./g, '\\.'), 'gi'));
+  const EMPHASIS_REGEX = new RegExp(`\\b(${EMPHASIS_KEYWORDS.join('|')})\\b`, 'gi');
+  const BASE_SENTENCE_PAUSE_MS = 200;
+  const SENTENCE_PAUSE_STEP_MS = 100;
+  const RATE_MIN = 0.8;
+  const RATE_MAX = 1.05;
+  const RATE_VARIATION_STEP = 0.015;
+  const BASE_PITCH = 0.97;
+  const PITCH_UP_VARIATION = 0.015;
+  const PITCH_DOWN_VARIATION = -0.01;
+  const PITCH_MIN = 0.95;
+  const PITCH_MAX = 1.0;
 
   let soundOn = true;   // auto-enabled; user can toggle off
   let errorCount = 0;
   let currentUtterance = null;
   let voices = [];
   let chosenVoice = null;
+  let premiumVoiceNoticeShown = false;
 
   function log(...args) { console.info('[MockMode][TTS]', ...args); }
   function warn(...args) { console.warn('[MockMode][TTS]', ...args); }
+  function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
 
   function updateIcon() {
     const icon = document.getElementById('sound-icon');
@@ -29,12 +45,64 @@
     if (!voices.length) return;
 
     const preferredLang = (document.documentElement.lang || 'en').toLowerCase();
-    const byLang = voices.filter(v => (v.lang || '').toLowerCase().startsWith(preferredLang));
-    const pool = byLang.length ? byLang : voices;
+    const startsWithLang = (voice, lang) => (voice.lang || '').toLowerCase().startsWith(lang);
+    const isPremiumVoice = (voice) => /\b(neural|premium|enhanced|natural)\b/i.test(voice.name || '');
+    const isModernVendorVoice = (voice) => /\b(google|microsoft|apple|siri)\b/i.test(voice.name || '');
 
-    // Prefer non-local-service voices for better quality; fall back to first available.
-    chosenVoice = pool.find(v => !v.localService) || pool[0] || null;
-    log('voices:', voices.length, 'chosen:', chosenVoice ? `${chosenVoice.name} (${chosenVoice.lang})` : 'none');
+    const tiers = [
+      { name: 'preferred-lang modern premium', voice: voices.find(v => startsWithLang(v, preferredLang) && (isPremiumVoice(v) || isModernVendorVoice(v))) },
+      { name: 'preferred-lang premium', voice: voices.find(v => startsWithLang(v, preferredLang) && isPremiumVoice(v)) },
+      { name: 'preferred-lang any', voice: voices.find(v => startsWithLang(v, preferredLang)) },
+      { name: 'english modern premium', voice: voices.find(v => startsWithLang(v, 'en') && (isPremiumVoice(v) || isModernVendorVoice(v))) },
+      { name: 'english premium', voice: voices.find(v => startsWithLang(v, 'en') && isPremiumVoice(v)) },
+      { name: 'english any', voice: voices.find(v => startsWithLang(v, 'en')) },
+      { name: 'any modern premium', voice: voices.find(v => isPremiumVoice(v) || isModernVendorVoice(v)) },
+      { name: 'any premium', voice: voices.find(isPremiumVoice) },
+      { name: 'first available', voice: voices[0] || null }
+    ];
+
+    const selectedTier = tiers.find(t => t.voice) || tiers[tiers.length - 1];
+    chosenVoice = selectedTier.voice || null;
+
+    const premiumAvailable = voices.some(isPremiumVoice);
+    if (!premiumAvailable) {
+      warn('premium/neural voices are not available in this browser');
+      if (!premiumVoiceNoticeShown && typeof showToast === 'function') {
+        premiumVoiceNoticeShown = true;
+        showToast('Premium interview voices are not available. Using the best available system voice.', 'info');
+      }
+    }
+
+    log('voices:', voices.length, 'tier:', selectedTier.name, 'chosen:', chosenVoice ? `${chosenVoice.name} (${chosenVoice.lang})` : 'none');
+  }
+
+  function splitIntoSentences(text) {
+    let normalized = String(text).replace(/\s+/g, ' ').trim();
+    if (!normalized) return [];
+
+    SENTENCE_ABBREVIATION_PATTERNS.forEach((pattern) => {
+      normalized = normalized.replace(pattern, (match) => match.replace(/\./g, '<DOT>'));
+    });
+    normalized = normalized.replace(/\.{3,}/g, '<ELLIPSIS>');
+
+    const matches = normalized.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [];
+    return matches
+      .map((s) => s.replace(/<DOT>/g, '.').replace(/<ELLIPSIS>/g, '...').trim())
+      .filter(Boolean);
+  }
+
+  function emphasizeInterviewWords(text) {
+    return String(text)
+      .replace(EMPHASIS_REGEX, ', $1,')
+      .replace(/,\s*,+/g, ', ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
+  function getBaseRateByWordCount(wordCount) {
+    if (wordCount < 20) return 1.0;
+    if (wordCount <= 50) return 0.95;
+    return 0.85;
   }
 
   function unlockSpeech() {
@@ -81,15 +149,6 @@
 
     try { window.speechSynthesis.cancel(); } catch (_) {}
 
-    const utter = new SpeechSynthesisUtterance(String(text));
-    if (chosenVoice) utter.voice = chosenVoice;
-    utter.rate = 1.0;   // normal speed for clear interview question delivery
-    utter.pitch = 1.05;
-    utter.volume = 0.9;
-
-    // Keep hard reference on window so GC does not collect mid-speech.
-    window._currentUtterance = utter;
-
     function fireOnDone() {
       if (typeof onDone === 'function') {
         const cb = onDone;
@@ -98,42 +157,84 @@
       }
     }
 
-    utter.onstart = () => {
-      currentUtterance = utter;
-    };
+    const fullText = String(text).trim();
+    const sentences = splitIntoSentences(fullText);
+    const words = fullText.split(/\s+/).filter(Boolean).length;
+    const baseRate = getBaseRateByWordCount(words);
 
-    utter.onend = () => {
-      if (window._currentUtterance === utter) window._currentUtterance = null;
-      if (currentUtterance === utter) currentUtterance = null;
-      fireOnDone();
-    };
+    let sentenceIndex = 0;
 
-    utter.onerror = (ev) => {
-      if (window._currentUtterance === utter) window._currentUtterance = null;
-      if (currentUtterance === utter) currentUtterance = null;
-
-      // 'interrupted' means cancel() was called intentionally (skip-voice button).
-      // Do not count as error; onDone is intentionally NOT called here so the skip
-      // handler fires _safeEnableAnsweringPhase() directly via window._skipVoiceBridge
-      // (defined in asset.interview.js).
-      if (ev && ev.error === 'interrupted') return;
-
-      errorCount++;
-      warn('error:', ev && ev.error ? ev.error : ev);
-      if (errorCount >= TTS_MAX_ERRORS) {
-        warn('giving up; toggle sound to retry');
-        if (typeof showToast === 'function') showToast('Voice output failed. Toggle sound off and on to retry.', 'warning');
+    const speakNextSentence = () => {
+      if (sentenceIndex >= sentences.length) {
+        fireOnDone();
+        return;
       }
-      // Always unlock the UI even on error
-      fireOnDone();
+
+      const sentence = emphasizeInterviewWords(sentences[sentenceIndex]);
+      const utter = new SpeechSynthesisUtterance(sentence);
+      if (chosenVoice) utter.voice = chosenVoice;
+
+      // Cycles through -0.015, 0, +0.015 to reduce monotone delivery.
+      // Rate cycles through -step, 0, +step so sentence starts measured and grows slightly.
+      const variation = ((sentenceIndex % 3) - 1) * RATE_VARIATION_STEP;
+      utter.rate = clamp(baseRate + variation, RATE_MIN, RATE_MAX);
+      utter.pitch = clamp(BASE_PITCH + ((sentenceIndex % 2) ? PITCH_UP_VARIATION : PITCH_DOWN_VARIATION), PITCH_MIN, PITCH_MAX);
+      utter.volume = 1.0;
+
+      // Keep hard reference on window so GC does not collect mid-speech.
+      window._currentUtterance = utter;
+
+      utter.onstart = () => {
+        currentUtterance = utter;
+      };
+
+      utter.onend = () => {
+        if (window._currentUtterance === utter) window._currentUtterance = null;
+        if (currentUtterance === utter) currentUtterance = null;
+
+        const pauseMs = BASE_SENTENCE_PAUSE_MS + ((sentenceIndex % 3) * SENTENCE_PAUSE_STEP_MS); // repeating 200/300/400ms sentence pacing
+        sentenceIndex++;
+        if (sentenceIndex >= sentences.length) {
+          fireOnDone();
+          return;
+        }
+        setTimeout(speakNextSentence, pauseMs);
+      };
+
+      utter.onerror = (ev) => {
+        if (window._currentUtterance === utter) window._currentUtterance = null;
+        if (currentUtterance === utter) currentUtterance = null;
+
+        // 'interrupted' means cancel() was called intentionally (skip-voice button).
+        // Do not count as error; onDone is intentionally NOT called here so the skip
+        // handler fires _safeEnableAnsweringPhase() directly via window._skipVoiceBridge
+        // (defined in asset.interview.js).
+        if (ev && ev.error === 'interrupted') return;
+
+        errorCount++;
+        warn('error:', ev && ev.error ? ev.error : ev);
+        if (errorCount >= TTS_MAX_ERRORS) {
+          warn('giving up; toggle sound to retry');
+          if (typeof showToast === 'function') showToast('Voice output failed. Toggle sound off and on to retry.', 'warning');
+        }
+        // Always unlock the UI even on error
+        fireOnDone();
+      };
+
+      try {
+        window.speechSynthesis.speak(utter);
+      } catch (e) {
+        errorCount++;
+        warn('speak threw:', e);
+        fireOnDone();
+      }
     };
 
-    currentUtterance = utter;
     try {
-      window.speechSynthesis.speak(utter);
+      speakNextSentence();
     } catch (e) {
       errorCount++;
-      warn('speak threw:', e);
+      warn('sentence speech failed:', e);
       fireOnDone();
     }
   }
