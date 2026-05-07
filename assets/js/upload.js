@@ -325,16 +325,18 @@ async function validatePhase1() {
   }
 
   const matchInDetected = keywords.some(k => detected.includes(k));
-  const matchInResume   = keywords.some(k => resumeText.includes(k));
-  const isMatch         = matchInDetected || matchInResume;
+  // Require at least 2 keyword hits in the resume — 1 stray mention is not enough
+  const selectedHits  = keywords.filter(k => resumeText.includes(k)).length;
+  const matchInResume = selectedHits >= 2;
+  const isMatch       = matchInDetected || matchInResume;
 
   const otherRoles = Object.entries(roleKeywords).filter(([r]) => r !== role && r !== 'general');
   const otherHits  = otherRoles.map(([r, kws]) => ({
     role: r,
     hits: kws.filter(k => resumeText.includes(k)).length
   }));
-  const selectedHits  = keywords.filter(k => resumeText.includes(k)).length;
-  const strongerMatch = otherRoles.length > 0 && otherHits.some(o => o.hits > selectedHits + 2);
+  // Tightened from +2 to +1 — if any other role scores even slightly higher, flag it
+  const strongerMatch = otherRoles.length > 0 && otherHits.some(o => o.hits > selectedHits + 1);
 
   if (!isMatch || strongerMatch) {
     const bestMatch = otherHits.sort((a, b) => b.hits - a.hits)[0];
