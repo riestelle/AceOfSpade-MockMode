@@ -353,8 +353,10 @@
       overflow: hidden;
       cursor: grab;
       touch-action: none;
-      width: 100px;
-      height: 80px;
+      /* Fixed landscape bubble — width drives size, height is auto via aspect-ratio */
+      width: 110px;
+      aspect-ratio: 4 / 3;
+      height: auto;
       bottom: 10px;
       right: 8px;
       border-radius: 4px;
@@ -362,11 +364,22 @@
       user-select: none;
     }
     #pip-camera.pip-active { display: block; }
+    /* Tablet+ (768px): #webcam-col is visible in the dialogue box — no PiP needed */
+    @media (min-width: 768px) {
+      #pip-camera.pip-active { display: none !important; }
+    }
     #pip-camera:active { cursor: grabbing; }
     #pip-camera video {
+      /* Fill the pip box and crop whatever overflows — never let portrait stream bleed out */
+      position: absolute;
+      top: 0; left: 0;
       width: 100%; height: 100%;
-      object-fit: cover; display: block;
+      object-fit: cover;
+      object-position: center;
+      display: block;
       filter: grayscale(1) contrast(1.2);
+      /* Mirror front-facing camera so it feels natural */
+      transform: scaleX(-1);
       pointer-events: none;
     }
     #pip-rec-badge {
@@ -1078,20 +1091,18 @@
     // ── Resize logic ──
     const handle = document.getElementById('pip-resize-handle');
     let resizing = false, resStartX, resStartY, resStartW, resStartH;
-    const MIN_W = 70, MIN_H = 56, MAX_W = 220, MAX_H = 180;
+    const MIN_W = 70, MAX_W = 240;
 
     function resizeStart(cx, cy) {
       resizing = true;
       resStartX = cx; resStartY = cy;
       resStartW = pip.offsetWidth;
-      resStartH = pip.offsetHeight;
     }
     function resizeMove(cx, cy) {
       if (!resizing) return;
+      // Only drive width; height is auto via aspect-ratio on the container
       const newW = Math.min(MAX_W, Math.max(MIN_W, resStartW + (cx - resStartX)));
-      const newH = Math.min(MAX_H, Math.max(MIN_H, resStartH + (cy - resStartY)));
       pip.style.width = newW + 'px';
-      pip.style.height = newH + 'px';
     }
     function resizeEnd() { resizing = false; }
 
