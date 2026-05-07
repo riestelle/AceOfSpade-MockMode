@@ -318,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ? window.isDesktopSession
     : !window.matchMedia('(max-width: 900px)').matches;
 
-  const resolvedFaceEnabled = (consent === 'granted') && (isDesktop ? true : faceEnabled);
+  const resolvedFaceEnabled = (consent === 'granted') && faceEnabled;
 
   // Restore toggle UI state (desktop always starts active; mobile respects saved pref)
   faceApiOverlayEnabled = resolvedFaceEnabled;
