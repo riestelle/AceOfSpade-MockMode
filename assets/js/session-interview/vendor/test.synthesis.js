@@ -10,9 +10,7 @@
   const TTS_MAX_ERRORS = 3;
   const EMPHASIS_KEYWORDS = ['important', 'critical', 'must', 'always', 'never'];
   const SENTENCE_ABBREVIATIONS = ['mr.', 'mrs.', 'ms.', 'dr.', 'prof.', 'sr.', 'jr.', 'u.s.', 'e.g.', 'i.e.'];
-  const SENTENCE_ABBREVIATION_PATTERNS = SENTENCE_ABBREVIATIONS.map((abbr) => ({
-    pattern: new RegExp(abbr.replace(/\./g, '\\.'), 'gi')
-  }));
+  const SENTENCE_ABBREVIATION_PATTERNS = SENTENCE_ABBREVIATIONS.map((abbr) => new RegExp(abbr.replace(/\./g, '\\.'), 'gi'));
   const EMPHASIS_REGEX = new RegExp(`\\b(${EMPHASIS_KEYWORDS.join('|')})\\b`, 'gi');
   const BASE_SENTENCE_PAUSE_MS = 200;
   const SENTENCE_PAUSE_STEP_MS = 100;
@@ -78,7 +76,7 @@
     let normalized = String(text).replace(/\s+/g, ' ').trim();
     if (!normalized) return [];
 
-    SENTENCE_ABBREVIATION_PATTERNS.forEach(({ pattern }) => {
+    SENTENCE_ABBREVIATION_PATTERNS.forEach((pattern) => {
       normalized = normalized.replace(pattern, (match) => match.replace(/\./g, '<DOT>'));
     });
     normalized = normalized.replace(/\.{3,}/g, '<ELLIPSIS>');
@@ -173,6 +171,7 @@
       if (chosenVoice) utter.voice = chosenVoice;
 
       // Cycles through -0.015, 0, +0.015 to reduce monotone delivery.
+      // Cycles through -step, 0, +step so sentence starts measured and grows slightly.
       const variation = ((sentenceIndex % 3) - 1) * RATE_VARIATION_STEP;
       utter.rate = clamp(baseRate + variation, RATE_MIN, RATE_MAX);
       utter.pitch = clamp(BASE_PITCH + ((sentenceIndex % 2) ? PITCH_UP_VARIATION : PITCH_DOWN_VARIATION), PITCH_MIN, PITCH_MAX);
@@ -189,13 +188,12 @@
         if (window._currentUtterance === utter) window._currentUtterance = null;
         if (currentUtterance === utter) currentUtterance = null;
 
+        const pauseMs = BASE_SENTENCE_PAUSE_MS + ((sentenceIndex % 3) * SENTENCE_PAUSE_STEP_MS); // 200/300/400ms sentence pacing
         sentenceIndex++;
         if (sentenceIndex >= sentences.length) {
           fireOnDone();
           return;
         }
-
-        const pauseMs = BASE_SENTENCE_PAUSE_MS + (((sentenceIndex + 2) % 3) * SENTENCE_PAUSE_STEP_MS); // 200/300/400ms sentence pacing
         setTimeout(speakNextSentence, pauseMs);
       };
 
