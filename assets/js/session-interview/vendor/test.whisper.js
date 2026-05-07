@@ -28,6 +28,7 @@ let recording = false;
 let transcriberPromise = null;
 let transformersModule = null; // full module { pipeline, env, ... }
 let prewarmStarted = false;
+let preloadIdleCallbackId = null;
 
 function warn(...args) { console.warn('[MockMode][Whisper]', ...args); }
 function info(...args) { console.info('[MockMode][Whisper]', ...args); }
@@ -304,7 +305,7 @@ function prewarmTranscriber() {
 
 // Globals expected by asset.interview.js
 window.startMicCapture = function startMicCapture() {
-  // Secondary preload trigger during interview flow.
+  // Backup preload trigger during interview flow (primary trigger runs in wire()).
   prewarmTranscriber();
 };
 
@@ -331,7 +332,16 @@ function wire() {
   if (window.location && /\/interview\.html$/i.test(window.location.pathname)) {
     if (typeof window.requestIdleCallback === 'function') {
       // Delay until browser idle but force within 3s to reduce first-use latency.
-      window.requestIdleCallback(() => prewarmTranscriber(), { timeout: 3000 });
+      preloadIdleCallbackId = window.requestIdleCallback(() => {
+        prewarmTranscriber();
+        preloadIdleCallbackId = null;
+      }, { timeout: 3000 });
+      window.addEventListener('pagehide', () => {
+        if (preloadIdleCallbackId !== null && typeof window.cancelIdleCallback === 'function') {
+          window.cancelIdleCallback(preloadIdleCallbackId);
+          preloadIdleCallbackId = null;
+        }
+      }, { once: true });
     } else {
       // Fallback small delay when requestIdleCallback is unavailable.
       setTimeout(() => prewarmTranscriber(), 600);
