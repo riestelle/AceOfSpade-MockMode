@@ -197,26 +197,6 @@ window.stopMicCapture = stopMicCapture;
 window.isMicArmed = () => micArmed;
 
 window.addEventListener('DOMContentLoaded', () => {
-  // Respect the privacy preference set in privacy.html.
-  // STT defaults to ON (true) when no pref is saved yet.
-  const sttEnabled = (() => {
-    try {
-      const prefs = JSON.parse(localStorage.getItem('mm_privacy_prefs') || '{}');
-      return prefs.stt !== false; // treat missing/undefined as true (on by default)
-    } catch (_) { return true; }
-  })();
-
-  if (!sttEnabled) {
-    // Hide mic button and prevent any mic functionality from initialising
-    const micBtn = document.getElementById('mic-btn');
-    if (micBtn) micBtn.style.display = 'none';
-    // Stub out the globals so asset.interview.js calls are no-ops
-    window.startMicCapture = () => {};
-    window.stopMicCapture  = () => {};
-    window.isMicArmed      = () => false;
-    return; // do not wire up mic events
-  }
-
   logSpeechDiagnostics();
   setupSTT();
   updateMicUi();

@@ -7,7 +7,7 @@
 // TTS — Text-to-Speech (interviewer voice output)
 // ─────────────────────────────────────────────────────────────────────────────
 
-let soundOn          = true;   // auto-enabled on load — user can toggle off; overridden by privacy prefs below
+let soundOn          = true;   // auto-enabled on load — user can toggle off
 let currentUtterance = null;
 let ttsRetryCount    = 0;   // error counter — resets on success
 let voiceLoadRetries = 0;   // separate counter just for voice-load polling
@@ -263,7 +263,6 @@ function setMicUI(active) {
 }
 
 function toggleMic() {
-  if (window._sttDisabledByPrivacy) return; // STT disabled in privacy settings
   if (!sttSupported) {
     if (typeof showToast === 'function') showToast('Speech recognition not supported.', 'warning');
     return;
@@ -392,23 +391,6 @@ if (typeof window !== 'undefined') {
       }
     } else {
       console.warn('[MockMode] TTS is not supported in this browser.');
-    }
-
-    // ── Apply privacy preferences set in privacy.html ──
-    const _privacyPrefs = JSON.parse(localStorage.getItem('mm_privacy_prefs') || '{}');
-
-    // TTS: if the user disabled voice output in privacy settings, turn sound off
-    if (_privacyPrefs.tts === false) {
-      soundOn = false;
-    }
-
-    // STT: if the user disabled voice input in privacy settings, hide the mic button
-    // and prevent toggleMic() from activating recognition
-    if (_privacyPrefs.stt === false) {
-      const micBtnEl = document.getElementById('mic-btn');
-      if (micBtnEl) micBtnEl.style.display = 'none';
-      // Patch toggleMic so keyboard shortcut [M] is also a no-op
-      window._sttDisabledByPrivacy = true;
     }
 
     // ── Sound icon initial state ──
