@@ -78,6 +78,7 @@ There's actual game logic running underneath:
 - Web Speech API for voice input/output (browser-native TTS/STT)
 - Xenova/whisper-base.en (ONNX, via Transformers.js) for higher-quality offline speech recognition
 - face-api.js for webcam-based confidence tracking
+- GSAP
 
 **Backend**
 - Vercel Serverless Functions (Node.js 20.x)
