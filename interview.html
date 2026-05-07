@@ -1176,6 +1176,8 @@
     if (!webcamEnabled) {
       sessionStorage.setItem('mm_webcam_consent', 'denied');
       // banner stays hidden (no visible class added)
+      const webcamCol = document.getElementById('webcam-col');
+      if (webcamCol) webcamCol.style.display = 'none';
     } else {
       // Only show the banner if the user hasn't already answered this session
       const consent = sessionStorage.getItem('mm_webcam_consent');
