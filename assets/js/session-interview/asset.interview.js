@@ -710,7 +710,12 @@ async function askCurrentQuestion() {
 
   // FIX: Expose _safeEnableAnsweringPhase so the skip-voice button (wired in
   // session.realtime.tts.js) can fire through the guard without double-enabling.
-  window._skipVoiceBridge = _safeEnableAnsweringPhase;
+  // Also reset the spurious-interrupt guard flag for this new question.
+  window._skipVoiceBridgeFired = false;
+  window._skipVoiceBridge = () => {
+    window._skipVoiceBridgeFired = true; // tells TTS onerror this was a real skip
+    _safeEnableAnsweringPhase();
+  };
 
   let streamFinished = false;
 

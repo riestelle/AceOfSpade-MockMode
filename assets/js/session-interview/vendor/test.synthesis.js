@@ -205,11 +205,29 @@
         if (window._currentUtterance === utter) window._currentUtterance = null;
         if (currentUtterance === utter) currentUtterance = null;
 
-        // 'interrupted' means cancel() was called intentionally (skip-voice button).
-        // Do not count as error; onDone is intentionally NOT called here so the skip
-        // handler fires _safeEnableAnsweringPhase() directly via window._skipVoiceBridge
-        // (defined in asset.interview.js).
-        if (ev && ev.error === 'interrupted') return;
+        // 'interrupted' fires when cancel() is called externally (skip-voice button OR
+        // the cancel() at the top of speakText clearing a stale unlockSpeech utterance).
+        //
+        // CRITICAL FIX: In the sentence-by-sentence model, 'interrupted' on sentence[0]
+        // used to silently return without calling fireOnDone(), killing the entire TTS
+        // chain on Q1 — nothing would unlock the UI or start the timer.
+        //
+        // New rule:
+        //   - If _skipVoiceBridgeFired is set, this was a real intentional skip.
+        //     Bail silently so the skip bridge handles enableAnsweringPhase.
+        //   - Otherwise it's a spurious interrupt (stale cancel / race on first load).
+        //     Advance to the next sentence instead of dying.
+        if (ev && ev.error === 'interrupted') {
+          if (window._skipVoiceBridgeFired) return; // intentional skip
+          // Spurious interrupt — advance to next sentence
+          sentenceIndex++;
+          if (sentenceIndex < sentences.length) {
+            setTimeout(speakNextSentence, 80);
+          } else {
+            fireOnDone();
+          }
+          return;
+        }
 
         errorCount++;
         warn('error:', ev && ev.error ? ev.error : ev);
