@@ -4,7 +4,7 @@
 //
 // Model loading strategy:
 //   1. Tries to load quantized Whisper model from the bundled local path:
-//      /assets/js/session-interview/models/Xenova/whisper-tiny.en/
+//      /assets/js/session-interview/models/Xenova/whisper-base.en/
 //   2. Falls back to HuggingFace CDN if local files are not present.
 // Run the GitHub Actions workflow "Download Whisper Model" to bundle the model into the repo
 // so end-users do not need to download it at runtime.
@@ -15,7 +15,7 @@ const TRANSFORMERS_CDN = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17
 
 // Local model root served by the web server — mirrors the HuggingFace repo layout.
 const LOCAL_MODEL_PATH = '/assets/js/session-interview/models/';
-const MODEL_ID = 'Xenova/whisper-tiny.en';
+const MODEL_ID = 'Xenova/whisper-base.en';
 
 let micErrors = 0;
 let micHardStopped = false;
@@ -27,6 +27,8 @@ let recording = false;
 
 let transcriberPromise = null;
 let transformersModule = null; // full module { pipeline, env, ... }
+let prewarmStarted = false;
+let preloadIdleCallbackId = null;
 
 function warn(...args) { console.warn('[MockMode][Whisper]', ...args); }
 function info(...args) { console.info('[MockMode][Whisper]', ...args); }
@@ -295,9 +297,16 @@ function toggleMic() {
   else startRecording();
 }
 
+function prewarmTranscriber() {
+  if (prewarmStarted || transcriberPromise) return;
+  prewarmStarted = true;
+  ensureTranscriber().catch((err) => warn('preload failed:', err));
+}
+
 // Globals expected by asset.interview.js
 window.startMicCapture = function startMicCapture() {
-  // Resets per-question failure state. Does not auto-start recording.
+  // Backup preload trigger during interview flow (primary preload runs on page init).
+  prewarmTranscriber();
 };
 
 window.stopMicCapture = function stopMicCapture() {
@@ -319,6 +328,25 @@ function wire() {
     if (document.activeElement === document.getElementById('answer-input')) return;
     if (e.key.toLowerCase() === 'm') toggleMic();
   });
+
+  if (window.location && /\/interview\.html$/i.test(window.location.pathname)) {
+    if (typeof window.requestIdleCallback === 'function') {
+      // Delay until browser idle but force within 3s to reduce first-use latency.
+      preloadIdleCallbackId = window.requestIdleCallback(() => {
+        prewarmTranscriber();
+        preloadIdleCallbackId = null;
+      }, { timeout: 3000 });
+      window.addEventListener('pagehide', () => {
+        if (preloadIdleCallbackId !== null && typeof window.cancelIdleCallback === 'function') {
+          window.cancelIdleCallback(preloadIdleCallbackId);
+          preloadIdleCallbackId = null;
+        }
+      }, { once: true });
+    } else {
+      // Fallback small delay when requestIdleCallback is unavailable.
+      setTimeout(() => prewarmTranscriber(), 600);
+    }
+  }
 }
 
 if (document.readyState === 'loading') {

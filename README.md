@@ -42,7 +42,7 @@ There's actual game logic running underneath:
 - Chart.js for the results score breakdown
 - Lottie (bodymovin) for animated interviewer characters
 - Web Speech API for voice input/output (browser-native TTS/STT)
-- Xenova/whisper-tiny.en (ONNX, via Transformers.js) for offline speech recognition
+- Xenova/whisper-base.en (ONNX, via Transformers.js) for higher-quality offline speech recognition
 - face-api.js for webcam-based confidence tracking
 
 **Backend**
@@ -128,7 +128,7 @@ The Whisper ONNX model files are large and not committed to the repo. Download t
 .github/workflows/download-whisper-model.yml
 ```
 
-You can trigger it manually from the GitHub UI under **Actions → Download Whisper Model**, or run it automatically on push. The workflow downloads `Xenova/whisper-tiny.en` encoder and decoder ONNX files into `assets/js/session-interview/models/Xenova/whisper-tiny.en/onnx/`.
+You can trigger it manually from the GitHub UI under **Actions → Download Whisper Model**, or run it automatically on push. The workflow downloads `Xenova/whisper-base.en` encoder and decoder ONNX files into `assets/js/session-interview/models/Xenova/whisper-base.en/onnx/`.
 
 ---
 
