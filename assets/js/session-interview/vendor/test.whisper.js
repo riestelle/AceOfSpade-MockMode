@@ -58,8 +58,28 @@ function setMicUI(active) {
   }
 }
 
+// FIX: Show a loading state on the mic button while the Whisper model is
+// being downloaded/initialized, so the user isn't left clicking a silent button.
+function setMicLoading(loading) {
+  const btn = document.getElementById('mic-btn');
+  const icon = btn && btn.querySelector('.mic-icon');
+  if (!btn) return;
+  if (loading) {
+    btn.disabled = true;
+    btn.title = 'Speech model loading... please wait';
+    if (icon) icon.textContent = 'hourglass_empty';
+    btn.style.opacity = '0.5';
+  } else {
+    btn.disabled = false;
+    btn.title = 'Hold to speak [M]';
+    if (icon) icon.textContent = 'mic';
+    btn.style.opacity = '';
+  }
+}
+
 async function ensureTranscriber() {
   if (!transcriberPromise) {
+    setMicLoading(true);
     if (typeof showToast === 'function') {
       showToast('Loading speech model... first-time load may take a moment.', 'info');
     }
@@ -79,13 +99,15 @@ async function ensureTranscriber() {
       })
       .then(p => {
         info('model loaded');
+        setMicLoading(false);
         if (typeof showToast === 'function') {
-          showToast('Speech model ready. Press the mic button and speak.', 'success');
+          showToast('Speech model ready. Press [M] or the mic button to record.', 'success');
         }
         return p;
       })
       .catch(err => {
         transcriberPromise = null;
+        setMicLoading(false);
         warn('model load failed:', err);
         if (typeof showToast === 'function') {
           showToast('Failed to load speech model. Check your connection or browser settings.', 'error');
@@ -305,7 +327,7 @@ function prewarmTranscriber() {
 
 // Globals expected by asset.interview.js
 window.startMicCapture = function startMicCapture() {
-  // Backup preload trigger during interview flow (primary preload runs on page init).
+  // Called by enableAnsweringPhase() each question — good secondary prewarm trigger.
   prewarmTranscriber();
 };
 
@@ -330,21 +352,28 @@ function wire() {
   });
 
   if (window.location && /\/interview\.html$/i.test(window.location.pathname)) {
+    // FIX: Start prewarming immediately with a short fixed delay (800ms) instead
+    // of waiting for requestIdleCallback — which can be held off for several
+    // seconds when the page is busy loading Lottie + face-api + the AI stream
+    // all at the same time. On first question the user gets a ~30-45s window
+    // while the interviewer is speaking, which is enough to finish loading the
+    // model silently in the background so the first mic press feels instant.
+    //
+    // requestIdleCallback is kept as an immediate secondary trigger in case the
+    // browser IS idle early (e.g. cached questions skip the AI stream wait).
+    setTimeout(() => prewarmTranscriber(), 800);
+
     if (typeof window.requestIdleCallback === 'function') {
-      // Delay until browser idle but force within 3s to reduce first-use latency.
       preloadIdleCallbackId = window.requestIdleCallback(() => {
-        prewarmTranscriber();
+        prewarmTranscriber(); // no-op if 800ms timer already started it
         preloadIdleCallbackId = null;
-      }, { timeout: 3000 });
+      }, { timeout: 5000 });
       window.addEventListener('pagehide', () => {
         if (preloadIdleCallbackId !== null && typeof window.cancelIdleCallback === 'function') {
           window.cancelIdleCallback(preloadIdleCallbackId);
           preloadIdleCallbackId = null;
         }
       }, { once: true });
-    } else {
-      // Fallback small delay when requestIdleCallback is unavailable.
-      setTimeout(() => prewarmTranscriber(), 600);
     }
   }
 }
