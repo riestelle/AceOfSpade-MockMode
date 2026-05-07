@@ -293,6 +293,12 @@ document.addEventListener('DOMContentLoaded', () => {
     return; // stop — do not attempt to start the camera at all
   }
 
+  // Privacy pref = ON means the user already opted in — auto-grant so the
+  // banner never appears and the camera starts without an extra prompt.
+  if (!sessionStorage.getItem('mm_webcam_consent')) {
+    sessionStorage.setItem('mm_webcam_consent', 'granted');
+  }
+
   const consent = sessionStorage.getItem('mm_webcam_consent');
 
   // FIX: Do not read the saved overlay pref until consent has actually been
