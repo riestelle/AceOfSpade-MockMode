@@ -32,7 +32,6 @@ There's actual game logic running underneath:
 - **One skip** allowed per session — but it costs +15 stress.
 - **Boss question** on the last round with a score multiplier.
 - **Final verdict**: Hired, Waitlisted, or Fired — determined by the AI based on your scores and resume. Stress hitting 100 skips the AI and fires you instantly.
-- **Verdict subtypes**: Hired Confident, Hired Lucky, Waitlisted, Fired (Breakdown / Technical / Attitude) — scored from your actual performance averages.
 
 ---
 
@@ -42,7 +41,6 @@ There's actual game logic running underneath:
 - AI-generated questions personalized to resume content
 - Answer evaluation with per-question scoring
 - Stress meter and combo tracking
-- Follow-up question branching
 - Skip button (one per session, +15 stress)
 - Interviewer personas — Ms. Reyes, Kai, Dr. Matsuda — each with Lottie character animations and distinct questioning styles
 - Face expression → stress integration: sustained negative expressions during answering apply passive stress spikes
