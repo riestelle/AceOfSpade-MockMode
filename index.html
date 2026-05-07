@@ -444,68 +444,26 @@
         footer > div:first-child { padding:5px 8px !important; }
         footer .text-xs { font-size:9px !important; }
 
-        /* ── Modal: bottom sheet on mobile ── */
+        /* ── Modal: centered on all phones ── */
         #how-to-play-modal {
-            padding:0 !important;
-            align-items:flex-end !important;
+            padding: 16px !important;
+            align-items: center !important;
+            justify-content: center !important;
         }
         #how-to-play-modal.open > div {
             animation: modal-slide-up 0.32s cubic-bezier(0.34,1.2,0.64,1) both;
         }
         #how-to-play-modal > div {
-            width:100% !important;
-            max-width:100% !important;
-            max-height:88svh !important;
-            overflow-y:auto !important;
-            border-bottom:none !important;
-            /* Rounded top corners only on mobile */
-            border-top-left-radius:12px !important;
-            border-top-right-radius:12px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            max-height: 85svh !important;
+            overflow-y: auto !important;
+            border-bottom: 4px solid #1A0F0D !important;
+            border-radius: 4px !important;
         }
 
-        /* Modal header */
-        #how-to-play-modal .bg-\[#2D1B18\] { padding:14px 16px !important; }
-        #how-to-play-modal h2 { font-size:18px !important; }
-
-        /* Modal body padding & gaps */
-        #how-to-play-modal .p-lg  { padding:14px !important; }
-        #how-to-play-modal .gap-lg { gap:14px !important; }
-
-        /* Step rows: tighter gap, protect min-width on number box */
-        #how-to-play-modal .flex.gap-md { gap:10px !important; align-items:flex-start !important; }
-        #how-to-play-modal .w-12.h-12 {
-            width:36px !important;
-            height:36px !important;
-            min-width:36px !important;
-            font-size:15px !important;
-            flex-shrink:0 !important;
-        }
-
-        /* Step title */
-        #how-to-play-modal .font-headline-md { font-size:14px !important; }
-
-        /* Step body text */
-        #how-to-play-modal .font-body-md { font-size:12px !important; line-height:1.5 !important; }
-
-        /* "Operation: INTERVIEW" label: don't overflow */
-        #how-to-play-modal .absolute.-top-3 {
-            font-size:8px !important;
-            letter-spacing:0.06em !important;
-            left:8px !important;
-        }
-
-        /* "I UNDERSTAND" button: full width on mobile, reduce padding */
-        #how-to-play-modal .flex.justify-end { justify-content:stretch !important; }
-        #how-to-play-modal .flex.justify-end > button {
-            width:100% !important;
-            justify-content:center !important;
-            padding-left:16px !important;
-            padding-right:16px !important;
-            font-size:15px !important;
-        }
-
-        /* Corner dots in modal: hide on mobile (they clip outside rounded corners) */
-        #how-to-play-modal .rounded-full { display:none !important; }
+        /* Corner dots: hide on mobile */
+        #how-to-play-modal .rounded-full { display: none !important; }
     }
 
     /* Tablets portrait: 640px–767px */
@@ -655,10 +613,8 @@
     <div class="relative w-full max-w-2xl bg-surface-container border-4 border-[#1A0F0D] shadow-[8px_8px_0_0_#190a08] flex flex-col overflow-hidden" style="max-height:88svh; overflow-y:auto;">
         <div class="absolute inset-0 pixel-dither pointer-events-none opacity-10"></div>
 
-        <!-- Mobile drag handle -->
-        <div class="sm:hidden flex justify-center pt-2 pb-1 relative z-10">
-            <div class="w-10 h-1 bg-outline-variant rounded-full opacity-60"></div>
-        </div>
+        <!-- Mobile drag handle: hidden since modal is centered -->
+        <div class="hidden"></div>
 
         <!-- Header -->
         <div class="bg-[#2D1B18] border-b-4 border-[#1A0F0D] px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center relative z-10">
@@ -679,8 +635,8 @@
                     <div class="flex gap-3 sm:gap-md items-start">
                         <div class="flex-shrink-0 w-9 h-9 sm:w-12 sm:h-12 min-w-[36px] bg-primary-container text-primary border-2 border-[#1A0F0D] flex items-center justify-center font-headline-md shadow-[3px_3px_0_0_#190a08] text-sm sm:text-xl">1</div>
                         <div class="flex flex-col min-w-0">
-                            <p class="font-headline-md text-on-primary-container mb-1 uppercase text-sm sm:text-xl">📋 DATA UPLOAD</p>
-                            <p class="text-on-surface-variant leading-relaxed text-xs sm:text-base">Paste your resume text into the terminal. The system will parse your experience for the quest simulation.</p>
+                            <p class="font-headline-md text-on-primary-container mb-1 uppercase" style="font-size:clamp(12px,3.5vw,20px);">📋 DATA UPLOAD</p>
+                            <p class="text-on-surface-variant leading-relaxed" style="font-size:clamp(11px,3vw,16px);">Paste your resume text into the terminal. The system will parse your experience for the quest simulation.</p>
                         </div>
                     </div>
 
@@ -688,8 +644,8 @@
                     <div class="flex gap-3 sm:gap-md items-start">
                         <div class="flex-shrink-0 w-9 h-9 sm:w-12 sm:h-12 min-w-[36px] bg-secondary-container text-secondary border-2 border-[#1A0F0D] flex items-center justify-center font-headline-md shadow-[3px_3px_0_0_#190a08] text-sm sm:text-xl">2</div>
                         <div class="flex flex-col min-w-0">
-                            <p class="font-headline-md text-on-secondary-container mb-1 uppercase text-sm sm:text-xl">🎭 CHOOSE AVATAR</p>
-                            <p class="text-on-surface-variant leading-relaxed text-xs sm:text-base">Select your interviewer persona. Each boss has a unique questioning style and difficulty rating.</p>
+                            <p class="font-headline-md text-on-secondary-container mb-1 uppercase" style="font-size:clamp(12px,3.5vw,20px);">🎭 CHOOSE AVATAR</p>
+                            <p class="text-on-surface-variant leading-relaxed" style="font-size:clamp(11px,3vw,16px);">Select your interviewer persona. Each boss has a unique questioning style and difficulty rating.</p>
                         </div>
                     </div>
 
@@ -697,8 +653,8 @@
                     <div class="flex gap-3 sm:gap-md items-start">
                         <div class="flex-shrink-0 w-9 h-9 sm:w-12 sm:h-12 min-w-[36px] bg-tertiary-container text-tertiary border-2 border-[#1A0F0D] flex items-center justify-center font-headline-md shadow-[3px_3px_0_0_#190a08] text-sm sm:text-xl">3</div>
                         <div class="flex flex-col min-w-0">
-                            <p class="font-headline-md text-on-tertiary-container mb-1 uppercase text-sm sm:text-xl">⚖️ THE GAUNTLET</p>
-                            <p class="text-on-surface-variant leading-relaxed text-xs sm:text-base">Answer 5 high-stakes questions. Your responses determine your Final Ranking and Loot Grade.</p>
+                            <p class="font-headline-md text-on-tertiary-container mb-1 uppercase" style="font-size:clamp(12px,3.5vw,20px);">⚖️ THE GAUNTLET</p>
+                            <p class="text-on-surface-variant leading-relaxed" style="font-size:clamp(11px,3vw,16px);">Answer 5 high-stakes questions. Your responses determine your Final Ranking and Loot Grade.</p>
                         </div>
                     </div>
 
