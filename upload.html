@@ -164,8 +164,8 @@
         /* ── DOOR WRAP ── */
         .door-wrap {
             position: relative;
-            width: 210px;
-            height: 320px;
+            width: 260px;
+            height: 400px;
             opacity: 0;
             flex: 0 0 auto;
 
@@ -254,8 +254,8 @@
         .door-unit:hover {transform: translateY(-5px);}
 
         .door-wrap {
-            width: 210px;
-            height: 320px;
+            width: 260px;
+            height: 400px;
             position: relative;
         }
 
@@ -619,7 +619,11 @@
         .resume-validation.warn    { color: #f97316; }
         .resume-validation.loading { color: #94a3b8; }
 
-        /* ── DESK ── */
+        .desk-prop.gsap-drop {
+            animation: none !important;
+            opacity: 0; /* GSAP will handle fade-in */
+        }
+
         #desk-layer {
             position: fixed; bottom: 0; left: 0;
             width: 100%; height: 80px;
@@ -1629,7 +1633,7 @@
             <div id="desk-surface"></div>
                 
             <!-- MUG — left side -->
-            <div class="desk-prop" style="right: 9%; bottom: 77px; animation-delay: 0.1s;">
+            <div class="desk-prop gsap-drop" style="right: 9%; bottom: 77px; animation-delay: 0.1s;">
                 <svg width="350" height="250" viewBox="0 0 48 58" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" style="image-rendering:pixelated">
                     <!-- LID top cap -->
                     <rect x="10" y="2"  width="28" height="2"  fill="#3d1f0a"/>
@@ -1818,7 +1822,7 @@
                 </div>
                 
                 <!-- PAPERS STACK — right side -->
-                <div class="desk-prop" style="left: 3%; bottom: 65px; animation-delay: 0.4s;">
+                <div class="desk-prop gsap-drop" style="left: 3%; bottom: 65px; animation-delay: 0.4s;">
                     <svg width="340" height="244" viewBox="0 0 72 52" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" style="image-rendering:pixelated">
                         <!-- BOOK 6 — bottom, gray -->
                         <rect x="4"  y="44" width="62" height="6"  fill="#b0b8c8"/>
@@ -1895,7 +1899,7 @@
                     </svg>
                 </div-->
 
-                <div class="desk-prop" style="right: 2%; bottom: 77px; animation-delay: 0.55s;">
+                <div class="desk-prop gsap-drop" style="right: 2%; bottom: 77px; animation-delay: 0.55s;">
                     <svg width="250" height="500" viewBox="0 0 40 35" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" style="image-rendering:pixelated">
                     <!-- LIGHT BEAM (cone below shade) -->
                     <defs>
@@ -2173,10 +2177,34 @@
         <script src="assets/js/main.js"></script>
         <script src="assets/js/upload.js"></script>
         
-        <!-- DUST PARTICLES -->
+        <!-- GSAP DROP ANIMATIONS -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
         <script>
-        (function() {
-            const canvas = document.getElementById('dust-canvas');
+        window.addEventListener('load', () => {
+            const DELAY_BASE = 1.5;
+            const books = document.querySelector('.desk-prop[style*="left: 3%"]');
+            const mug   = document.querySelector('.desk-prop[style*="right: 9%"]');
+            const lamp  = document.querySelector('.desk-prop[style*="right: 2%"]');
+
+            function dropIn(el, delay, bounceFrom) {
+                if (!el) return;
+                gsap.set(el, { y: bounceFrom || -280, opacity: 0 });
+                gsap.to(el, {
+                    y: 0,
+                    opacity: 1,
+                    duration: 0.72,
+                    delay: DELAY_BASE + delay,
+                    ease: 'bounce.out',
+                });
+            }
+
+            dropIn(books, 0.05, -320);
+            dropIn(mug,   0.22, -260);
+            dropIn(lamp,  0.38, -380);
+        });
+        </script>
+
+        <!-- DUST PARTICLES -->
             const ctx = canvas.getContext('2d');
             let W, H;
             
