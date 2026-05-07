@@ -293,16 +293,27 @@ document.addEventListener('DOMContentLoaded', () => {
     return; // stop — do not attempt to start the camera at all
   }
 
-  const consent     = sessionStorage.getItem('mm_webcam_consent');
+  const consent = sessionStorage.getItem('mm_webcam_consent');
+
+  // FIX: Do not read the saved overlay pref until consent has actually been
+  // granted this session. A stale '1' in sessionStorage from a prior page load
+  // would cause the face panel to appear before the user answers the consent
+  // banner — even when webcam is toggled ON in privacy.html.
+  // Clear it now so the panel always starts hidden on a fresh page load,
+  // and only gets restored below once consent === 'granted'.
+  if (consent !== 'granted') {
+    sessionStorage.removeItem('mm_face_api_overlay');
+  }
+
   const faceEnabled = sessionStorage.getItem('mm_face_api_overlay') === '1';
 
   // On desktop, default the overlay ON so the face scan HUD is visible without
   // the user needing to find [F]. On mobile it's too cramped and the model load
   // adds jank, so leave it off and let the user enable manually.
   //
-  // FIX: Gate resolvedFaceEnabled behind actual consent. The panel must not
-  // become visible just because webcam is enabled in privacy.html — the user
-  // still needs to grant consent on the in-session banner before anything shows.
+  // FIX: Also gate resolvedFaceEnabled behind actual consent. The panel must
+  // not become visible just because webcam is enabled in privacy.html — the
+  // user still needs to grant consent on the in-session banner first.
   const isDesktop = typeof window.isDesktopSession !== 'undefined'
     ? window.isDesktopSession
     : !window.matchMedia('(max-width: 900px)').matches;
