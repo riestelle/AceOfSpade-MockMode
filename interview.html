@@ -1167,7 +1167,15 @@
   }
 
   window.addEventListener('DOMContentLoaded', () => {
-    // Webcam consent
+    // Webcam consent — honour the privacy preference set in privacy.html.
+    // If the user turned webcam OFF in privacy settings, skip the banner entirely
+    // and mark consent as denied for this session so asset_webcam.js won't start.
+    const privacyPrefs = JSON.parse(localStorage.getItem('mm_privacy_prefs') || '{}');
+    if (privacyPrefs.webcam === false) {
+      sessionStorage.setItem('mm_webcam_consent', 'denied');
+      document.getElementById('webcam-consent').classList.remove('visible');
+    }
+
     const consent = sessionStorage.getItem('mm_webcam_consent');
     if (consent) {
       document.getElementById('webcam-consent').classList.remove('visible');

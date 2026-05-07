@@ -279,6 +279,18 @@ function toggleFaceApi() {
 
 // ── Auto-init on DOMContentLoaded ───────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // Respect the privacy preference from privacy.html.
+  // If webcam was explicitly disabled there, deny consent for this session
+  // so the banner never appears and the camera never starts.
+  const privacyPrefs = JSON.parse(localStorage.getItem('mm_privacy_prefs') || '{}');
+  if (privacyPrefs.webcam === false) {
+    sessionStorage.setItem('mm_webcam_consent', 'denied');
+    updateWebcamUiState('skipped', 'Camera Disabled');
+    const consentBanner = document.getElementById('webcam-consent');
+    if (consentBanner) consentBanner.classList.remove('visible');
+    return; // stop — do not attempt to start the camera at all
+  }
+
   const consent     = sessionStorage.getItem('mm_webcam_consent');
   const faceEnabled = sessionStorage.getItem('mm_face_api_overlay') === '1';
 
