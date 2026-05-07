@@ -283,14 +283,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // If webcam was explicitly disabled there, deny consent for this session
   // so the banner never appears and the camera never starts.
   const privacyPrefs = JSON.parse(localStorage.getItem('mm_privacy_prefs') || '{}');
-  // Webcam is opt-in: treat missing/undefined the same as false (disabled).
   const webcamEnabled = privacyPrefs.webcam === true;
-  if (!webcamEnabled) {
-    sessionStorage.setItem('mm_webcam_consent', 'denied');
-    updateWebcamUiState('skipped', 'Camera Disabled');
-    const consentBanner = document.getElementById('webcam-consent');
-    if (consentBanner) consentBanner.classList.remove('visible');
-    return; // stop — do not attempt to start the camera at all
+
+  if (webcamEnabled) {
+    // Privacy = ON: interview.html already set consent to 'granted'.
+    // Nothing extra needed here — fall through to auto-start below.
+  } else {
+    // Privacy = OFF or default: leave the banner visible (interview.html shows it),
+    // don't touch sessionStorage so the user can still grant via the banner.
+    // Camera does not start until they click ENABLE.
+    const existingConsent = sessionStorage.getItem('mm_webcam_consent');
+    if (!existingConsent) return; // wait for banner interaction
+    if (existingConsent !== 'granted') {
+      updateWebcamUiState('skipped', 'Camera Disabled');
+      return;
+    }
+    // existingConsent === 'granted' means they enabled it via banner this session — fall through.
   }
 
   const consent = sessionStorage.getItem('mm_webcam_consent');

@@ -986,7 +986,7 @@
 </div><!-- /app-shell -->
 
 <!-- ══ Webcam Consent Banner ══ -->
-<div id="webcam-consent" class="visible" role="alertdialog" aria-label="Webcam consent">
+<div id="webcam-consent" role="alertdialog" aria-label="Webcam consent">
   <span class="material-symbols-outlined text-tertiary text-2xl flex-shrink-0">videocam</span>
   <p class="font-body-md text-on-surface flex-1" style="min-width: 160px;">
     <strong class="text-tertiary">Webcam Confidence Tracking</strong> — Enable your camera to analyze facial expression confidence during the interview? No data is sent externally.
@@ -1168,17 +1168,23 @@
 
   window.addEventListener('DOMContentLoaded', () => {
     // Webcam consent — honour the privacy preference set in privacy.html.
-    // If the user turned webcam OFF in privacy settings, skip the banner entirely
-    // and mark consent as denied for this session so asset_webcam.js won't start.
     const privacyPrefs = JSON.parse(localStorage.getItem('mm_privacy_prefs') || '{}');
-    if (privacyPrefs.webcam === false) {
-      sessionStorage.setItem('mm_webcam_consent', 'denied');
-      document.getElementById('webcam-consent').classList.remove('visible');
-    }
+    const consentBanner = document.getElementById('webcam-consent');
 
-    const consent = sessionStorage.getItem('mm_webcam_consent');
-    if (consent) {
-      document.getElementById('webcam-consent').classList.remove('visible');
+    if (privacyPrefs.webcam === true) {
+      // User opted IN via privacy settings — auto-grant, hide banner, camera
+      // will start automatically in asset.webcam.js.
+      sessionStorage.setItem('mm_webcam_consent', 'granted');
+      if (consentBanner) consentBanner.classList.remove('visible');
+    } else {
+      // Webcam is OFF or default — show the banner so user can enable it
+      // mid-interview if they want. Only skip banner if already answered this session.
+      const consent = sessionStorage.getItem('mm_webcam_consent');
+      if (!consent) {
+        if (consentBanner) consentBanner.classList.add('visible');
+      } else {
+        if (consentBanner) consentBanner.classList.remove('visible');
+      }
     }
 
     // ── Lottie stage: anchor above dialogue panel via CSS var ──
