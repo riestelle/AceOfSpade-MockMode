@@ -299,7 +299,7 @@ function toggleMic() {
 function prewarmTranscriber() {
   if (prewarmStarted || transcriberPromise) return;
   prewarmStarted = true;
-  ensureTranscriber().catch(() => {});
+  ensureTranscriber().catch((err) => warn('preload failed:', err));
 }
 
 // Globals expected by asset.interview.js
@@ -330,8 +330,8 @@ function wire() {
 
   if (window.location && /\/interview\.html$/i.test(window.location.pathname)) {
     if (typeof window.requestIdleCallback === 'function') {
-      // Delay until browser idle but force within 1.5s to reduce first-use latency.
-      window.requestIdleCallback(() => prewarmTranscriber(), { timeout: 1500 });
+      // Delay until browser idle but force within 3s to reduce first-use latency.
+      window.requestIdleCallback(() => prewarmTranscriber(), { timeout: 3000 });
     } else {
       // Fallback small delay when requestIdleCallback is unavailable.
       setTimeout(() => prewarmTranscriber(), 600);
