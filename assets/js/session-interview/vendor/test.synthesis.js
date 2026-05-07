@@ -10,6 +10,11 @@
   const TTS_MAX_ERRORS = 3;
   const EMPHASIS_KEYWORDS = ['important', 'critical', 'must', 'always', 'never'];
   const SENTENCE_ABBREVIATIONS = ['mr.', 'mrs.', 'ms.', 'dr.', 'prof.', 'sr.', 'jr.', 'u.s.', 'e.g.', 'i.e.'];
+  const SENTENCE_ABBREVIATION_PATTERNS = SENTENCE_ABBREVIATIONS.map((abbr) => ({
+    pattern: new RegExp(abbr.replace(/\./g, '\\.'), 'gi')
+  }));
+  const BASE_SENTENCE_PAUSE_MS = 200;
+  const SENTENCE_PAUSE_STEP_MS = 100;
 
   let soundOn = true;   // auto-enabled; user can toggle off
   let errorCount = 0;
@@ -34,7 +39,7 @@
 
     const preferredLang = (document.documentElement.lang || 'en').toLowerCase();
     const startsWithLang = (voice, lang) => (voice.lang || '').toLowerCase().startsWith(lang);
-    const isPremiumVoice = (voice) => /(neural|natural|premium|google|microsoft|apple|siri|enhanced)/i.test(voice.name || '');
+    const isPremiumVoice = (voice) => /\b(neural|premium|google|microsoft|apple|siri|enhanced)\b/i.test(voice.name || '');
 
     const tiers = [
       { name: 'preferred-lang premium', voice: voices.find(v => startsWithLang(v, preferredLang) && isPremiumVoice(v)) },
@@ -64,9 +69,8 @@
     let normalized = String(text).replace(/\s+/g, ' ').trim();
     if (!normalized) return [];
 
-    SENTENCE_ABBREVIATIONS.forEach((abbr) => {
-      const escaped = abbr.replace(/\./g, '\\.');
-      normalized = normalized.replace(new RegExp(escaped, 'gi'), (match) => match.replace(/\./g, '<DOT>'));
+    SENTENCE_ABBREVIATION_PATTERNS.forEach(({ pattern }) => {
+      normalized = normalized.replace(pattern, (match) => match.replace(/\./g, '<DOT>'));
     });
     normalized = normalized.replace(/\.{3,}/g, '<ELLIPSIS>');
 
@@ -183,7 +187,7 @@
           return;
         }
 
-        const pauseMs = 200 + (((sentenceIndex - 1) % 3) * 100); // 200/300/400ms sentence pacing
+        const pauseMs = BASE_SENTENCE_PAUSE_MS + (((sentenceIndex - 1) % 3) * SENTENCE_PAUSE_STEP_MS); // 200/300/400ms sentence pacing
         setTimeout(speakNextSentence, pauseMs);
       };
 
