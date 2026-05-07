@@ -8,6 +8,8 @@
 
   const supported = ('speechSynthesis' in window) && ('SpeechSynthesisUtterance' in window);
   const TTS_MAX_ERRORS = 3;
+  const EMPHASIS_KEYWORDS = ['important', 'critical', 'must', 'always', 'never'];
+  const SENTENCE_ABBREVIATIONS = ['mr.', 'mrs.', 'ms.', 'dr.', 'prof.', 'sr.', 'jr.', 'u.s.', 'e.g.', 'i.e.'];
 
   let soundOn = true;   // auto-enabled; user can toggle off
   let errorCount = 0;
@@ -32,7 +34,7 @@
 
     const preferredLang = (document.documentElement.lang || 'en').toLowerCase();
     const startsWithLang = (voice, lang) => (voice.lang || '').toLowerCase().startsWith(lang);
-    const isPremiumVoice = (voice) => /(neural|natural|premium|google|microsoft|apple|siri|enhanced|online)/i.test(voice.name || '');
+    const isPremiumVoice = (voice) => /(neural|natural|premium|google|microsoft|apple|siri|enhanced)/i.test(voice.name || '');
 
     const tiers = [
       { name: 'preferred-lang premium', voice: voices.find(v => startsWithLang(v, preferredLang) && isPremiumVoice(v)) },
@@ -59,14 +61,25 @@
   }
 
   function splitIntoSentences(text) {
-    const matches = String(text).replace(/\s+/g, ' ').trim().match(/[^.!?]+[.!?]+|[^.!?]+$/g);
-    if (!matches) return [];
-    return matches.map(s => s.trim()).filter(Boolean);
+    let normalized = String(text).replace(/\s+/g, ' ').trim();
+    if (!normalized) return [];
+
+    SENTENCE_ABBREVIATIONS.forEach((abbr) => {
+      const escaped = abbr.replace(/\./g, '\\.');
+      normalized = normalized.replace(new RegExp(escaped, 'gi'), (match) => match.replace(/\./g, '<DOT>'));
+    });
+    normalized = normalized.replace(/\.{3,}/g, '<ELLIPSIS>');
+
+    const matches = normalized.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [];
+    return matches
+      .map((s) => s.replace(/<DOT>/g, '.').replace(/<ELLIPSIS>/g, '...').trim())
+      .filter(Boolean);
   }
 
   function emphasizeInterviewWords(text) {
+    const emphasisRegex = new RegExp(`\\b(${EMPHASIS_KEYWORDS.join('|')})\\b`, 'gi');
     return String(text)
-      .replace(/\b(important|critical|must|always|never)\b/gi, ', $1,')
+      .replace(emphasisRegex, ', $1,')
       .replace(/,\s*,+/g, ', ')
       .replace(/\s{2,}/g, ' ')
       .trim();
@@ -170,7 +183,7 @@
           return;
         }
 
-        const pauseMs = 200 + ((sentenceIndex * 67) % 201); // Deterministic 200-400ms sentence pacing
+        const pauseMs = 200 + (((sentenceIndex - 1) % 3) * 100); // 200/300/400ms sentence pacing
         setTimeout(speakNextSentence, pauseMs);
       };
 
