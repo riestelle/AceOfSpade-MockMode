@@ -282,12 +282,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const consent     = sessionStorage.getItem('mm_webcam_consent');
   const faceEnabled = sessionStorage.getItem('mm_face_api_overlay') === '1';
 
-  // Restore toggle UI state from previous session
-  faceApiOverlayEnabled = faceEnabled;
+  // On desktop, default the overlay ON so the face scan HUD is visible without
+  // the user needing to find [F]. On mobile it's too cramped and the model load
+  // adds jank, so leave it off and let the user enable manually.
+  const isDesktop = typeof window.isDesktopSession !== 'undefined'
+    ? window.isDesktopSession
+    : !window.matchMedia('(max-width: 900px)').matches;
+
+  const resolvedFaceEnabled = isDesktop ? true : faceEnabled;
+
+  // Restore toggle UI state (desktop always starts active; mobile respects saved pref)
+  faceApiOverlayEnabled = resolvedFaceEnabled;
+  sessionStorage.setItem('mm_face_api_overlay', resolvedFaceEnabled ? '1' : '0');
   const btn   = document.getElementById('face-api-btn');
   const panel = document.getElementById('face-data-panel');
-  if (btn)   btn.classList.toggle('face-api-active', faceEnabled);
-  if (panel) panel.style.display = faceEnabled ? '' : 'none';
+  if (btn)   btn.classList.toggle('face-api-active', resolvedFaceEnabled);
+  if (panel) panel.style.display = resolvedFaceEnabled ? '' : 'none';
 
   // Start face monitoring automatically when the video starts playing.
   // This handles both: first-time consent grant AND page reload with prior consent.
