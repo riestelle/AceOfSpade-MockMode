@@ -65,7 +65,11 @@
   }
 
   function emphasizeInterviewWords(text) {
-    return String(text).replace(/\b(important|critical|must|always|never)\b/gi, ', $1,');
+    return String(text)
+      .replace(/\b(important|critical|must|always|never)\b/gi, ', $1,')
+      .replace(/,\s*,+/g, ', ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
   }
 
   function getBaseRateByWordCount(wordCount) {
@@ -166,7 +170,7 @@
           return;
         }
 
-        const pauseMs = 200 + ((sentenceIndex * 67) % 201); // 67 is prime for even pseudo-random 200-400ms spacing
+        const pauseMs = 200 + ((sentenceIndex * 67) % 201); // Deterministic 200-400ms sentence pacing
         setTimeout(speakNextSentence, pauseMs);
       };
 
@@ -190,7 +194,6 @@
         fireOnDone();
       };
 
-      currentUtterance = utter;
       try {
         window.speechSynthesis.speak(utter);
       } catch (e) {
