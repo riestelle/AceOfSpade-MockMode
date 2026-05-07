@@ -919,6 +919,7 @@ async function submitAnswer() {
     score = Math.round(score * multiplier);
 
     // 2. Boss question multiplier (SPEC: Q5 ×1.5)
+    isBossQuestion = currentIndex === 4;
     if (isBossQuestion) {
       score = Math.round(score * BOSS_MULTIPLIER);
     }
