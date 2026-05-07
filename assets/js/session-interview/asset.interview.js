@@ -438,32 +438,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ── Boot the Lottie character animation ────────────────────────────────
-  // Resolves personality → animation JSON path, then loads CharacterController.
-  // The controller is stored at module scope (_interviewerCtrl) so speakText
-  // can call startTalking() / stopTalking() from session.realtime.tts.js.
-  (async () => {
-    const animDef = INTERVIEWER_ANIMATIONS[personality] ?? INTERVIEWER_ANIMATIONS['corporate'];
-    if (typeof lottie !== 'undefined') {
-      try {
-        _interviewerCtrl = new CharacterController('lottie-interviewer', animDef.path, animDef.eyes);
-        await _interviewerCtrl.init();
-        _interviewerCtrl.goIdle();
-        // Expose globally so session.realtime.tts.js can reach it
-        window._interviewerCtrl = _interviewerCtrl;
-      } catch (err) {
-        console.warn('[MockMode] Lottie init failed — running without character animation:', err);
-      }
-    } else {
-      console.warn('[MockMode] lottie-web not loaded — character animation skipped.');
+  // FIX: Awaited inline so _interviewerCtrl is guaranteed to exist before
+  // waitForVoicesThenStart() → startInterview() → askCurrentQuestion() runs.
+  // Previously this was a fire-and-forget IIFE, meaning speakText() could
+  // call startTalking() while _interviewerCtrl was still null.
+  const animDef = INTERVIEWER_ANIMATIONS[personality] ?? INTERVIEWER_ANIMATIONS['corporate'];
+  if (typeof lottie !== 'undefined') {
+    try {
+      _interviewerCtrl = new CharacterController('lottie-interviewer', animDef.path, animDef.eyes);
+      await _interviewerCtrl.init();
+      _interviewerCtrl.goIdle();
+      window._interviewerCtrl = _interviewerCtrl;
+      console.info('[MockMode] Lottie character ready.');
+    } catch (err) {
+      console.warn('[MockMode] Lottie init failed — running without character animation:', err);
     }
-  })();
+  } else {
+    console.warn('[MockMode] lottie-web not loaded — character animation skipped.');
+  }
 
-  // Load or generate questions
+  // Load or generate questions — only after Lottie is ready
   const cached = getFromStorage('questions');
   if (Array.isArray(cached) && cached.length === 5) {
     questions = cached;
-    // FIX: Even for cached questions, wait for TTS voices before starting
-    // so the loading screen persists until everything is truly ready.
+    // Wait for TTS voices before starting so the loading screen persists
+    // until everything is truly ready.
     waitForVoicesThenStart();
   } else {
     await loadQuestions();
@@ -493,32 +492,46 @@ document.addEventListener('DOMContentLoaded', async () => {
 function waitForVoicesThenStart() {
   const ttsOk = typeof window !== 'undefined' && 'speechSynthesis' in window;
   if (!ttsOk) {
-    // No TTS support — start immediately
     hideLoader();
     startInterview();
     return;
   }
 
-  const voices = window.speechSynthesis.getVoices();
-  if (voices.length > 0) {
-    // Voices already available
+  // FIX: Check both the browser voice list AND whether test.synthesis.js has
+  // already picked a voice (chosenVoice). The synthesis module caches voices
+  // independently; if it's already ready we can start immediately without
+  // waiting for the voiceschanged event (which may have already fired and been
+  // consumed by the synthesis module's own listener).
+  const voicesReady = () => {
+    const v = window.speechSynthesis.getVoices();
+    return v.length > 0;
+  };
+
+  if (voicesReady()) {
     hideLoader();
     startInterview();
     return;
   }
 
-  // Voices not yet loaded — wait for them (max 3 s)
+  // Voices not yet loaded -- wait for them (max 4 s, up from 3 s to give
+  // slow connections and Firefox more breathing room).
   let resolved = false;
   const resolve = () => {
     if (resolved) return;
     resolved = true;
     clearTimeout(timeout);
+    clearInterval(poll);
     hideLoader();
     startInterview();
   };
 
-  const timeout = setTimeout(resolve, 3000); // Give up after 3 s and start anyway
+  // Belt-and-suspenders: both the event AND a poll so we never miss it.
+  const timeout = setTimeout(resolve, 4000);
   window.speechSynthesis.addEventListener('voiceschanged', resolve, { once: true });
+
+  // Poll every 200ms as fallback for Brave/Firefox which sometimes don't fire
+  // voiceschanged reliably.
+  const poll = setInterval(() => { if (voicesReady()) resolve(); }, 200);
 }
 
 // ── Question generation ────────────────────────────────────────────────────
@@ -719,12 +732,36 @@ async function askCurrentQuestion() {
 
   let streamFinished = false;
 
-  // Hard fallback: if the stream hangs for 10 s, show question text and unblock UI
+  // FIX: Stream timeout no longer directly calls _safeEnableAnsweringPhase().
+  // Instead it routes through speakText() so the timer only starts AFTER the
+  // interviewer finishes speaking -- even in the stream-hang fallback path.
+  // Previously a 10s stream hang would start the timer immediately, racing
+  // against TTS that hadn't even begun yet.
   const streamTimeout = setTimeout(() => {
     if (!streamFinished) {
-      console.warn('[MockMode] Stream timeout → forcing UI unlock');
+      streamFinished = true;
+      console.warn('[MockMode] Stream timeout -- falling back to raw question text');
       dialogueBox.textContent = question;
-      _safeEnableAnsweringPhase();
+      if (skipVoiceBtn) skipVoiceBtn.classList.remove('hidden');
+      if (typeof speakText === 'function') {
+        const wordCount = question.split(' ').length;
+        // FIX: 800ms/word + 5s buffer -- generous enough that TTS always
+        // finishes before the safety timeout fires prematurely.
+        const estimatedMs = Math.max(10000, wordCount * 800 + 5000);
+        const ttsFallback = setTimeout(() => {
+          console.warn('[MockMode] TTS fallback (stream-timeout path) -- forcing UI unlock');
+          if (window._interviewerCtrl) window._interviewerCtrl.stopTalking();
+          _safeEnableAnsweringPhase();
+        }, estimatedMs);
+        if (window._interviewerCtrl) window._interviewerCtrl.startTalking();
+        speakText(question, () => {
+          clearTimeout(ttsFallback);
+          if (window._interviewerCtrl) window._interviewerCtrl.stopTalking();
+          _safeEnableAnsweringPhase();
+        });
+      } else {
+        _safeEnableAnsweringPhase();
+      }
     }
   }, 10000);
 
@@ -734,23 +771,24 @@ async function askCurrentQuestion() {
       personality,
       dialogueBox,
       (fullText) => {
-        // Stream is complete — clear the stream-hang timeout
+        // Stream is complete -- clear the stream-hang timeout
         streamFinished = true;
         clearTimeout(streamTimeout);
 
-        // FIX #5: Show the skip-voice button NOW, before TTS starts,
+        // Show the skip-voice button NOW, before TTS starts,
         // so the user can skip even if TTS takes a moment to initialise.
         if (skipVoiceBtn) skipVoiceBtn.classList.remove('hidden');
 
         if (typeof speakText === 'function') {
-          // FIX #8: TTS fallback — if TTS never calls back (browser bug),
-          // unblock the UI after an estimated safe window.
+          // FIX: 800ms/word + 5s buffer. At speech rate ~0.85-1.0 a 60-word question
+          // takes ~27-35s. 800ms*60+5s = 53s ceiling -- safely above the real
+          // duration but below the 45s answer timer so the interviewer always
+          // finishes speaking before the player's clock starts running.
           const textWordCount = (fullText || question).split(' ').length;
-          const estimatedMs = Math.max(8000, textWordCount * 600 + 3000);
+          const estimatedMs = Math.max(10000, textWordCount * 800 + 5000);
 
           const ttsFallback = setTimeout(() => {
-            console.warn('[MockMode] TTS fallback timeout → forcing UI unlock');
-            // Stop the animation if TTS falls back silently
+            console.warn('[MockMode] TTS fallback timeout -- forcing UI unlock');
             if (window._interviewerCtrl) window._interviewerCtrl.stopTalking();
             _safeEnableAnsweringPhase();
           }, estimatedMs);
@@ -758,17 +796,16 @@ async function askCurrentQuestion() {
           // Start the character animation before TTS speaks
           if (window._interviewerCtrl) window._interviewerCtrl.startTalking();
 
-          // FIX #1 & #2: speakText is called immediately after stream ends.
-          // The onDone callback is the ONLY normal path to enableAnsweringPhase.
+          // speakText onDone is the ONLY normal path to enableAnsweringPhase.
+          // The timer ONLY starts when the interviewer finishes speaking.
           speakText(fullText || question, () => {
             clearTimeout(ttsFallback);
-            // Stop animation when the interviewer finishes speaking
             if (window._interviewerCtrl) window._interviewerCtrl.stopTalking();
             _safeEnableAnsweringPhase();
           });
 
         } else {
-          // TTS not available — unlock immediately
+          // TTS not available -- unlock immediately
           _safeEnableAnsweringPhase();
         }
       }
@@ -778,7 +815,24 @@ async function askCurrentQuestion() {
     console.error('[MockMode] streamInterviewerMessage error:', err);
     clearTimeout(streamTimeout);
     dialogueBox.textContent = question;
-    _safeEnableAnsweringPhase();
+    // Even on stream error, route through TTS so the timer waits for speech to end
+    if (typeof speakText === 'function') {
+      if (skipVoiceBtn) skipVoiceBtn.classList.remove('hidden');
+      const wordCount = question.split(' ').length;
+      const estimatedMs = Math.max(10000, wordCount * 800 + 5000);
+      const ttsFallback = setTimeout(() => {
+        if (window._interviewerCtrl) window._interviewerCtrl.stopTalking();
+        _safeEnableAnsweringPhase();
+      }, estimatedMs);
+      if (window._interviewerCtrl) window._interviewerCtrl.startTalking();
+      speakText(question, () => {
+        clearTimeout(ttsFallback);
+        if (window._interviewerCtrl) window._interviewerCtrl.stopTalking();
+        _safeEnableAnsweringPhase();
+      });
+    } else {
+      _safeEnableAnsweringPhase();
+    }
   }
 }
 

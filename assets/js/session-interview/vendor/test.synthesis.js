@@ -147,7 +147,14 @@
       return;
     }
 
+    // FIX: Add a small flush delay after cancel() before speaking the first sentence.
+    // Without this, the cancel() call (clearing any stale unlock utterance) races
+    // with the new speak() call on Chrome/Edge, causing the audio context to drop
+    // the very first few hundred milliseconds of audio -- heard as the first
+    // sentence being skipped or truncated on Q1.
+    // The 150ms pause lets the browser fully process the cancel before we speak.
     try { window.speechSynthesis.cancel(); } catch (_) {}
+    const _cancelFlushMs = 150;
 
     function fireOnDone() {
       if (typeof onDone === 'function') {
@@ -248,8 +255,10 @@
       }
     };
 
+    // FIX: Delay the first sentence slightly to let the cancel() above flush.
+    // Subsequent sentences are chained via onend and need no extra delay.
     try {
-      speakNextSentence();
+      setTimeout(speakNextSentence, _cancelFlushMs);
     } catch (e) {
       errorCount++;
       warn('sentence speech failed:', e);
