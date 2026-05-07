@@ -299,11 +299,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // On desktop, default the overlay ON so the face scan HUD is visible without
   // the user needing to find [F]. On mobile it's too cramped and the model load
   // adds jank, so leave it off and let the user enable manually.
+  //
+  // FIX: Gate resolvedFaceEnabled behind actual consent. The panel must not
+  // become visible just because webcam is enabled in privacy.html — the user
+  // still needs to grant consent on the in-session banner before anything shows.
   const isDesktop = typeof window.isDesktopSession !== 'undefined'
     ? window.isDesktopSession
     : !window.matchMedia('(max-width: 900px)').matches;
 
-  const resolvedFaceEnabled = isDesktop ? true : faceEnabled;
+  const resolvedFaceEnabled = (consent === 'granted') && (isDesktop ? true : faceEnabled);
 
   // Restore toggle UI state (desktop always starts active; mobile respects saved pref)
   faceApiOverlayEnabled = resolvedFaceEnabled;
