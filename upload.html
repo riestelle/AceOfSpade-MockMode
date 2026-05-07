@@ -338,9 +338,10 @@
             border: 2px solid #c5a88a;
             box-shadow: none;
             position: relative;
-            flex-grow: 1; overflow-y: auto; overflow-x: hidden; overflow-y: auto;       
-            height: 100%; /*transform: perspective(1200px) rotateX(3deg);
-            transform-origin: center bottom;*/
+            flex: 1 1 0;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
         /* Chrome bar */
@@ -666,16 +667,24 @@
 
         /* ── MONITOR ── */
         #monitor-wrap {
-            position: absolute; bottom: 77px; left: 50%;
-            transform: translateX(-50%); display: flex;
-            flex-direction: column; align-items: center;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* anchor from top so it never overflows upward */
+            top: clamp(10px, 4vh, 40px);
+            bottom: 110px;
         }
 
         #monitor-bezel {
             background: #2a2a2a; border: 3px solid #1a1a1a; border-radius: 8px; 
             padding: 14px; box-shadow: 6px 0 0 #0a0a0a, 0 0 60px 15px rgba(245, 220, 150, 0.35), 0 0 120px 30px rgba(245, 200, 100, 0.12);
-            position: relative; display: flex; flex-shrink: 0; flex-direction: column; overflow: visible;
-            min-height: 500px; max-height: 85vh; width: fit-content; height: 520px; 
+            position: relative; display: flex; flex-shrink: 1; flex-direction: column; overflow: visible;
+            flex: 1 1 0;
+            min-height: 0;
+            width: fit-content;
         }
 
         #monitor-bezel::before {
@@ -791,7 +800,8 @@
 
             /* ── PHASE 1: monitor centered, bigger, above desk ── */
             #monitor-wrap {
-                bottom: 110px;
+                top: clamp(10px, 4vh, 40px);
+                bottom: 130px;
                 left: 50%;
                 transform: translateX(-50%);
             }
