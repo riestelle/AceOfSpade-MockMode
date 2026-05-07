@@ -161,12 +161,22 @@
 </div>
 
 <script>
-  // Load saved preferences on page load
+  // Default preferences — used on first visit before anything is saved.
+  // webcam: false (opt-in), tts: true (on by default), stt: true (on by default)
+  const PREF_DEFAULTS = { webcam: false, tts: true, stt: true };
+
   window.addEventListener('DOMContentLoaded', () => {
-    const prefs = JSON.parse(localStorage.getItem('mm_privacy_prefs') || '{}');
-    if (prefs.webcam !== undefined) document.getElementById('webcam-toggle').checked = prefs.webcam;
-    if (prefs.tts !== undefined)    document.getElementById('tts-toggle').checked    = prefs.tts;
-    if (prefs.stt !== undefined)    document.getElementById('stt-toggle').checked    = prefs.stt;
+    const saved = JSON.parse(localStorage.getItem('mm_privacy_prefs') || '{}');
+
+    // Merge saved values over defaults so first-time visitors get sensible state
+    const prefs = Object.assign({}, PREF_DEFAULTS, saved);
+
+    document.getElementById('webcam-toggle').checked = prefs.webcam;
+    document.getElementById('tts-toggle').checked    = prefs.tts;
+    document.getElementById('stt-toggle').checked    = prefs.stt;
+
+    // Persist merged defaults immediately so interview.html always has something to read
+    localStorage.setItem('mm_privacy_prefs', JSON.stringify(prefs));
   });
 
   function updatePreference(key, value) {
@@ -176,8 +186,17 @@
   }
 
   function saveAndReturn() {
+    // Always write ALL three current toggle states before navigating away.
+    // This ensures interview.html always reads a fully-populated prefs object
+    // regardless of whether the user changed anything.
+    const prefs = {
+      webcam: document.getElementById('webcam-toggle').checked,
+      tts:    document.getElementById('tts-toggle').checked,
+      stt:    document.getElementById('stt-toggle').checked,
+    };
+    localStorage.setItem('mm_privacy_prefs', JSON.stringify(prefs));
     localStorage.setItem('mm_privacy_seen', '1');
-    // Return to landing page or upload page
+
     const from = new URLSearchParams(location.search).get('from') || 'index.html';
     window.location.href = from;
   }

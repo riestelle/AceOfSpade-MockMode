@@ -283,7 +283,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // If webcam was explicitly disabled there, deny consent for this session
   // so the banner never appears and the camera never starts.
   const privacyPrefs = JSON.parse(localStorage.getItem('mm_privacy_prefs') || '{}');
-  if (privacyPrefs.webcam === false) {
+  // Webcam is opt-in: treat missing/undefined the same as false (disabled).
+  const webcamEnabled = privacyPrefs.webcam === true;
+  if (!webcamEnabled) {
     sessionStorage.setItem('mm_webcam_consent', 'denied');
     updateWebcamUiState('skipped', 'Camera Disabled');
     const consentBanner = document.getElementById('webcam-consent');
