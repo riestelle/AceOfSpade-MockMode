@@ -236,6 +236,13 @@
 <body class="bg-background text-on-surface font-body-md selection:bg-tertiary selection:text-surface min-h-screen">
 
 <main class="relative max-w-6xl mx-auto px-margin py-xl space-y-lg pb-[120px]">
+
+<button id="music-btn" title="Toggle music" onclick="toggleMusic()"
+    class="flex items-center justify-center bg-surface-container/60 border-2 border-[#190a08] hover:bg-surface-container-high transition-colors"
+    style="position:fixed;top:12px;right:14px;z-index:4999;width:40px;height:40px;cursor:pointer;">
+    <span id="music-icon-on"  class="material-symbols-outlined" style="color:#669BBC;font-size:20px;">volume_up</span>
+    <span id="music-icon-off" class="material-symbols-outlined" style="color:#669BBC;font-size:20px;display:none;">volume_off</span>
+</button>
     <!-- Background textures -->
     <div class="absolute inset-0 pixel-dither opacity-10 pointer-events-none"></div>
     <div class="absolute inset-0 pixel-scanline opacity-20 pointer-events-none"></div>
@@ -459,5 +466,40 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="assets/js/main.js"></script>
 <script src="assets/js/results.js"></script>
+
+<audio id="bg-music" loop>
+    <source src="sounds/uploadA.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+    let musicStarted = false;
+    let musicMuted   = false;
+
+    window.addEventListener('load', () => {
+        const music = document.getElementById('bg-music');
+        if (!music) return;
+        music.volume = 0.5;
+        music.play().then(() => { musicStarted = true; }).catch(() => {
+            document.addEventListener('click', () => {
+                if (musicStarted) return;
+                music.play().then(() => { musicStarted = true; }).catch(() => {});
+            }, { once: true });
+        });
+    });
+
+    function toggleMusic() {
+        const music   = document.getElementById('bg-music');
+        const iconOn  = document.getElementById('music-icon-on');
+        const iconOff = document.getElementById('music-icon-off');
+        if (!music) return;
+        if (!musicStarted) {
+            music.play().then(() => { musicStarted = true; }).catch(() => {});
+        }
+        musicMuted = !musicMuted;
+        music.muted   = musicMuted;
+        iconOn.style.display  = musicMuted ? 'none'   : 'inline';
+        iconOff.style.display = musicMuted ? 'inline' : 'none';
+    }
+</script>
 </body>
 </html>
