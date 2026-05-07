@@ -19,6 +19,10 @@ async function handleWebcamConsent(choice) {
     if (consentBanner) {
         consentBanner.classList.remove('visible');
     }
+    // Ensure the webcam column is visible (it may have been hidden if webcam
+    // was off in privacy settings and the user enabled it mid-interview).
+    const webcamCol = document.getElementById('webcam-col');
+    if (webcamCol) webcamCol.style.display = '';
 
     try {
         await startWebcam('webcam-video');
@@ -274,6 +278,16 @@ function setFaceApiEnabled(enabled) {
 }
 
 function toggleFaceApi() {
+  // If the camera hasn't been granted yet, show the consent banner instead
+  // of toggling the face overlay (there's no stream to analyse yet).
+  const consent = sessionStorage.getItem('mm_webcam_consent');
+  if (consent !== 'granted') {
+    const webcamCol = document.getElementById('webcam-col');
+    if (webcamCol) webcamCol.style.display = '';
+    const banner = document.getElementById('webcam-consent');
+    if (banner) banner.classList.add('visible');
+    return;
+  }
   setFaceApiEnabled(!faceApiOverlayEnabled);
 }
 
