@@ -305,7 +305,7 @@ function prewarmTranscriber() {
 
 // Globals expected by asset.interview.js
 window.startMicCapture = function startMicCapture() {
-  // Backup preload trigger during interview flow (primary trigger runs in wire()).
+  // Backup preload trigger during interview flow (primary preload runs on page init).
   prewarmTranscriber();
 };
 
