@@ -13,8 +13,17 @@
   const SENTENCE_ABBREVIATION_PATTERNS = SENTENCE_ABBREVIATIONS.map((abbr) => ({
     pattern: new RegExp(abbr.replace(/\./g, '\\.'), 'gi')
   }));
+  const EMPHASIS_REGEX = new RegExp(`\\b(${EMPHASIS_KEYWORDS.join('|')})\\b`, 'gi');
   const BASE_SENTENCE_PAUSE_MS = 200;
   const SENTENCE_PAUSE_STEP_MS = 100;
+  const RATE_MIN = 0.8;
+  const RATE_MAX = 1.05;
+  const RATE_VARIATION_STEP = 0.015;
+  const BASE_PITCH = 0.97;
+  const PITCH_UP_VARIATION = 0.015;
+  const PITCH_DOWN_VARIATION = -0.01;
+  const PITCH_MIN = 0.95;
+  const PITCH_MAX = 1.0;
 
   let soundOn = true;   // auto-enabled; user can toggle off
   let errorCount = 0;
@@ -81,9 +90,8 @@
   }
 
   function emphasizeInterviewWords(text) {
-    const emphasisRegex = new RegExp(`\\b(${EMPHASIS_KEYWORDS.join('|')})\\b`, 'gi');
     return String(text)
-      .replace(emphasisRegex, ', $1,')
+      .replace(EMPHASIS_REGEX, ', $1,')
       .replace(/,\s*,+/g, ', ')
       .replace(/\s{2,}/g, ' ')
       .trim();
@@ -165,9 +173,9 @@
       if (chosenVoice) utter.voice = chosenVoice;
 
       // Cycles through -0.015, 0, +0.015 to reduce monotone delivery.
-      const variation = ((sentenceIndex % 3) - 1) * 0.015;
-      utter.rate = clamp(baseRate + variation, 0.8, 1.05);
-      utter.pitch = clamp(0.97 + ((sentenceIndex % 2) ? 0.015 : -0.01), 0.95, 1.0);
+      const variation = ((sentenceIndex % 3) - 1) * RATE_VARIATION_STEP;
+      utter.rate = clamp(baseRate + variation, RATE_MIN, RATE_MAX);
+      utter.pitch = clamp(BASE_PITCH + ((sentenceIndex % 2) ? PITCH_UP_VARIATION : PITCH_DOWN_VARIATION), PITCH_MIN, PITCH_MAX);
       utter.volume = 1.0;
 
       // Keep hard reference on window so GC does not collect mid-speech.
@@ -187,7 +195,7 @@
           return;
         }
 
-        const pauseMs = BASE_SENTENCE_PAUSE_MS + (((sentenceIndex - 1) % 3) * SENTENCE_PAUSE_STEP_MS); // 200/300/400ms sentence pacing
+        const pauseMs = BASE_SENTENCE_PAUSE_MS + (((sentenceIndex + 2) % 3) * SENTENCE_PAUSE_STEP_MS); // 200/300/400ms sentence pacing
         setTimeout(speakNextSentence, pauseMs);
       };
 
