@@ -234,7 +234,7 @@ function bindFileUpload() {
         file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       showToast('Reading DOCX...', 'info');
       try {
-        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
+        await loadScript('https://unpkg.com/mammoth/mammoth.browser.min.js');
 
         const buffer = await file.arrayBuffer();
         const result = await mammoth.extractRawText({ arrayBuffer: buffer });
