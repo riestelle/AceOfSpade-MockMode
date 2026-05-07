@@ -286,8 +286,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const webcamEnabled = privacyPrefs.webcam === true;
 
   if (webcamEnabled) {
-    // Privacy = ON: interview.html already set consent to 'granted'.
-    // Nothing extra needed here — fall through to auto-start below.
+    // Privacy = ON: auto-grant consent right here so the camera starts
+    // without waiting for the banner. We own this, not interview.html.
+    sessionStorage.setItem('mm_webcam_consent', 'granted');
   } else {
     // Privacy = OFF or default: leave the banner visible (interview.html shows it),
     // don't touch sessionStorage so the user can still grant via the banner.
