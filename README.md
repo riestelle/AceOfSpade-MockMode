@@ -38,7 +38,7 @@ There's actual game logic running underneath:
 ## Tips for Best Experience
 
 - **Voice input:** Speak clearly and keep answers concise. Whisper performs best with focused responses rather than long continuous speech.
-- **Webcam:** Enable camera access in Settings before starting your session for a smoother experience.
+- **Webcam:** Enable camera access in Settings (Menu) before starting your session for a smoother experience.
 - **Resume:** Use a well-formatted PDF or TXT file for best parsing results.
 - **Browser:** Use a Chromium-based browser (Chrome, Edge) for best Web Speech API and webcam support.
 
