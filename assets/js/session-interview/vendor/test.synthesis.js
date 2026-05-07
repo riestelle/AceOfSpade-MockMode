@@ -14,9 +14,11 @@
   let currentUtterance = null;
   let voices = [];
   let chosenVoice = null;
+  let premiumVoiceNoticeShown = false;
 
   function log(...args) { console.info('[MockMode][TTS]', ...args); }
   function warn(...args) { console.warn('[MockMode][TTS]', ...args); }
+  function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
 
   function updateIcon() {
     const icon = document.getElementById('sound-icon');
@@ -29,12 +31,47 @@
     if (!voices.length) return;
 
     const preferredLang = (document.documentElement.lang || 'en').toLowerCase();
-    const byLang = voices.filter(v => (v.lang || '').toLowerCase().startsWith(preferredLang));
-    const pool = byLang.length ? byLang : voices;
+    const startsWithLang = (voice, lang) => (voice.lang || '').toLowerCase().startsWith(lang);
+    const isPremiumVoice = (voice) => /(neural|natural|premium|google|microsoft|apple|siri|enhanced|online)/i.test(voice.name || '');
 
-    // Prefer non-local-service voices for better quality; fall back to first available.
-    chosenVoice = pool.find(v => !v.localService) || pool[0] || null;
-    log('voices:', voices.length, 'chosen:', chosenVoice ? `${chosenVoice.name} (${chosenVoice.lang})` : 'none');
+    const tiers = [
+      { name: 'preferred-lang premium', voice: voices.find(v => startsWithLang(v, preferredLang) && isPremiumVoice(v)) },
+      { name: 'preferred-lang any', voice: voices.find(v => startsWithLang(v, preferredLang)) },
+      { name: 'english premium', voice: voices.find(v => startsWithLang(v, 'en') && isPremiumVoice(v)) },
+      { name: 'english any', voice: voices.find(v => startsWithLang(v, 'en')) },
+      { name: 'any premium', voice: voices.find(isPremiumVoice) },
+      { name: 'first available', voice: voices[0] || null }
+    ];
+
+    const selectedTier = tiers.find(t => t.voice) || tiers[tiers.length - 1];
+    chosenVoice = selectedTier.voice || null;
+
+    const premiumAvailable = voices.some(isPremiumVoice);
+    if (!premiumAvailable) {
+      warn('premium/neural voices are not available in this browser');
+      if (!premiumVoiceNoticeShown && typeof showToast === 'function') {
+        premiumVoiceNoticeShown = true;
+        showToast('Premium interview voices are not available. Using the best available system voice.', 'info');
+      }
+    }
+
+    log('voices:', voices.length, 'tier:', selectedTier.name, 'chosen:', chosenVoice ? `${chosenVoice.name} (${chosenVoice.lang})` : 'none');
+  }
+
+  function splitIntoSentences(text) {
+    const matches = String(text).replace(/\s+/g, ' ').trim().match(/[^.!?]+[.!?]+|[^.!?]+$/g);
+    if (!matches) return [];
+    return matches.map(s => s.trim()).filter(Boolean);
+  }
+
+  function emphasizeInterviewWords(text) {
+    return String(text).replace(/\b(important|critical|must|always|never)\b/gi, ', $1,');
+  }
+
+  function getBaseRateByWordCount(wordCount) {
+    if (wordCount < 20) return 1.0;
+    if (wordCount <= 50) return 0.95;
+    return 0.85;
   }
 
   function unlockSpeech() {
@@ -81,15 +118,6 @@
 
     try { window.speechSynthesis.cancel(); } catch (_) {}
 
-    const utter = new SpeechSynthesisUtterance(String(text));
-    if (chosenVoice) utter.voice = chosenVoice;
-    utter.rate = 1.0;   // normal speed for clear interview question delivery
-    utter.pitch = 1.05;
-    utter.volume = 0.9;
-
-    // Keep hard reference on window so GC does not collect mid-speech.
-    window._currentUtterance = utter;
-
     function fireOnDone() {
       if (typeof onDone === 'function') {
         const cb = onDone;
@@ -98,42 +126,84 @@
       }
     }
 
-    utter.onstart = () => {
-      currentUtterance = utter;
-    };
+    const fullText = String(text).trim();
+    const sentences = splitIntoSentences(fullText);
+    const words = fullText.split(/\s+/).filter(Boolean).length;
+    const baseRate = getBaseRateByWordCount(words);
 
-    utter.onend = () => {
-      if (window._currentUtterance === utter) window._currentUtterance = null;
-      if (currentUtterance === utter) currentUtterance = null;
-      fireOnDone();
-    };
+    let sentenceIndex = 0;
 
-    utter.onerror = (ev) => {
-      if (window._currentUtterance === utter) window._currentUtterance = null;
-      if (currentUtterance === utter) currentUtterance = null;
-
-      // 'interrupted' means cancel() was called intentionally (skip-voice button).
-      // Do not count as error; onDone is intentionally NOT called here so the skip
-      // handler fires _safeEnableAnsweringPhase() directly via window._skipVoiceBridge
-      // (defined in asset.interview.js).
-      if (ev && ev.error === 'interrupted') return;
-
-      errorCount++;
-      warn('error:', ev && ev.error ? ev.error : ev);
-      if (errorCount >= TTS_MAX_ERRORS) {
-        warn('giving up; toggle sound to retry');
-        if (typeof showToast === 'function') showToast('Voice output failed. Toggle sound off and on to retry.', 'warning');
+    const speakNextSentence = () => {
+      if (sentenceIndex >= sentences.length) {
+        fireOnDone();
+        return;
       }
-      // Always unlock the UI even on error
-      fireOnDone();
+
+      const sentence = emphasizeInterviewWords(sentences[sentenceIndex]);
+      const utter = new SpeechSynthesisUtterance(sentence);
+      if (chosenVoice) utter.voice = chosenVoice;
+
+      const variation = ((sentenceIndex % 3) - 1) * 0.015;
+      utter.rate = clamp(baseRate + variation, 0.8, 1.05);
+      utter.pitch = clamp(0.97 + ((sentenceIndex % 2) ? 0.015 : -0.01), 0.95, 1.0);
+      utter.volume = 1.0;
+
+      // Keep hard reference on window so GC does not collect mid-speech.
+      window._currentUtterance = utter;
+
+      utter.onstart = () => {
+        currentUtterance = utter;
+      };
+
+      utter.onend = () => {
+        if (window._currentUtterance === utter) window._currentUtterance = null;
+        if (currentUtterance === utter) currentUtterance = null;
+
+        sentenceIndex++;
+        if (sentenceIndex >= sentences.length) {
+          fireOnDone();
+          return;
+        }
+
+        const pauseMs = 200 + ((sentenceIndex * 67) % 201); // 200-400ms
+        setTimeout(speakNextSentence, pauseMs);
+      };
+
+      utter.onerror = (ev) => {
+        if (window._currentUtterance === utter) window._currentUtterance = null;
+        if (currentUtterance === utter) currentUtterance = null;
+
+        // 'interrupted' means cancel() was called intentionally (skip-voice button).
+        // Do not count as error; onDone is intentionally NOT called here so the skip
+        // handler fires _safeEnableAnsweringPhase() directly via window._skipVoiceBridge
+        // (defined in asset.interview.js).
+        if (ev && ev.error === 'interrupted') return;
+
+        errorCount++;
+        warn('error:', ev && ev.error ? ev.error : ev);
+        if (errorCount >= TTS_MAX_ERRORS) {
+          warn('giving up; toggle sound to retry');
+          if (typeof showToast === 'function') showToast('Voice output failed. Toggle sound off and on to retry.', 'warning');
+        }
+        // Always unlock the UI even on error
+        fireOnDone();
+      };
+
+      currentUtterance = utter;
+      try {
+        window.speechSynthesis.speak(utter);
+      } catch (e) {
+        errorCount++;
+        warn('speak threw:', e);
+        fireOnDone();
+      }
     };
 
-    currentUtterance = utter;
     try {
-      window.speechSynthesis.speak(utter);
+      speakNextSentence();
     } catch (e) {
       errorCount++;
-      warn('speak threw:', e);
+      warn('sentence speech failed:', e);
       fireOnDone();
     }
   }
