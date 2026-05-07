@@ -1179,10 +1179,10 @@
       const webcamCol = document.getElementById('webcam-col');
       if (webcamCol) webcamCol.style.display = 'none';
     } else {
-      // Only show the banner if the user hasn't already answered this session
-      const consent = sessionStorage.getItem('mm_webcam_consent');
-      if (!consent) {
-        document.getElementById('webcam-consent').classList.add('visible');
+      // Webcam is enabled in privacy settings — treat that as consent already given.
+      // Auto-grant so the banner never appears; the camera will start automatically.
+      if (!sessionStorage.getItem('mm_webcam_consent')) {
+        sessionStorage.setItem('mm_webcam_consent', 'granted');
       }
     }
 
