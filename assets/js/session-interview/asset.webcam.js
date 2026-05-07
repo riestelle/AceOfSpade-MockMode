@@ -16,6 +16,10 @@ async function handleWebcamConsent(choice) {
     const consentBanner = document.getElementById('webcam-consent');
     if (choice === 'grant') {
         sessionStorage.setItem('mm_webcam_consent', 'granted');
+        // Persist to privacy prefs so privacy.html toggle reflects the choice.
+        const prefs = JSON.parse(localStorage.getItem('mm_privacy_prefs') || '{}');
+        prefs.webcam = true;
+        localStorage.setItem('mm_privacy_prefs', JSON.stringify(prefs));
     if (consentBanner) {
         consentBanner.classList.remove('visible');
     }
@@ -33,6 +37,10 @@ async function handleWebcamConsent(choice) {
 
     if (choice === 'deny') {
         sessionStorage.setItem('mm_webcam_consent', 'denied');
+        // Persist denial to privacy prefs too.
+        const prefs = JSON.parse(localStorage.getItem('mm_privacy_prefs') || '{}');
+        prefs.webcam = false;
+        localStorage.setItem('mm_privacy_prefs', JSON.stringify(prefs));
         if (consentBanner) {
             consentBanner.classList.remove('visible');
         }
