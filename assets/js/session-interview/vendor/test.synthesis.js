@@ -46,13 +46,17 @@
 
     const preferredLang = (document.documentElement.lang || 'en').toLowerCase();
     const startsWithLang = (voice, lang) => (voice.lang || '').toLowerCase().startsWith(lang);
-    const isPremiumVoice = (voice) => /\b(neural|premium|google|microsoft|apple|siri|enhanced)\b/i.test(voice.name || '');
+    const isPremiumVoice = (voice) => /\b(neural|premium|enhanced|natural)\b/i.test(voice.name || '');
+    const isModernVendorVoice = (voice) => /\b(google|microsoft|apple|siri)\b/i.test(voice.name || '');
 
     const tiers = [
+      { name: 'preferred-lang modern premium', voice: voices.find(v => startsWithLang(v, preferredLang) && (isPremiumVoice(v) || isModernVendorVoice(v))) },
       { name: 'preferred-lang premium', voice: voices.find(v => startsWithLang(v, preferredLang) && isPremiumVoice(v)) },
       { name: 'preferred-lang any', voice: voices.find(v => startsWithLang(v, preferredLang)) },
+      { name: 'english modern premium', voice: voices.find(v => startsWithLang(v, 'en') && (isPremiumVoice(v) || isModernVendorVoice(v))) },
       { name: 'english premium', voice: voices.find(v => startsWithLang(v, 'en') && isPremiumVoice(v)) },
       { name: 'english any', voice: voices.find(v => startsWithLang(v, 'en')) },
+      { name: 'any modern premium', voice: voices.find(v => isPremiumVoice(v) || isModernVendorVoice(v)) },
       { name: 'any premium', voice: voices.find(isPremiumVoice) },
       { name: 'first available', voice: voices[0] || null }
     ];
@@ -171,7 +175,7 @@
       if (chosenVoice) utter.voice = chosenVoice;
 
       // Cycles through -0.015, 0, +0.015 to reduce monotone delivery.
-      // Cycles through -step, 0, +step so sentence starts measured and grows slightly.
+      // Rate cycles through -step, 0, +step so sentence starts measured and grows slightly.
       const variation = ((sentenceIndex % 3) - 1) * RATE_VARIATION_STEP;
       utter.rate = clamp(baseRate + variation, RATE_MIN, RATE_MAX);
       utter.pitch = clamp(BASE_PITCH + ((sentenceIndex % 2) ? PITCH_UP_VARIATION : PITCH_DOWN_VARIATION), PITCH_MIN, PITCH_MAX);
@@ -188,7 +192,7 @@
         if (window._currentUtterance === utter) window._currentUtterance = null;
         if (currentUtterance === utter) currentUtterance = null;
 
-        const pauseMs = BASE_SENTENCE_PAUSE_MS + ((sentenceIndex % 3) * SENTENCE_PAUSE_STEP_MS); // 200/300/400ms sentence pacing
+        const pauseMs = BASE_SENTENCE_PAUSE_MS + ((sentenceIndex % 3) * SENTENCE_PAUSE_STEP_MS); // repeating 200/300/400ms sentence pacing
         sentenceIndex++;
         if (sentenceIndex >= sentences.length) {
           fireOnDone();
