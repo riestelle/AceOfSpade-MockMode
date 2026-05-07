@@ -23,7 +23,16 @@
   const PITCH_MIN = 0.95;
   const PITCH_MAX = 1.0;
 
-  let soundOn = true;   // auto-enabled; user can toggle off
+  // Respect the privacy preference set in privacy.html.
+  // TTS defaults to ON (true) when no pref is saved yet.
+  const _ttsPrivacyPref = (() => {
+    try {
+      const prefs = JSON.parse(localStorage.getItem('mm_privacy_prefs') || '{}');
+      return prefs.tts !== false; // treat missing/undefined as true (on by default)
+    } catch (_) { return true; }
+  })();
+
+  let soundOn = _ttsPrivacyPref;   // initialise from privacy pref, user can toggle mid-session
   let errorCount = 0;
   let currentUtterance = null;
   let voices = [];

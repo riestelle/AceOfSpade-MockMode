@@ -337,6 +337,24 @@ window.stopMicCapture = function stopMicCapture() {
 
 // Wire UI
 function wire() {
+  // Respect the privacy preference set in privacy.html.
+  // STT defaults to ON (true) when no pref is saved yet.
+  const sttEnabled = (() => {
+    try {
+      const prefs = JSON.parse(localStorage.getItem('mm_privacy_prefs') || '{}');
+      return prefs.stt !== false; // treat missing/undefined as true (on by default)
+    } catch (_) { return true; }
+  })();
+
+  if (!sttEnabled) {
+    const micBtn = document.getElementById('mic-btn');
+    if (micBtn) micBtn.style.display = 'none';
+    // Stub out globals so asset.interview.js calls are safe no-ops
+    window.startMicCapture = () => {};
+    window.stopMicCapture  = () => {};
+    return; // do not wire mic events or prewarm model
+  }
+
   const micBtn = document.getElementById('mic-btn');
   if (micBtn) {
     micBtn.addEventListener('click', (e) => {

@@ -1167,10 +1167,10 @@
   }
 
   window.addEventListener('DOMContentLoaded', () => {
-    // Webcam consent — honour the privacy preference set in privacy.html.
-    // If the user turned webcam OFF in privacy settings, skip the banner entirely
-    // and mark consent as denied for this session so asset_webcam.js won't start.
+    // ── Read privacy prefs ──────────────────────────────────────────────────
     const privacyPrefs = JSON.parse(localStorage.getItem('mm_privacy_prefs') || '{}');
+
+    // ── Webcam: honour opt-in ────────────────────────────────────────────────
     // Webcam defaults to OFF (opt-in). Treat missing pref the same as false.
     const webcamEnabled = privacyPrefs.webcam === true;
     if (!webcamEnabled) {
@@ -1182,6 +1182,28 @@
       if (!consent) {
         document.getElementById('webcam-consent').classList.add('visible');
       }
+    }
+
+    // ── TTS: hide sound button & kbd hint when disabled ──────────────────────
+    const ttsEnabled = privacyPrefs.tts !== false; // default ON
+    if (!ttsEnabled) {
+      const soundBtn = document.getElementById('sound-btn');
+      if (soundBtn) soundBtn.closest('.flex.flex-col.items-center')?.style && (soundBtn.closest('.flex.flex-col.items-center').style.display = 'none');
+    } else {
+      // Sync icon to ON state (test.synthesis.js will have already set soundOn=true)
+      const soundIcon = document.getElementById('sound-icon');
+      if (soundIcon) soundIcon.textContent = 'volume_up';
+    }
+
+    // ── STT: hide mic button & [M] kbd hint when disabled ───────────────────
+    const sttEnabled = privacyPrefs.stt !== false; // default ON
+    if (!sttEnabled) {
+      const micBtn = document.getElementById('mic-btn');
+      if (micBtn) micBtn.style.display = 'none';
+      // Hide the [M] keyboard hint
+      document.querySelectorAll('.kbd-hint').forEach(hint => {
+        if (hint.textContent.trim() === '[M] Mic') hint.style.display = 'none';
+      });
     }
 
     // ── Lottie stage: anchor above dialogue panel via CSS var ──
