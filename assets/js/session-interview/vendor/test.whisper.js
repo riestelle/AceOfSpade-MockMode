@@ -304,7 +304,7 @@ function prewarmTranscriber() {
 
 // Globals expected by asset.interview.js
 window.startMicCapture = function startMicCapture() {
-  // Secondary preload trigger during interview flow (primary trigger is in wire()).
+  // Secondary preload trigger during interview flow.
   prewarmTranscriber();
 };
 
@@ -328,7 +328,7 @@ function wire() {
     if (e.key.toLowerCase() === 'm') toggleMic();
   });
 
-  if (window.location && /\/?interview\.html(?:$|\?)/i.test(window.location.pathname)) {
+  if (window.location && /\/interview\.html$/i.test(window.location.pathname)) {
     if (typeof window.requestIdleCallback === 'function') {
       // Delay until browser idle but force within 1.5s to reduce first-use latency.
       window.requestIdleCallback(() => prewarmTranscriber(), { timeout: 1500 });
