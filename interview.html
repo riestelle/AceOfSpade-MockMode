@@ -858,22 +858,22 @@
       </div>
     </div>
 
-    <!-- ══ MOBILE PiP CAMERA ══ -->
-    <div id="pip-camera" role="region" aria-label="Camera preview">
-      <video id="pip-video" autoplay muted playsinline></video>
-      <div id="pip-rec-badge">
-        <span id="pip-rec-dot"></span>
-        <span id="pip-rec-label">REC</span>
-      </div>
-      <div id="pip-resize-handle" title="Drag to resize">
-        <svg viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <line x1="10" y1="2" x2="2" y2="10" stroke="#fcdbd6" stroke-width="1.5" stroke-linecap="round"/>
-          <line x1="10" y1="6" x2="6" y2="10" stroke="#fcdbd6" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-      </div>
-    </div>
-
   </div><!-- /stage -->
+
+  <!-- ══ MOBILE PiP CAMERA ══ -->
+  <div id="pip-camera" role="region" aria-label="Camera preview">
+    <video id="pip-video" autoplay muted playsinline></video>
+    <div id="pip-rec-badge">
+      <span id="pip-rec-dot"></span>
+      <span id="pip-rec-label">REC</span>
+    </div>
+    <div id="pip-resize-handle" title="Drag to resize">
+      <svg viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <line x1="10" y1="2" x2="2" y2="10" stroke="#fcdbd6" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="10" y1="6" x2="6" y2="10" stroke="#fcdbd6" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
 
   <!-- ══ DIALOGUE PANEL (always at bottom) ══ -->
   <div id="dialogue-panel">
@@ -1006,7 +1006,7 @@
   (function () {
     const pip = document.getElementById('pip-camera');
     const pipVideo = document.getElementById('pip-video');
-    const stage = document.getElementById('stage');
+    const stage = document.getElementById('app-shell');
 
     // ── Mirror the main webcam stream into the PiP ──
     function syncPipStream() {
