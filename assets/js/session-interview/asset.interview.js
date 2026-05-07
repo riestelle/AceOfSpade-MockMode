@@ -615,7 +615,7 @@ function stopTimer() {
 
 function startTimer() {
   stopTimer(); // Always clear previous intervals first
-  timeRemaining = TIMER_DURATION; // Reset to 45[cite: 2]
+  timeRemaining = TIMER_DURATION;
 
   // Force immediate UI update to 00:45
   if (typeof updateTimerDisplay === 'function') {
@@ -1005,6 +1005,7 @@ function skipQuestion() {
     stopMicCapture();
   }
 
+  stopTimer(); // stop countdown immediately on skip
   skipUsed = true;
   if (skipBtn) {
     skipBtn.disabled = true;
