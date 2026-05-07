@@ -115,15 +115,7 @@ function buildExpressionSummary() {
 // Logic is wired — UI hookup (display element) is frontend's job.
 let timerInterval = null;
 let timeRemaining = 45;
-const TIMER_DURATION = 45; // fallback default
-const TIMER_DURATION_BY_PERSONALITY = {
-  startup:   45,  // Kai — casual, short answers are fine
-  corporate: 60,  // Ms. Reyes — expects structured, polished answers
-  technical: 75,  // Dr. Matsuda — needs time for technical depth
-};
-function getTimerDuration() {
-  return TIMER_DURATION_BY_PERSONALITY[personality] ?? TIMER_DURATION;
-}
+const TIMER_DURATION = 45;
 
 // ── Personality score multipliers (SPEC) ──────────────────────────────────
 const PERSONALITY_MULTIPLIER = {
@@ -623,7 +615,7 @@ function stopTimer() {
 
 function startTimer() {
   stopTimer(); // Always clear previous intervals first
-  timeRemaining = getTimerDuration();
+  timeRemaining = TIMER_DURATION; // Reset to 45[cite: 2]
 
   // Force immediate UI update to 00:45
   if (typeof updateTimerDisplay === 'function') {
@@ -659,7 +651,8 @@ function handleTimerTimeout() {
   if (checkLoseCondition()) return;
 
   // Reset display immediately so it doesn't stay at 0:00
-  timeRemaining = getTimerDuration();
+  timeRemaining = TIMER_DURATION;
+  if (typeof updateTimerDisplay === 'function') updateTimerDisplay(timeRemaining);
 
   if (answerInput) answerInput.value = '[No answer — time ran out]';
   submitAnswer();
