@@ -24,8 +24,8 @@ jobs:
       - name: Check if model files already exist
         id: check
         run: |
-          ENCODER="assets/js/session-interview/models/Xenova/whisper-tiny.en/onnx/encoder_model_quantized.onnx"
-          DECODER="assets/js/session-interview/models/Xenova/whisper-tiny.en/onnx/decoder_model_merged_quantized.onnx"
+          ENCODER="assets/js/session-interview/models/Xenova/whisper-base.en/onnx/encoder_model_quantized.onnx"
+          DECODER="assets/js/session-interview/models/Xenova/whisper-base.en/onnx/decoder_model_merged_quantized.onnx"
           if [ -f "$ENCODER" ] && [ -f "$DECODER" ] && [ "${{ inputs.force_redownload }}" != "true" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "Model files already present — skipping download."
@@ -33,11 +33,11 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Download Xenova/whisper-tiny.en model files
+      - name: Download Xenova/whisper-base.en model files
         if: steps.check.outputs.skip != 'true'
         run: |
-          BASE="https://huggingface.co/Xenova/whisper-tiny.en/resolve/main"
-          DEST="assets/js/session-interview/models/Xenova/whisper-tiny.en"
+          BASE="https://huggingface.co/Xenova/whisper-base.en/resolve/main"
+          DEST="assets/js/session-interview/models/Xenova/whisper-base.en"
           mkdir -p "$DEST/onnx"
 
           echo "Downloading config and tokenizer files..."
@@ -66,10 +66,19 @@ jobs:
       - name: Remove placeholder .gitkeep if present
         if: steps.check.outputs.skip != 'true'
         run: |
-          KEEP="assets/js/session-interview/models/Xenova/whisper-tiny.en/onnx/.gitkeep"
+          KEEP="assets/js/session-interview/models/Xenova/whisper-base.en/onnx/.gitkeep"
           if [ -f "$KEEP" ]; then
             rm "$KEEP"
             echo "Removed .gitkeep placeholder."
+          fi
+
+      - name: Remove legacy tiny model if present
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          LEGACY="assets/js/session-interview/models/Xenova/whisper-tiny.en"
+          if [ -d "$LEGACY" ]; then
+            rm -rf "$LEGACY"
+            echo "Removed legacy low-quality whisper-tiny.en model bundle."
           fi
 
       - name: Commit and push model files
@@ -77,11 +86,11 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add assets/js/session-interview/models/Xenova/
+          git add -A assets/js/session-interview/models/Xenova/
           git diff --cached --stat
           if git diff --cached --quiet; then
             echo "Nothing to commit — model files unchanged."
           else
-            git commit -m "chore: bundle Xenova/whisper-tiny.en quantized model for local serving"
+            git commit -m "chore: bundle Xenova/whisper-base.en quantized model for local serving"
             git push
           fi
